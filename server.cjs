@@ -13,7 +13,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = 8787;
+const PORT = process.env.PORT || 8787;
+
+server.listen(PORT, () => {
+  console.log(`TBS V2 API running on http://localhost:${PORT}`);
+});
 
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
