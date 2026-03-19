@@ -1,0 +1,28 @@
+{
+  "counts": {
+    "hotwords": 157,
+    "glossary": 78,
+    "corrections": 13,
+    "phrases": 729,
+    "paired_books": 11
+  },
+  "paired_books": [
+    "254 The Most Glorious Realization_CN.csv",
+    "236 The Magical Hands of Sheng-yen Lu_CN.csv",
+    "246 Chatting with Oneself_CN.csv",
+    "238 Intimate Talk with the Moon_CN.csv",
+    "223 Stories of Supreme Spiritual Responses_CN.csv",
+    "226 Open Your Mind_CN.csv",
+    "252 Pith Teachings to Samadhi_CN.csv",
+    "214 The Sword of the Yogi_CN.csv",
+    "204 The Divine Book_CN.csv",
+    "240 Gateway to Infinite Dharma Treasure_CN.csv",
+    "275 Pith Teachings to the Path of Liberation_CN.csv"
+  ],
+  "notes": [
+    "High_King_Sutra.csv produced high-confidence Chinese-English phrase pairs.",
+    "Bilingual CN/EN book pairs were used to extract chapter title pairs and selected short body phrases.",
+    "Some English CSVs are dictionary-style single-column files and were not used for direct line pairing in this first pass.",
+    "corrections.generated.json includes seed corrections plus simplified/traditional variants for glossary terms."
+  ]
+}

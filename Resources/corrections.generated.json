@@ -1,0 +1,54 @@
+[
+  {
+    "wrong": "北方月殿清净佛。",
+    "correct": "北方月殿清淨佛。"
+  },
+  {
+    "wrong": "失尊",
+    "correct": "師尊"
+  },
+  {
+    "wrong": "师尊",
+    "correct": "師尊"
+  },
+  {
+    "wrong": "師中",
+    "correct": "師尊"
+  },
+  {
+    "wrong": "根本传承上师",
+    "correct": "根本傳承上師"
+  },
+  {
+    "wrong": "根本船城上師",
+    "correct": "根本傳承上師"
+  },
+  {
+    "wrong": "真佛中",
+    "correct": "真佛宗"
+  },
+  {
+    "wrong": "真佛種",
+    "correct": "真佛宗"
+  },
+  {
+    "wrong": "莲生活佛",
+    "correct": "蓮生活佛"
+  },
+  {
+    "wrong": "蓮生佛",
+    "correct": "蓮生活佛"
+  },
+  {
+    "wrong": "連生活佛",
+    "correct": "蓮生活佛"
+  },
+  {
+    "wrong": "护摩",
+    "correct": "護摩"
+  },
+  {
+    "wrong": "高王观世音真经",
+    "correct": "高王觀世音真經"
+  }
+]
