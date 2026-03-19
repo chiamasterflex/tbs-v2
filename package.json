@@ -14,9 +14,9 @@
   "dependencies": {
     "@deepgram/sdk": "^5.0.0",
     "cross-fetch": "^4.1.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^4.21.2",
-    "cors": "^2.8.5",
     "lucide-react": "^0.577.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
