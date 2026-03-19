@@ -30,3 +30,11 @@
     "vite": "^8.0.0"
   }
 }
+{
+  "name": "tbs-v2",
+  "version": "1.0.0",
+  "main": "server.cjs",
+  "scripts": {
+    "start": "node server.cjs"
+  }
+}
