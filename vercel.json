@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/study",
+      "destination": "/"
+    },
+    {
+      "source": "/((?!api).*)",
+      "destination": "/"
+    }
+  ]
+}

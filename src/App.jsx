@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Study from './Study';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
 
 export default function App() {
+  const path = window.location.pathname;
+
+if (path === '/study') {
+  return <Study />;
+}
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('idle');
   const [audioDebug, setAudioDebug] = useState({
