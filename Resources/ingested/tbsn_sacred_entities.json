@@ -1,0 +1,32 @@
+[
+  {
+    "cn": "大日如來",
+    "en": "Mahavairocana",
+    "category": "buddha",
+    "source_url": "https://tbsn.org/master/index.html",
+    "source_type": "tbsn_seed",
+    "aliases": ["毘盧遮那佛"],
+    "mishears": [],
+    "keywords": ["密教", "根本佛"]
+  },
+  {
+    "cn": "阿彌陀佛",
+    "en": "Amitabha Buddha",
+    "category": "buddha",
+    "source_url": "https://tbsn.org/master/index.html",
+    "source_type": "tbsn_seed",
+    "aliases": ["無量光佛"],
+    "mishears": [],
+    "keywords": ["西方極樂世界"]
+  },
+  {
+    "cn": "觀世音菩薩",
+    "en": "Avalokiteshvara",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/index.html",
+    "source_type": "tbsn_seed",
+    "aliases": ["觀音菩薩"],
+    "mishears": [],
+    "keywords": ["慈悲"]
+  }
+]
