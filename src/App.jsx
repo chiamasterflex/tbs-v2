@@ -349,6 +349,8 @@ export default function App() {
   return (
     <div style={styles.page}>
       <div style={styles.shell}>
+        <ToolTabs current="live" />
+
         <div style={styles.headerCard}>
           <div style={styles.eyebrow}>True Buddha School</div>
           <h1 style={styles.title}>Live Translation</h1>
@@ -481,7 +483,7 @@ const styles = {
   },
 
   loadingWrap: {
-    minHeight: '100vh',
+    minHeight: '50vh',
     display: 'grid',
     placeItems: 'center',
     color: '#fff',
