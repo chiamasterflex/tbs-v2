@@ -95,6 +95,36 @@ let sessions = [
   },
 ];
 
+function mapSourceLanguageToDeepgram(language) {
+  switch (language) {
+    case 'Mandarin':
+      return 'zh-CN';
+    case 'Cantonese':
+      return 'zh';
+    case 'Bahasa':
+      return 'ms';
+    case 'English':
+      return 'en';
+    case 'Auto Detect':
+      return 'zh';
+    default:
+      return 'zh-CN';
+  }
+}
+
+function mapTargetLanguageLabel(language) {
+  switch (language) {
+    case 'English':
+      return 'English';
+    case 'Chinese':
+      return 'Chinese';
+    case 'Bahasa':
+      return 'Bahasa Melayu';
+    default:
+      return 'English';
+  }
+}
+
 function normalizeSpaces(text) {
   return (text || '').replace(/\s+/g, ' ').trim();
 }
@@ -254,11 +284,15 @@ function applyContextBias(text) {
   return normalizeSpaces(out);
 }
 
-function runBrainNormalization(text) {
+function runBrainNormalization(text, sourceLanguage = 'Mandarin') {
   let out = normalizeChineseText(text);
-  out = applyPhoneticBrain(out);
-  out = applySacredNameBrain(out);
-  out = applyContextBias(out);
+
+  if (sourceLanguage === 'Mandarin' || sourceLanguage === 'Cantonese' || sourceLanguage === 'Auto Detect') {
+    out = applyPhoneticBrain(out);
+    out = applySacredNameBrain(out);
+    out = applyContextBias(out);
+  }
+
   return normalizeSpaces(out);
 }
 
@@ -537,11 +571,19 @@ function conservativeInterimTranslate(text, hits) {
   return literalFallbackTranslate(t, hits);
 }
 
-async function translateWithDeepSeek(text, hits, mode = 'final', retrieval = {}, eventMode = 'Dharma Talk') {
+async function translateWithDeepSeek(
+  text,
+  hits,
+  mode = 'final',
+  retrieval = {},
+  eventMode = 'Dharma Talk',
+  sourceLanguage = 'Mandarin',
+  targetLanguage = 'English'
+) {
   if (!text || !text.trim()) return '';
 
   const phraseMatch = findPhraseMatch(text, mode);
-  if (phraseMatch?.en) return phraseMatch.en;
+  if (phraseMatch?.en && targetLanguage === 'English') return phraseMatch.en;
 
   if (mode === 'interim') {
     if (!DEEPSEEK_API_KEY || isShortFragment(text)) {
@@ -577,14 +619,16 @@ async function translateWithDeepSeek(text, hits, mode = 'final', retrieval = {},
       ? retrieval.ceremonyMatches.map((x) => `${x.cn} => ${x.en}`).join('\n')
       : 'No ceremony phrase hits';
 
+  const targetLabel = mapTargetLanguageLabel(targetLanguage);
+
   const systemPrompt =
     mode === 'interim'
       ? `
 You are the official translator for True Buddha School (TBS).
-Translate spoken Chinese into short, conservative live subtitle English.
+Translate spoken ${sourceLanguage} into short, conservative live subtitle ${targetLabel}.
 
 Rules:
-1. Output English only.
+1. Output only ${targetLabel}.
 2. Be literal and restrained.
 3. Do not guess missing context.
 4. Preserve TBS terms exactly from the glossary and sacred entity list.
@@ -594,24 +638,26 @@ Rules:
 `.trim()
       : `
 You are the official translator for True Buddha School (TBS).
-Translate spoken Chinese into natural English for final subtitles.
+Translate spoken ${sourceLanguage} into natural ${targetLabel} for final subtitles.
 
 Rules:
-1. Output English only.
+1. Output only ${targetLabel}.
 2. Preserve TBS terminology exactly when given in the glossary and sacred entity list.
 3. No explanations.
 4. Keep it clear, natural, and subtitle-friendly.
 5. Prefer accuracy over flourish.
 6. Do not invent implied meanings.
 7. Prefer retrieved phrase examples and ceremony language where relevant.
-8. Use culturally and doctrinally appropriate TBS English wording.
+8. Use culturally and doctrinally appropriate TBS wording.
 Event mode: ${eventMode}
 `.trim();
 
   const userPrompt = `
 Mode: ${mode}
+Source language: ${sourceLanguage}
+Target language: ${targetLabel}
 
-Chinese:
+Source text:
 ${text}
 
 Glossary:
@@ -726,6 +772,23 @@ app.post('/api/session', (req, res) => {
   res.json(session);
 });
 
+app.post('/api/session/:id/settings', (req, res) => {
+  const session = sessions.find((s) => s.id === req.params.id);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const {
+    sourceLanguage = session.sourceLanguage,
+    targetLanguage = session.targetLanguage,
+    eventMode = session.eventMode,
+  } = req.body || {};
+
+  session.sourceLanguage = sourceLanguage;
+  session.targetLanguage = targetLanguage;
+  session.eventMode = eventMode;
+
+  res.json({ ok: true, session });
+});
+
 app.post('/api/session/:id/line', async (req, res) => {
   const session = sessions.find((s) => s.id === req.params.id);
   if (!session) return res.status(404).json({ error: 'Session not found' });
@@ -733,7 +796,10 @@ app.post('/api/session/:id/line', async (req, res) => {
   const rawCn = (req.body?.rawCn || '').trim();
   if (!rawCn) return res.status(400).json({ error: 'rawCn required' });
 
-  const normalizedCn = runBrainNormalization(rawCn);
+  const sourceLanguage = req.body?.sourceLanguage || session.sourceLanguage || 'Mandarin';
+  const targetLanguage = req.body?.targetLanguage || session.targetLanguage || 'English';
+
+  const normalizedCn = runBrainNormalization(rawCn, sourceLanguage);
   const hits = applyGlossary(normalizedCn);
 
   const retrieval = {
@@ -747,7 +813,9 @@ app.post('/api/session/:id/line', async (req, res) => {
     hits,
     'final',
     retrieval,
-    session.eventMode
+    session.eventMode,
+    sourceLanguage,
+    targetLanguage
   );
 
   const line = buildLine(rawCn, normalizedCn, en, hits, retrieval);
@@ -760,10 +828,12 @@ app.post('/api/session/:id/line', async (req, res) => {
 app.post('/api/translate-interim', async (req, res) => {
   const rawCn = (req.body?.rawCn || '').trim();
   const eventMode = req.body?.eventMode || 'Dharma Talk';
+  const sourceLanguage = req.body?.sourceLanguage || 'Mandarin';
+  const targetLanguage = req.body?.targetLanguage || 'English';
 
   if (!rawCn) return res.json({ en: '', normalizedCn: '', hits: [] });
 
-  const normalizedCn = runBrainNormalization(rawCn);
+  const normalizedCn = runBrainNormalization(rawCn, sourceLanguage);
   const hits = applyGlossary(normalizedCn);
 
   if (!isStableEnoughForInterim(normalizedCn)) {
@@ -781,7 +851,9 @@ app.post('/api/translate-interim', async (req, res) => {
     hits,
     'interim',
     retrieval,
-    eventMode
+    eventMode,
+    sourceLanguage,
+    targetLanguage
   );
 
   res.json({ en, normalizedCn, hits, retrieval });
@@ -838,13 +910,25 @@ wss.on('connection', async (browserWs) => {
   let lastInterimSourceSent = '';
   let lastInterimSentAt = 0;
 
-  const activeSession = sessions[0] || {
-    id: 'demo-session',
-    eventMode: 'Dharma Talk',
+  let connectionConfig = {
+    sessionId: 'demo-session',
     sourceLanguage: 'Mandarin',
     targetLanguage: 'English',
-    lines: [],
+    eventMode: 'Dharma Talk',
   };
+
+  function getActiveSession() {
+    return (
+      sessions.find((s) => s.id === connectionConfig.sessionId) ||
+      sessions[0] || {
+        id: 'demo-session',
+        eventMode: 'Dharma Talk',
+        sourceLanguage: 'Mandarin',
+        targetLanguage: 'English',
+        lines: [],
+      }
+    );
+  }
 
   function sendToBrowser(obj) {
     if (browserWs.readyState === 1) {
@@ -873,10 +957,10 @@ wss.on('connection', async (browserWs) => {
     }
   }
 
-  try {
-    dg = await deepgram.listen.v1.connect({
+  function openDeepgramStream() {
+    return deepgram.listen.v1.connect({
       model: 'nova-2',
-      language: 'zh-CN',
+      language: mapSourceLanguageToDeepgram(connectionConfig.sourceLanguage),
       interim_results: true,
       punctuate: true,
       smart_format: true,
@@ -884,6 +968,10 @@ wss.on('connection', async (browserWs) => {
       sample_rate: 16000,
       channels: 1,
     });
+  }
+
+  try {
+    dg = await openDeepgramStream();
 
     dg.on('open', () => {
       if (shuttingDown) return;
@@ -910,7 +998,8 @@ wss.on('connection', async (browserWs) => {
         const rawText = data?.channel?.alternatives?.[0]?.transcript || '';
         if (!rawText.trim()) return;
 
-        const normalizedCn = runBrainNormalization(rawText);
+        const activeSession = getActiveSession();
+        const normalizedCn = runBrainNormalization(rawText, connectionConfig.sourceLanguage);
         const hits = applyGlossary(normalizedCn);
 
         if (data.is_final) {
@@ -925,7 +1014,9 @@ wss.on('connection', async (browserWs) => {
             hits,
             'final',
             retrieval,
-            activeSession.eventMode
+            activeSession.eventMode,
+            connectionConfig.sourceLanguage,
+            connectionConfig.targetLanguage
           );
 
           const line = buildLine(rawText, normalizedCn, en, hits, retrieval);
@@ -1017,8 +1108,22 @@ wss.on('connection', async (browserWs) => {
 
     try {
       const msg = JSON.parse(data.toString());
+
       if (msg.type === 'ping') {
         sendToBrowser({ type: 'pong', t: Date.now() });
+        return;
+      }
+
+      if (msg.type === 'config') {
+        connectionConfig = {
+          sessionId: msg.sessionId || 'demo-session',
+          sourceLanguage: msg.sourceLanguage || 'Mandarin',
+          targetLanguage: msg.targetLanguage || 'English',
+          eventMode: msg.eventMode || 'Dharma Talk',
+        };
+
+        console.log('[WS config]', connectionConfig);
+        return;
       }
     } catch {
       console.log('[Browser] bad text message');
