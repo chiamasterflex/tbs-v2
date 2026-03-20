@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Study from './Study';
 import Review from './Review';
+import ToolTabs from './ToolTabs';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
@@ -338,6 +339,7 @@ export default function App() {
     return (
       <div style={styles.page}>
         <div style={styles.shell}>
+          <ToolTabs current="live" />
           <div style={styles.loadingWrap}>Loading…</div>
         </div>
       </div>
