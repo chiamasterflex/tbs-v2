@@ -1,0 +1,274 @@
+[
+  {
+    "cn": "吉祥天母",
+    "en": "Drashi Lhamo",
+    "pinyin": "jí xiáng tiān mǔ",
+    "aliases": [
+      "扎西拉姆",
+      "札西拉姆",
+      "吉祥天姆"
+    ],
+    "mishears": [
+      "炸雞拉姆",
+      "炸鸡拉姆",
+      "炸西拉姆",
+      "炸鸡",
+      "札西"
+    ],
+    "category": "deity",
+    "related": [
+      "護法",
+      "天母",
+      "護摩"
+    ]
+  },
+  {
+    "cn": "佛母大孔雀明王",
+    "en": "Mahamayuri",
+    "pinyin": "fó mǔ dà kǒng què míng wáng",
+    "aliases": [
+      "大孔雀明王",
+      "孔雀明王"
+    ],
+    "mishears": [
+      "孔雀名王",
+      "大孔雀"
+    ],
+    "category": "deity",
+    "related": [
+      "佛母",
+      "明王",
+      "息災"
+    ]
+  },
+  {
+    "cn": "大白蓮花童子",
+    "en": "Padmakumara",
+    "pinyin": "dà bái lián huā tóng zǐ",
+    "aliases": [
+      "蓮花童子",
+      "白蓮花童子"
+    ],
+    "mishears": [
+      "莲花童子",
+      "白莲花童子"
+    ],
+    "category": "yidam",
+    "related": [
+      "根本上師",
+      "蓮花童子"
+    ]
+  },
+  {
+    "cn": "咕嚕咕咧佛母",
+    "en": "Kurukulla",
+    "pinyin": "gū lū gū liě fó mǔ",
+    "aliases": [
+      "咕噜咕咧佛母"
+    ],
+    "mishears": [
+      "咕噜咕列佛母",
+      "咕嚕咕列佛母"
+    ],
+    "category": "deity",
+    "related": [
+      "佛母",
+      "敬愛"
+    ]
+  },
+  {
+    "cn": "瑪哈嘎拉",
+    "en": "Mahakala",
+    "pinyin": "mǎ hā gá lā",
+    "aliases": [
+      "摩訶迦羅",
+      "玛哈嘎拉"
+    ],
+    "mishears": [
+      "玛哈伽拉",
+      "瑪哈伽拉"
+    ],
+    "category": "protector",
+    "related": [
+      "護法",
+      "黑天"
+    ]
+  },
+  {
+    "cn": "準提佛母",
+    "en": "Cundi",
+    "pinyin": "zhǔn tí fó mǔ",
+    "aliases": [
+      "准提佛母"
+    ],
+    "mishears": [
+      "準提",
+      "准提"
+    ],
+    "category": "deity",
+    "related": [
+      "佛母",
+      "息災",
+      "增益"
+    ]
+  },
+  {
+    "cn": "金母",
+    "en": "Golden Mother",
+    "pinyin": "jīn mǔ",
+    "aliases": [
+      "瑤池金母",
+      "瑶池金母"
+    ],
+    "mishears": [
+      "今母",
+      "金木"
+    ],
+    "category": "deity",
+    "related": [
+      "瑤池",
+      "金母"
+    ]
+  },
+  {
+    "cn": "獨髻佛母",
+    "en": "Ekajati",
+    "pinyin": "dú jì fó mǔ",
+    "aliases": [
+      "独髻佛母"
+    ],
+    "mishears": [
+      "獨記佛母",
+      "独记佛母"
+    ],
+    "category": "protector",
+    "related": [
+      "佛母",
+      "護法"
+    ]
+  },
+  {
+    "cn": "蓮生活佛",
+    "en": "Living Buddha Lian-sheng",
+    "pinyin": "lián shēng huó fó",
+    "aliases": [
+      "莲生活佛",
+      "師尊",
+      "师尊"
+    ],
+    "mishears": [
+      "連生活佛",
+      "莲生佛"
+    ],
+    "category": "lineage",
+    "related": [
+      "真佛宗",
+      "盧勝彥"
+    ]
+  },
+  {
+    "cn": "盧勝彥",
+    "en": "Grand Master Lu",
+    "pinyin": "lú shèng yàn",
+    "aliases": [
+      "卢胜彦",
+      "師尊",
+      "师尊"
+    ],
+    "mishears": [
+      "卢盛彦",
+      "魯勝彥"
+    ],
+    "category": "lineage",
+    "related": [
+      "蓮生活佛",
+      "根本傳承上師"
+    ]
+  },
+  {
+    "cn": "真佛宗",
+    "en": "True Buddha School",
+    "pinyin": "zhēn fó zōng",
+    "aliases": [
+      "真佛"
+    ],
+    "mishears": [
+      "真佛中",
+      "真佛忠"
+    ],
+    "category": "school",
+    "related": [
+      "蓮生活佛",
+      "傳承"
+    ]
+  },
+  {
+    "cn": "根本傳承上師",
+    "en": "Root Guru",
+    "pinyin": "gēn běn chuán chéng shàng shī",
+    "aliases": [
+      "根本上師",
+      "根本传承上师"
+    ],
+    "mishears": [
+      "根本傳承老師",
+      "根本上司"
+    ],
+    "category": "lineage",
+    "related": [
+      "上師",
+      "傳承"
+    ]
+  },
+  {
+    "cn": "護摩",
+    "en": "homa",
+    "pinyin": "hù mó",
+    "aliases": [
+      "护摩"
+    ],
+    "mishears": [
+      "互摸",
+      "虎魔"
+    ],
+    "category": "ritual",
+    "related": [
+      "火供",
+      "法會"
+    ]
+  },
+  {
+    "cn": "灌頂",
+    "en": "empowerment",
+    "pinyin": "guàn dǐng",
+    "aliases": [
+      "灌顶"
+    ],
+    "mishears": [
+      "關頂",
+      "官頂"
+    ],
+    "category": "ritual",
+    "related": [
+      "傳法",
+      "上師"
+    ]
+  },
+  {
+    "cn": "迴向",
+    "en": "dedication of merits",
+    "pinyin": "huí xiàng",
+    "aliases": [
+      "回向"
+    ],
+    "mishears": [
+      "回想",
+      "回象"
+    ],
+    "category": "ritual",
+    "related": [
+      "功德",
+      "祈願"
+    ]
+  }
+]

@@ -1,0 +1,161 @@
+[
+  {
+    "cn": "吉祥天母",
+    "en": "Drashi Lhamo",
+    "pinyin": "jí xiáng tiān mǔ",
+    "aliases": [
+      "扎基拉姆",
+      "札基拉姆",
+      "吉祥天女"
+    ],
+    "category": "protector"
+  },
+  {
+    "cn": "大白蓮花童子",
+    "en": "Padmakumara",
+    "pinyin": "dà bái lián huā tóng zǐ",
+    "aliases": [
+      "蓮花童子",
+      "白蓮花童子"
+    ],
+    "category": "yidam"
+  },
+  {
+    "cn": "瑤池金母",
+    "en": "Golden Mother of the Jade Pond",
+    "pinyin": "yáo chí jīn mǔ",
+    "aliases": [
+      "西王金母",
+      "金母"
+    ],
+    "category": "deity"
+  },
+  {
+    "cn": "準提佛母",
+    "en": "Cundi Buddha Mother",
+    "pinyin": "zhǔn tí fó mǔ",
+    "aliases": [
+      "準提菩薩"
+    ],
+    "category": "deity"
+  },
+  {
+    "cn": "孔雀明王",
+    "en": "Mahamayuri",
+    "pinyin": "kǒng què míng wáng",
+    "aliases": [
+      "佛母大孔雀明王"
+    ],
+    "category": "deity"
+  },
+  {
+    "cn": "咕嚕咕咧佛母",
+    "en": "Kurukulla",
+    "pinyin": "gū lū gū liě fó mǔ",
+    "aliases": [
+      "咕嚕咕列佛母",
+      "咕噜咕咧佛母"
+    ],
+    "category": "deity"
+  },
+  {
+    "cn": "大威德金剛",
+    "en": "Yamantaka",
+    "pinyin": "dà wēi dé jīn gāng",
+    "aliases": [
+      "閻曼德迦"
+    ],
+    "category": "deity"
+  },
+  {
+    "cn": "時輪金剛",
+    "en": "Kalachakra",
+    "pinyin": "shí lún jīn gāng",
+    "aliases": [],
+    "category": "deity"
+  },
+  {
+    "cn": "不動明王",
+    "en": "Acala Vidyaraja",
+    "pinyin": "bù dòng míng wáng",
+    "aliases": [],
+    "category": "protector"
+  },
+  {
+    "cn": "大黑天",
+    "en": "Mahakala",
+    "pinyin": "dà hēi tiān",
+    "aliases": [
+      "瑪哈嘎拉"
+    ],
+    "category": "protector"
+  },
+  {
+    "cn": "穢跡金剛",
+    "en": "Ucchusma Vajra",
+    "pinyin": "huì jì jīn gāng",
+    "aliases": [
+      "烏樞沙摩明王"
+    ],
+    "category": "protector"
+  },
+  {
+    "cn": "一髻佛母",
+    "en": "Ekajati",
+    "pinyin": "yī jì fó mǔ",
+    "aliases": [
+      "一髻母"
+    ],
+    "category": "protector"
+  },
+  {
+    "cn": "阿彌陀佛",
+    "en": "Amitabha",
+    "pinyin": "ā mí tuó fó",
+    "aliases": [],
+    "category": "buddha"
+  },
+  {
+    "cn": "觀世音菩薩",
+    "en": "Avalokitesvara",
+    "pinyin": "guān shì yīn pú sà",
+    "aliases": [
+      "觀音菩薩"
+    ],
+    "category": "bodhisattva"
+  },
+  {
+    "cn": "地藏王菩薩",
+    "en": "Ksitigarbha",
+    "pinyin": "dì cáng wáng pú sà",
+    "aliases": [
+      "地藏菩薩"
+    ],
+    "category": "bodhisattva"
+  },
+  {
+    "cn": "藥師佛",
+    "en": "Medicine Buddha",
+    "pinyin": "yào shī fó",
+    "aliases": [
+      "藥師琉璃光如來"
+    ],
+    "category": "buddha"
+  },
+  {
+    "cn": "綠度母",
+    "en": "Green Tara",
+    "pinyin": "lǜ dù mǔ",
+    "aliases": [
+      "綠救度佛母"
+    ],
+    "category": "deity"
+  },
+  {
+    "cn": "白度母",
+    "en": "White Tara",
+    "pinyin": "bái dù mǔ",
+    "aliases": [],
+    "category": "deity"
+  }
+]

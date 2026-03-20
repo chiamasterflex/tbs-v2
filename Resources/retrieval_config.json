@@ -1,0 +1,13 @@
+{
+  "top_k_sacred_entities": 8,
+  "top_k_phrase_memory": 6,
+  "top_k_ceremony_memory": 4,
+  "interim_min_chars": 6,
+  "final_bias_event_modes": [
+    "dharma_talk",
+    "homa",
+    "repentance",
+    "announcement",
+    "chanting"
+  ]
+}

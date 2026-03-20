@@ -1,0 +1,12 @@
+{
+  "instructions": "Append new mistakes here. Each item should record what ASR heard, what it should be, and what kind of term it was.",
+  "items": [
+    {
+      "heard": "炸雞拉姆",
+      "correct": "吉祥天母",
+      "english": "Drashi Lhamo",
+      "category": "deity",
+      "notes": "Common phonetic miss during deity teachings"
+    }
+  ]
+}

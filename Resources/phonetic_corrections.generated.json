@@ -1,0 +1,112 @@
+[
+  {
+    "wrong": "炸鸡拉姆",
+    "correct": "吉祥天母",
+    "reason": "phonetic deity correction"
+  },
+  {
+    "wrong": "炸雞拉姆",
+    "correct": "吉祥天母",
+    "reason": "phonetic deity correction"
+  },
+  {
+    "wrong": "扎西拉姆",
+    "correct": "吉祥天母",
+    "reason": "phonetic deity correction"
+  },
+  {
+    "wrong": "札西拉姆",
+    "correct": "吉祥天母",
+    "reason": "phonetic deity correction"
+  },
+  {
+    "wrong": "吉祥天目",
+    "correct": "吉祥天母",
+    "reason": "ASR confusion"
+  },
+  {
+    "wrong": "大白莲花童子",
+    "correct": "大白蓮花童子",
+    "reason": "simplified to canonical"
+  },
+  {
+    "wrong": "连花童子",
+    "correct": "蓮花童子",
+    "reason": "ASR common confusion"
+  },
+  {
+    "wrong": "咕噜咕列",
+    "correct": "咕嚕咕咧佛母",
+    "reason": "phonetic deity correction"
+  },
+  {
+    "wrong": "咕噜咕咧",
+    "correct": "咕嚕咕咧佛母",
+    "reason": "phonetic deity correction"
+  },
+  {
+    "wrong": "古鲁古列",
+    "correct": "咕嚕咕咧佛母",
+    "reason": "phonetic deity correction"
+  },
+  {
+    "wrong": "孔雀明王母",
+    "correct": "孔雀明王",
+    "reason": "normalize"
+  },
+  {
+    "wrong": "瑶池金母",
+    "correct": "瑤池金母",
+    "reason": "simplified to canonical"
+  },
+  {
+    "wrong": "准提佛母",
+    "correct": "準提佛母",
+    "reason": "simplified to canonical"
+  },
+  {
+    "wrong": "观世音菩萨",
+    "correct": "觀世音菩薩",
+    "reason": "simplified to canonical"
+  },
+  {
+    "wrong": "阿弥陀佛",
+    "correct": "阿彌陀佛",
+    "reason": "simplified to canonical"
+  },
+  {
+    "wrong": "地藏王菩萨",
+    "correct": "地藏王菩薩",
+    "reason": "simplified to canonical"
+  },
+  {
+    "wrong": "药师佛",
+    "correct": "藥師佛",
+    "reason": "simplified to canonical"
+  },
+  {
+    "wrong": "绿度母",
+    "correct": "綠度母",
+    "reason": "simplified to canonical"
+  },
+  {
+    "wrong": "白度目",
+    "correct": "白度母",
+    "reason": "ASR common confusion"
+  },
+  {
+    "wrong": "一记佛母",
+    "correct": "一髻佛母",
+    "reason": "phonetic deity correction"
+  },
+  {
+    "wrong": "一祭佛母",
+    "correct": "一髻佛母",
+    "reason": "phonetic deity correction"
+  },
+  {
+    "wrong": "大黑天神",
+    "correct": "大黑天",
+    "reason": "normalize"
+  }
+]

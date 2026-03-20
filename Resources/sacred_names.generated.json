@@ -1,0 +1,358 @@
+[
+  {
+    "category": "deity",
+    "cn": "吉祥天母",
+    "en": "Drashi Lhamo",
+    "pinyin": "jí xiáng tiān mǔ",
+    "aliases": [
+      "札西拉姆",
+      "扎西拉姆",
+      "吉祥天母",
+      "多傑拉姆",
+      "多杰拉姆"
+    ],
+    "mishears": [
+      "炸雞拉麵",
+      "炸鸡拉面",
+      "炸雞拉姆",
+      "炸鸡拉姆",
+      "札西辣母",
+      "扎西辣母",
+      "炸西拉姆"
+    ],
+    "keywords": [
+      "homa",
+      "protector",
+      "dakini",
+      "tbs",
+      "teaching"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "大白蓮花童子",
+    "en": "Padmakumara",
+    "pinyin": "dà bái lián huā tóng zǐ",
+    "aliases": [
+      "蓮花童子",
+      "白蓮花童子",
+      "大白蓮花童子"
+    ],
+    "mishears": [
+      "白蓮花種子",
+      "白莲花种子",
+      "蓮花童女",
+      "莲花童女"
+    ],
+    "keywords": [
+      "yidam",
+      "root deity",
+      "tbs"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "咕嚕咕咧佛母",
+    "en": "Kurukulla",
+    "pinyin": "gū lū gū liě fó mǔ",
+    "aliases": [
+      "咕噜咕咧佛母",
+      "咕嚕咕咧",
+      "咕噜咕咧"
+    ],
+    "mishears": [
+      "咕嚕古列",
+      "咕噜古列",
+      "古魯古列",
+      "古噜古列"
+    ],
+    "keywords": [
+      "deity",
+      "magnetizing",
+      "homa"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "大白傘蓋佛母",
+    "en": "Sitatapatra",
+    "pinyin": "dà bái sǎn gài fó mǔ",
+    "aliases": [
+      "白傘蓋佛母",
+      "白伞盖佛母",
+      "大白傘蓋佛母"
+    ],
+    "mishears": [
+      "白傘佛母",
+      "白伞佛母",
+      "白傘蓋母"
+    ],
+    "keywords": [
+      "protection",
+      "homa",
+      "deity"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "摩利支天",
+    "en": "Marici",
+    "pinyin": "mó lì zhī tiān",
+    "aliases": [
+      "摩利支天",
+      "摩利支天菩薩"
+    ],
+    "mishears": [
+      "魔力之天",
+      "摩力之天",
+      "茉莉之天"
+    ],
+    "keywords": [
+      "deity",
+      "protection",
+      "practice"
+    ]
+  },
+  {
+    "category": "protector",
+    "cn": "瑪哈嘎拉",
+    "en": "Mahakala",
+    "pinyin": "mǎ hā gá lā",
+    "aliases": [
+      "玛哈嘎拉",
+      "瑪哈嘎拉",
+      "大黑天"
+    ],
+    "mishears": [
+      "麻哈咖喇",
+      "马哈嘎啦",
+      "瑪哈咖拉",
+      "玛哈咖拉"
+    ],
+    "keywords": [
+      "protector",
+      "homa",
+      "wrathful"
+    ]
+  },
+  {
+    "category": "protector",
+    "cn": "一髻佛母",
+    "en": "Ekajati",
+    "pinyin": "yī jì fó mǔ",
+    "aliases": [
+      "一髻佛母",
+      "獨髻佛母",
+      "独髻佛母"
+    ],
+    "mishears": [
+      "一季佛母",
+      "一記佛母",
+      "一计佛母"
+    ],
+    "keywords": [
+      "protector",
+      "wrathful",
+      "deity"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "黃財神",
+    "en": "Yellow Jambhala",
+    "pinyin": "huáng cái shén",
+    "aliases": [
+      "黄财神",
+      "黃財神"
+    ],
+    "mishears": [
+      "黃菜神",
+      "黄菜神",
+      "皇财神"
+    ],
+    "keywords": [
+      "wealth",
+      "homa",
+      "deity"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "紅財神",
+    "en": "Red Jambhala",
+    "pinyin": "hóng cái shén",
+    "aliases": [
+      "红财神",
+      "紅財神"
+    ],
+    "mishears": [
+      "洪财神",
+      "紅菜神",
+      "红菜神"
+    ],
+    "keywords": [
+      "wealth",
+      "homa",
+      "deity"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "準提佛母",
+    "en": "Cundi",
+    "pinyin": "zhǔn tí fó mǔ",
+    "aliases": [
+      "准提佛母",
+      "準提佛母",
+      "準提菩薩"
+    ],
+    "mishears": [
+      "準題佛母",
+      "准题佛母",
+      "準提佛目"
+    ],
+    "keywords": [
+      "deity",
+      "practice",
+      "mantra"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "觀世音菩薩",
+    "en": "Avalokitesvara",
+    "pinyin": "guān shì yīn pú sà",
+    "aliases": [
+      "观世音菩萨",
+      "觀世音菩薩",
+      "觀音菩薩",
+      "观音菩萨"
+    ],
+    "mishears": [
+      "關世音菩薩",
+      "关世音菩萨"
+    ],
+    "keywords": [
+      "bodhisattva",
+      "practice"
+    ]
+  },
+  {
+    "category": "buddha",
+    "cn": "阿彌陀佛",
+    "en": "Amitabha",
+    "pinyin": "ā mí tuó fó",
+    "aliases": [
+      "阿弥陀佛",
+      "阿彌陀佛"
+    ],
+    "mishears": [
+      "阿彌頭佛",
+      "阿弥头佛"
+    ],
+    "keywords": [
+      "buddha",
+      "pure land"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "地藏王菩薩",
+    "en": "Ksitigarbha Bodhisattva",
+    "pinyin": "dì zàng wáng pú sà",
+    "aliases": [
+      "地藏王菩薩",
+      "地藏菩薩",
+      "地藏王"
+    ],
+    "mishears": [
+      "地藏王菩撒",
+      "地藏王菩萨"
+    ],
+    "keywords": [
+      "bodhisattva",
+      "practice"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "瑤池金母",
+    "en": "Golden Mother",
+    "pinyin": "yáo chí jīn mǔ",
+    "aliases": [
+      "瑤池金母",
+      "瑶池金母",
+      "金母"
+    ],
+    "mishears": [
+      "金木",
+      "金目",
+      "今母"
+    ],
+    "keywords": [
+      "tbs",
+      "deity",
+      "practice"
+    ]
+  },
+  {
+    "category": "deity",
+    "cn": "大孔雀明王",
+    "en": "Mahamayuri Vidyaraja",
+    "pinyin": "dà kǒng què míng wáng",
+    "aliases": [
+      "大孔雀明王",
+      "孔雀明王",
+      "摩訶摩瑜利"
+    ],
+    "mishears": [
+      "大孔雀名王",
+      "孔雀名王",
+      "摩訶摩由利"
+    ],
+    "keywords": [
+      "protection",
+      "homa",
+      "deity"
+    ]
+  },
+  {
+    "category": "title",
+    "cn": "蓮生活佛",
+    "en": "Living Buddha Lian-sheng",
+    "pinyin": "lián shēng huó fó",
+    "aliases": [
+      "蓮生活佛",
+      "连生活佛"
+    ],
+    "mishears": [
+      "連生活佛",
+      "连生佛",
+      "蓮生佛"
+    ],
+    "keywords": [
+      "tbs",
+      "founder",
+      "title"
+    ]
+  },
+  {
+    "category": "title",
+    "cn": "師尊",
+    "en": "Grand Master",
+    "pinyin": "shī zūn",
+    "aliases": [
+      "師尊",
+      "师尊"
+    ],
+    "mishears": [
+      "失尊",
+      "師中",
+      "师中"
+    ],
+    "keywords": [
+      "tbs",
+      "title"
+    ]
+  }
+]

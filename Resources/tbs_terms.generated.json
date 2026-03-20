@@ -1,0 +1,127 @@
+[
+  {
+    "category": "term",
+    "cn": "護摩",
+    "en": "homa",
+    "aliases": [
+      "護摩",
+      "护摩"
+    ],
+    "mishears": [
+      "火摩",
+      "火磨"
+    ],
+    "keywords": [
+      "ritual"
+    ]
+  },
+  {
+    "category": "term",
+    "cn": "灌頂",
+    "en": "empowerment",
+    "aliases": [
+      "灌頂",
+      "灌顶"
+    ],
+    "mishears": [
+      "灌定",
+      "觀頂"
+    ],
+    "keywords": [
+      "ritual"
+    ]
+  },
+  {
+    "category": "term",
+    "cn": "迴向",
+    "en": "dedication of merits",
+    "aliases": [
+      "迴向",
+      "回向"
+    ],
+    "mishears": [
+      "回像",
+      "回相"
+    ],
+    "keywords": [
+      "liturgical"
+    ]
+  },
+  {
+    "category": "term",
+    "cn": "根本傳承上師",
+    "en": "Root Lineage Guru",
+    "aliases": [
+      "根本傳承上師",
+      "根本传承上师"
+    ],
+    "mishears": [
+      "根本船城上師",
+      "根本傳成上師"
+    ],
+    "keywords": [
+      "tbs",
+      "title"
+    ]
+  },
+  {
+    "category": "term",
+    "cn": "真佛宗",
+    "en": "True Buddha School",
+    "aliases": [
+      "真佛宗"
+    ],
+    "mishears": [
+      "真佛中",
+      "真佛種"
+    ],
+    "keywords": [
+      "tbs"
+    ]
+  },
+  {
+    "category": "term",
+    "cn": "四皈依",
+    "en": "Fourfold Refuge",
+    "aliases": [
+      "四皈依"
+    ],
+    "mishears": [
+      "四歸依",
+      "四归依"
+    ],
+    "keywords": [
+      "liturgical"
+    ]
+  },
+  {
+    "category": "term",
+    "cn": "法會",
+    "en": "dharma ceremony",
+    "aliases": [
+      "法會",
+      "法会"
+    ],
+    "mishears": [
+      "發會",
+      "发会"
+    ],
+    "keywords": [
+      "ritual"
+    ]
+  },
+  {
+    "category": "term",
+    "cn": "超度",
+    "en": "deliverance ritual",
+    "aliases": [
+      "超度"
+    ],
+    "mishears": [
+      "超渡"
+    ],
+    "keywords": [
+      "ritual"
+    ]
+  }
+]

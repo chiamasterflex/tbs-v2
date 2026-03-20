@@ -1,0 +1,38 @@
+[
+  {
+    "cn": "一心頂禮",
+    "en": "With one-pointed devotion, we pay homage.",
+    "event_type": "ceremony",
+    "category": "liturgy"
+  },
+  {
+    "cn": "供養根本傳承上師",
+    "en": "Make offerings to the Root Guru.",
+    "event_type": "ceremony",
+    "category": "offering"
+  },
+  {
+    "cn": "祈請佛菩薩放光加持",
+    "en": "We pray for the Buddhas and Bodhisattvas to radiate their blessings.",
+    "event_type": "ceremony",
+    "category": "blessing"
+  },
+  {
+    "cn": "願一切眾生離苦得樂",
+    "en": "May all sentient beings be free from suffering and attain happiness.",
+    "event_type": "general",
+    "category": "dedication"
+  },
+  {
+    "cn": "願功德迴向法界眾生",
+    "en": "May these merits be dedicated to all beings throughout the Dharma realm.",
+    "event_type": "general",
+    "category": "dedication"
+  },
+  {
+    "cn": "嗡。古魯。蓮生悉地。吽",
+    "en": "Om. Guru. Lian-sheng Siddhi. Hum.",
+    "event_type": "mantra",
+    "category": "mantra"
+  }
+]

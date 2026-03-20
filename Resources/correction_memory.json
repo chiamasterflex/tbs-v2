@@ -1,0 +1,26 @@
+[
+  {
+    "heard": "炸雞拉姆",
+    "corrected": "吉祥天母",
+    "category": "deity",
+    "notes": "ASR phonetic miss for Drashi Lhamo"
+  },
+  {
+    "heard": "炸鸡",
+    "corrected": "吉祥天母",
+    "category": "deity",
+    "notes": "short phonetic miss in deity context"
+  },
+  {
+    "heard": "孔雀名王",
+    "corrected": "佛母大孔雀明王",
+    "category": "deity",
+    "notes": "common mishear"
+  },
+  {
+    "heard": "連生活佛",
+    "corrected": "蓮生活佛",
+    "category": "lineage",
+    "notes": "common character substitution"
+  }
+]
