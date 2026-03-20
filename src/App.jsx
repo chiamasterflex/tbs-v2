@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
@@ -27,6 +27,8 @@ export default function App() {
   const pcmQueueRef = useRef([]);
   const interimTimerRef = useRef(null);
   const lastTranslatedChineseRef = useRef('');
+  const transcriptFeedRef = useRef(null);
+  const lastLiveSnapshotRef = useRef('');
 
   useEffect(() => {
     fetch(`${API}/api/session`, {
@@ -103,7 +105,7 @@ export default function App() {
       } catch (err) {
         console.error('interim translate failed', err);
       }
-    }, 300);
+    }, 180);
   };
 
   const startAudio = async () => {
@@ -187,8 +189,11 @@ export default function App() {
 
         if (msg.type === 'live_cn') {
           const sourceText = msg.normalizedCn || msg.text || '';
-          setLiveChinese(sourceText);
-          requestInterimTranslation(sourceText);
+          if (sourceText && sourceText !== lastLiveSnapshotRef.current) {
+            lastLiveSnapshotRef.current = sourceText;
+            setLiveChinese(sourceText);
+            requestInterimTranslation(sourceText);
+          }
         }
 
         if (msg.type === 'final') {
@@ -198,6 +203,7 @@ export default function App() {
             setLiveChinese('');
             setLiveEnglish('');
             lastTranslatedChineseRef.current = '';
+            lastLiveSnapshotRef.current = '';
           }
         }
 
@@ -303,26 +309,37 @@ export default function App() {
 
   const isListening = status === 'listening';
 
-  const feedItems = [];
-  if (liveChinese || liveEnglish) {
-    feedItems.push({
-      id: 'live-item',
-      time: 'Live',
-      chinese: liveChinese,
-      english: liveEnglish,
-      isLive: true,
-    });
-  }
+  const feedItems = useMemo(() => {
+    const items = [];
 
-  historyLines.forEach((line) => {
-    feedItems.push({
-      id: line.id,
-      time: line.time,
-      chinese: line.normalizedCn || line.rawCn,
-      english: line.en,
-      isLive: false,
+    if (liveChinese || liveEnglish) {
+      items.push({
+        id: 'live-item',
+        time: 'Live',
+        chinese: liveChinese,
+        english: liveEnglish,
+        isLive: true,
+      });
+    }
+
+    historyLines.forEach((line) => {
+      items.push({
+        id: line.id,
+        time: line.time,
+        chinese: line.normalizedCn || line.rawCn,
+        english: line.en,
+        isLive: false,
+      });
     });
-  });
+
+    return items;
+  }, [liveChinese, liveEnglish, historyLines]);
+
+  useEffect(() => {
+    const el = transcriptFeedRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+  }, [feedItems]);
 
   if (!session) {
     return (
@@ -394,7 +411,7 @@ export default function App() {
             </div>
           </div>
 
-          <div style={styles.transcriptFeed}>
+          <div ref={transcriptFeedRef} style={styles.transcriptFeed}>
             {feedItems.length === 0 ? (
               <div style={styles.emptyState}>Waiting for speech…</div>
             ) : (
@@ -406,14 +423,22 @@ export default function App() {
                     ...(item.isLive ? styles.feedRowLive : {}),
                   }}
                 >
-                  <div style={styles.feedMeta}>{item.time}</div>
+                  <div style={styles.feedMetaRow}>
+                    <div style={styles.feedMeta}>{item.time}</div>
+                    {item.isLive && <div style={styles.liveBadge}>Draft</div>}
+                  </div>
 
                   <div style={styles.feedChinese}>
                     {item.chinese || '…'}
                   </div>
 
-                  <div style={styles.feedEnglish}>
-                    {item.english || '…'}
+                  <div
+                    style={{
+                      ...styles.feedEnglish,
+                      ...(item.isLive ? styles.feedEnglishDraft : {}),
+                    }}
+                  >
+                    {item.english || (item.isLive ? 'Translating…' : '…')}
                   </div>
                 </div>
               ))
@@ -641,24 +666,42 @@ const styles = {
     background: '#fff8f2',
     borderRadius: '22px',
     padding: '6px 0',
+    scrollBehavior: 'smooth',
   },
 
   feedRow: {
     padding: '14px 16px 16px',
     borderBottom: '1px solid rgba(17,17,17,0.08)',
     textAlign: 'left',
+    transition: 'background 160ms ease',
   },
 
   feedRowLive: {
     background: '#fff0e8',
   },
 
+  feedMetaRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    marginBottom: '8px',
+  },
+
   feedMeta: {
     fontSize: '12px',
     fontWeight: 700,
     color: '#777',
-    marginBottom: '8px',
     textAlign: 'left',
+  },
+
+  liveBadge: {
+    fontSize: '11px',
+    fontWeight: 800,
+    color: '#7a4a38',
+    background: '#ffd8c8',
+    borderRadius: '999px',
+    padding: '6px 9px',
   },
 
   feedChinese: {
@@ -678,6 +721,12 @@ const styles = {
     color: '#2450d8',
     textAlign: 'left',
     wordBreak: 'break-word',
+    transition: 'opacity 160ms ease, color 160ms ease',
+  },
+
+  feedEnglishDraft: {
+    color: '#5c72c9',
+    opacity: 0.8,
   },
 
   emptyState: {
