@@ -34,6 +34,16 @@ function readJson(filePath, fallback) {
   }
 }
 
+function writeJson(filePath, value) {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(value, null, 2), 'utf8');
+    return true;
+  } catch (err) {
+    console.error(`Failed to write ${filePath}:`, err.message);
+    return false;
+  }
+}
+
 const resourcesDir = path.join(__dirname, 'Resources');
 
 const generatedGlossary = readJson(path.join(resourcesDir, 'glossary.generated.json'), []);
@@ -46,9 +56,16 @@ const generatedPhoneticCorrections = readJson(
   []
 );
 const generatedTbsTerms = readJson(path.join(resourcesDir, 'tbs_terms.generated.json'), []);
+const generatedSacredNames = readJson(path.join(resourcesDir, 'sacred_names.generated.json'), []);
+const generatedCeremonyPhrases = readJson(
+  path.join(resourcesDir, 'ceremony_phrases.generated.json'),
+  []
+);
+const asrMishearLogPath = path.join(resourcesDir, 'asr_mishear_log.json');
+let asrMishearLog = readJson(asrMishearLogPath, []);
 
 console.log(
-  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length}`
+  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} mishearLog=${asrMishearLog.length}`
 );
 
 let sessions = [
@@ -68,7 +85,6 @@ function normalizeChineseText(text) {
   if (!text) return '';
   let out = normalizeSpaces(text);
 
-  // Base corrections first
   for (const rule of generatedCorrections) {
     if (rule?.wrong && rule?.correct && out.includes(rule.wrong)) {
       out = out.replaceAll(rule.wrong, rule.correct);
@@ -78,24 +94,10 @@ function normalizeChineseText(text) {
   return out;
 }
 
-function scoreContainsAny(text, candidates = []) {
-  const normalized = normalizeSpaces(text);
-  let score = 0;
-
-  for (const c of candidates) {
-    if (!c) continue;
-    if (normalized.includes(c)) score += Math.max(1, c.length);
-  }
-
-  return score;
-}
-
 function applyPhoneticBrain(text) {
   if (!text) return '';
-
   let out = normalizeSpaces(text);
 
-  // Strong explicit phonetic corrections first
   for (const rule of generatedPhoneticCorrections) {
     const wrongs = Array.isArray(rule?.wrong) ? rule.wrong : rule?.wrong ? [rule.wrong] : [];
     const correct = rule?.correct || '';
@@ -108,7 +110,23 @@ function applyPhoneticBrain(text) {
     }
   }
 
-  // Deity aliases / transliteration variants
+  return out;
+}
+
+function applyAliasSet(out, canonical, aliases = []) {
+  let next = out;
+  for (const alias of aliases.filter(Boolean)) {
+    if (alias && next.includes(alias) && !next.includes(canonical)) {
+      next = next.replaceAll(alias, canonical);
+    }
+  }
+  return next;
+}
+
+function applySacredNameBrain(text) {
+  if (!text) return '';
+  let out = text;
+
   for (const deity of generatedDeities) {
     const canonicalCn = deity?.cn || '';
     if (!canonicalCn) continue;
@@ -118,14 +136,22 @@ function applyPhoneticBrain(text) {
       .concat(deity?.mishears || [])
       .filter(Boolean);
 
-    for (const alias of aliases) {
-      if (alias && out.includes(alias)) {
-        out = out.replaceAll(alias, canonicalCn);
-      }
-    }
+    out = applyAliasSet(out, canonicalCn, aliases);
   }
 
-  // TBS term aliases / variants
+  for (const entry of generatedSacredNames) {
+    const canonicalCn = entry?.cn || '';
+    if (!canonicalCn) continue;
+
+    const aliases = []
+      .concat(entry?.aliases || [])
+      .concat(entry?.mishears || [])
+      .concat(entry?.variants || [])
+      .filter(Boolean);
+
+    out = applyAliasSet(out, canonicalCn, aliases);
+  }
+
   for (const term of generatedTbsTerms) {
     const canonicalCn = term?.cn || '';
     if (!canonicalCn) continue;
@@ -135,23 +161,16 @@ function applyPhoneticBrain(text) {
       .concat(term?.mishears || [])
       .filter(Boolean);
 
-    for (const alias of aliases) {
-      if (alias && out.includes(alias)) {
-        out = out.replaceAll(alias, canonicalCn);
-      }
-    }
+    out = applyAliasSet(out, canonicalCn, aliases);
   }
 
-  return out;
+  return normalizeSpaces(out);
 }
 
 function applyContextBias(text) {
   if (!text) return '';
-
   let out = text;
 
-  // Light contextual rescue rules for common sacred name misses.
-  // Keep this narrow to avoid over-correcting normal speech.
   const biasRules = [
     {
       canonical: '吉祥天母',
@@ -169,8 +188,8 @@ function applyContextBias(text) {
       minTriggerCount: 2,
     },
     {
-      canonical: '大幻化網金剛',
-      triggers: ['金剛', '金刚', '幻化'],
+      canonical: '瑪哈嘎拉',
+      triggers: ['瑪哈', '玛哈', '嘎拉', '伽拉'],
       minTriggerCount: 2,
     },
     {
@@ -184,8 +203,13 @@ function applyContextBias(text) {
       minTriggerCount: 2,
     },
     {
-      canonical: '瑪哈嘎拉',
-      triggers: ['瑪哈', '玛哈', '嘎拉', '伽拉'],
+      canonical: '佛母大孔雀明王',
+      triggers: ['孔雀', '明王', '佛母'],
+      minTriggerCount: 2,
+    },
+    {
+      canonical: '蓮生活佛',
+      triggers: ['蓮生', '活佛', '莲生', '活佛'],
       minTriggerCount: 2,
     },
   ];
@@ -207,6 +231,7 @@ function applyContextBias(text) {
 function runBrainNormalization(text) {
   let out = normalizeChineseText(text);
   out = applyPhoneticBrain(out);
+  out = applySacredNameBrain(out);
   out = applyContextBias(out);
   return normalizeSpaces(out);
 }
@@ -220,7 +245,11 @@ function buildCanonicalGlossary() {
     .filter((t) => t?.cn && t?.en)
     .map((t) => ({ cn: t.cn, en: t.en }));
 
-  const merged = [...generatedGlossary, ...deityEntries, ...tbsEntries];
+  const sacredEntries = generatedSacredNames
+    .filter((s) => s?.cn && s?.en)
+    .map((s) => ({ cn: s.cn, en: s.en }));
+
+  const merged = [...generatedGlossary, ...deityEntries, ...tbsEntries, ...sacredEntries];
 
   const seen = new Set();
   const deduped = [];
@@ -287,7 +316,9 @@ function findPhraseMatch(text, mode = 'final') {
   if (!normalized) return null;
   if (isShortFragment(normalized)) return null;
 
-  for (const phrase of generatedPhrases) {
+  const allPhraseSources = [...generatedPhrases, ...generatedCeremonyPhrases];
+
+  for (const phrase of allPhraseSources) {
     if (!phrase?.cn || !phrase?.en) continue;
     const candidate = phrase.cn.trim();
     if (!candidate) continue;
@@ -300,7 +331,7 @@ function findPhraseMatch(text, mode = 'final') {
   const minLength = mode === 'interim' ? 14 : 10;
   let best = null;
 
-  for (const phrase of generatedPhrases) {
+  for (const phrase of allPhraseSources) {
     if (!phrase?.cn || !phrase?.en) continue;
 
     const candidate = phrase.cn.trim();
@@ -468,6 +499,18 @@ function buildLine(rawCn, normalizedCn, en, hits) {
   };
 }
 
+function appendMishearLog(entry) {
+  const row = {
+    id: Date.now(),
+    at: new Date().toISOString(),
+    ...entry,
+  };
+  asrMishearLog.unshift(row);
+  asrMishearLog = asrMishearLog.slice(0, 500);
+  writeJson(asrMishearLogPath, asrMishearLog);
+  return row;
+}
+
 app.get('/api/session/:id', (req, res) => {
   const session = sessions.find((s) => s.id === req.params.id);
   if (!session) return res.status(404).json({ error: 'Session not found' });
@@ -513,6 +556,20 @@ app.post('/api/translate-interim', async (req, res) => {
 
   const en = await translateWithDeepSeek(normalizedCn, hits, 'interim');
   res.json({ en, normalizedCn, hits });
+});
+
+app.get('/api/asr-mishear-log', (req, res) => {
+  res.json(asrMishearLog);
+});
+
+app.post('/api/asr-mishear-log', (req, res) => {
+  const { heard, corrected, category = 'unknown', notes = '' } = req.body || {};
+  if (!heard || !corrected) {
+    return res.status(400).json({ error: 'heard and corrected are required' });
+  }
+
+  const row = appendMishearLog({ heard, corrected, category, notes });
+  res.json({ ok: true, row });
 });
 
 const server = http.createServer(app);
