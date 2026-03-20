@@ -3,18 +3,17 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const { DeepgramClient } = require('@deepgram/sdk');
+const fetch = require('cross-fetch');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 8787;
-
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
@@ -100,6 +99,15 @@ function isShortFragment(text) {
   return false;
 }
 
+function isStableEnoughForInterim(text) {
+  if (!text) return false;
+  const t = text.trim();
+  if (t.length < 6) return false;
+  if (/[，。！？、,.!?]$/.test(t)) return true;
+  if (t.length >= 12) return true;
+  return false;
+}
+
 function findPhraseMatch(text, mode = 'final') {
   if (!text) return null;
 
@@ -117,7 +125,7 @@ function findPhraseMatch(text, mode = 'final') {
     }
   }
 
-  const minLength = mode === 'interim' ? 12 : 10;
+  const minLength = mode === 'interim' ? 14 : 10;
   let best = null;
 
   for (const phrase of generatedPhrases) {
@@ -131,14 +139,12 @@ function findPhraseMatch(text, mode = 'final') {
       if (!best || score > best.score) {
         best = { ...phrase, score, confidence: 'contains' };
       }
-    } else if (candidate.includes(normalized)) {
-      if (mode === 'final') {
-        const ratio = normalized.length / candidate.length;
-        if (ratio >= 0.8) {
-          const score = normalized.length;
-          if (!best || score > best.score) {
-            best = { ...phrase, score, confidence: 'near-complete' };
-          }
+    } else if (mode === 'final' && candidate.includes(normalized)) {
+      const ratio = normalized.length / candidate.length;
+      if (ratio >= 0.8) {
+        const score = normalized.length;
+        if (!best || score > best.score) {
+          best = { ...phrase, score, confidence: 'near-complete' };
         }
       }
     }
@@ -154,8 +160,8 @@ function literalFallbackTranslate(text, hits) {
   out = out
     .replaceAll('今天講解', 'today explains')
     .replaceAll('修持重點', 'the key points of practice')
-    .replaceAll('我們先', 'Let us first')
-    .replaceAll('接下來是', 'Next is')
+    .replaceAll('我們先', 'let us first')
+    .replaceAll('接下來是', 'next is')
     .replaceAll('開示', 'teaching')
     .replaceAll('法會', 'dharma ceremony')
     .replaceAll('修行', 'spiritual practice')
@@ -211,7 +217,7 @@ Rules:
 3. Do not guess missing context.
 4. Preserve TBS terms exactly from the glossary.
 5. If the input is fragmentary, translate only what is clearly present.
-6. Do not embellish, summarize, or complete unfinished thoughts.
+6. Keep it very short.
 `.trim()
       : `
 You are the official translator for True Buddha School (TBS).
@@ -223,7 +229,7 @@ Rules:
 3. No explanations.
 4. Keep it clear and subtitle-friendly.
 5. Prefer accuracy over flourish.
-6. Do not invent implied meanings that are not in the Chinese.
+6. Do not invent implied meanings.
 `.trim();
 
   const userPrompt = `
@@ -328,8 +334,12 @@ app.post('/api/translate-interim', async (req, res) => {
 
   const normalizedCn = normalizeChineseText(rawCn);
   const hits = applyGlossary(normalizedCn);
-  const en = await translateWithDeepSeek(normalizedCn, hits, 'interim');
 
+  if (!isStableEnoughForInterim(normalizedCn)) {
+    return res.json({ en: '', normalizedCn, hits });
+  }
+
+  const en = await translateWithDeepSeek(normalizedCn, hits, 'interim');
   res.json({ en, normalizedCn, hits });
 });
 
@@ -345,6 +355,9 @@ wss.on('connection', async (browserWs) => {
   let dg = null;
   let shuttingDown = false;
   let deepgramClosedLogged = false;
+
+  let lastInterimSourceSent = '';
+  let lastInterimSentAt = 0;
 
   function sendToBrowser(obj) {
     if (browserWs.readyState === 1) {
@@ -423,9 +436,25 @@ wss.on('connection', async (browserWs) => {
             session.lines = session.lines.slice(0, 100);
           }
 
+          lastInterimSourceSent = '';
+          lastInterimSentAt = 0;
+
           sendToBrowser({ type: 'final', line });
         } else {
-          sendToBrowser({ type: 'live_cn', text: rawText, normalizedCn });
+          const now = Date.now();
+
+          // Send live source quickly, but not on every microscopic twitch.
+          const hasMeaningfulChange =
+            normalizedCn !== lastInterimSourceSent &&
+            normalizedCn.length >= Math.max(4, lastInterimSourceSent.length);
+
+          const respectsThrottle = now - lastInterimSentAt >= 350;
+
+          if (hasMeaningfulChange && respectsThrottle) {
+            lastInterimSourceSent = normalizedCn;
+            lastInterimSentAt = now;
+            sendToBrowser({ type: 'live_cn', text: rawText, normalizedCn });
+          }
         }
       } catch (err) {
         console.error('[Deepgram] transcript handler failed', err.message);
@@ -467,7 +496,7 @@ wss.on('connection', async (browserWs) => {
       frameCount += 1;
       totalBytes += data.length;
 
-      if (frameCount % 20 === 0) {
+      if (frameCount % 30 === 0) {
         console.log(
           `[Browser audio] frames=${frameCount} totalBytes=${totalBytes} lastBytes=${data.length}`
         );
