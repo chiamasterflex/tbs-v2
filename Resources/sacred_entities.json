@@ -720,3 +720,185 @@
     "id": "English Indonesian"
   }
 ]
+[
+  {
+    "cn": "釋迦牟尼佛",
+    "en": "Shakyamuni Buddha",
+    "category": "buddha",
+    "aliases": ["本師釋迦牟尼佛"],
+    "mishears": ["釋迦摩尼佛", "石家摩尼佛"],
+    "keywords": ["佛", "如來"],
+    "weight": 5
+  },
+  {
+    "cn": "阿彌陀佛",
+    "en": "Amitabha Buddha",
+    "category": "buddha",
+    "aliases": ["無量光佛", "無量壽佛"],
+    "mishears": ["阿密陀佛", "阿彌多佛"],
+    "keywords": ["極樂世界"],
+    "weight": 5
+  },
+  {
+    "cn": "藥師琉璃光王佛",
+    "en": "Medicine Buddha",
+    "category": "buddha",
+    "aliases": ["藥師佛"],
+    "mishears": ["藥師流離光王佛"],
+    "keywords": ["療癒", "藍光"],
+    "weight": 5
+  },
+  {
+    "cn": "大日如來",
+    "en": "Vairocana Buddha",
+    "category": "buddha",
+    "aliases": ["毘盧遮那佛"],
+    "mishears": ["大日如來佛"],
+    "keywords": ["法界體性"],
+    "weight": 5
+  },
+  {
+    "cn": "龍尊王佛",
+    "en": "Nagaraja Buddha",
+    "category": "buddha",
+    "aliases": [],
+    "mishears": ["龍王佛"],
+    "keywords": ["龍族"],
+    "weight": 5
+  },
+  {
+    "cn": "觀世音菩薩",
+    "en": "Avalokitesvara Bodhisattva",
+    "category": "bodhisattva",
+    "aliases": ["觀音菩薩"],
+    "mishears": ["觀世音不撒"],
+    "keywords": ["慈悲"],
+    "weight": 5
+  },
+  {
+    "cn": "文殊師利菩薩",
+    "en": "Manjushri Bodhisattva",
+    "category": "bodhisattva",
+    "aliases": ["文殊菩薩"],
+    "mishears": ["文書師利"],
+    "keywords": ["智慧"],
+    "weight": 5
+  },
+  {
+    "cn": "普賢菩薩",
+    "en": "Samantabhadra Bodhisattva",
+    "category": "bodhisattva",
+    "aliases": [],
+    "mishears": ["普賢不撒"],
+    "keywords": ["行願"],
+    "weight": 5
+  },
+  {
+    "cn": "地藏王菩薩",
+    "en": "Ksitigarbha Bodhisattva",
+    "category": "bodhisattva",
+    "aliases": ["地藏菩薩"],
+    "mishears": ["地藏王不撒"],
+    "keywords": ["地獄救度"],
+    "weight": 5
+  },
+  {
+    "cn": "金剛總持",
+    "en": "Vajradhara",
+    "category": "vidyaraja",
+    "aliases": [],
+    "mishears": ["金剛總池"],
+    "keywords": ["密教本源"],
+    "weight": 5
+  },
+  {
+    "cn": "不動明王",
+    "en": "Acala Vidyaraja",
+    "category": "vidyaraja",
+    "aliases": ["不動尊"],
+    "mishears": ["不動名王"],
+    "keywords": ["降魔"],
+    "weight": 5
+  },
+  {
+    "cn": "愛染明王",
+    "en": "Ragaraja",
+    "category": "vidyaraja",
+    "aliases": [],
+    "mishears": ["愛染名王"],
+    "keywords": ["愛染"],
+    "weight": 5
+  },
+  {
+    "cn": "孔雀明王",
+    "en": "Mahamayuri",
+    "category": "vidyaraja",
+    "aliases": [],
+    "mishears": ["孔雀名王"],
+    "keywords": ["解毒"],
+    "weight": 5
+  },
+  {
+    "cn": "準提佛母",
+    "en": "Cundi Bodhisattva",
+    "category": "buddha-mother",
+    "aliases": ["準提菩薩"],
+    "mishears": ["準提佛目"],
+    "keywords": ["準提咒"],
+    "weight": 5
+  },
+  {
+    "cn": "大白傘蓋佛母",
+    "en": "Sitātapatrā",
+    "category": "buddha-mother",
+    "aliases": [],
+    "mishears": ["白傘蓋佛母"],
+    "keywords": ["防護"],
+    "weight": 5
+  },
+  {
+    "cn": "綠度母",
+    "en": "Green Tara",
+    "category": "tara",
+    "aliases": ["救度母"],
+    "mishears": ["綠度木"],
+    "keywords": ["救度"],
+    "weight": 5
+  },
+  {
+    "cn": "白度母",
+    "en": "White Tara",
+    "category": "tara",
+    "aliases": [],
+    "mishears": ["白度木"],
+    "keywords": ["長壽"],
+    "weight": 5
+  },
+  {
+    "cn": "札基拉姆",
+    "en": "Drashi Lhamo",
+    "category": "protector",
+    "aliases": ["扎基拉姆"],
+    "mishears": ["炸雞拉姆", "炸雞拉莫", "炸雞"],
+    "keywords": ["護法", "財神"],
+    "weight": 6
+  },
+  {
+    "cn": "瑤池金母",
+    "en": "Golden Mother of the Jade Pool",
+    "category": "protector",
+    "aliases": ["金母"],
+    "mishears": ["搖池金母"],
+    "keywords": ["母"],
+    "weight": 6
+  },
+  {
+    "cn": "大黑天",
+    "en": "Mahakala",
+    "category": "protector",
+    "aliases": ["瑪哈嘎拉"],
+    "mishears": ["大黑田"],
+    "keywords": ["護法"],
+    "weight": 5
+  }
+]
