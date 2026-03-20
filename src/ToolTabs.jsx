@@ -1,8 +1,11 @@
-export default function ToolTabs({ current = 'live' }) {
+export default function ToolTabs({ current = 'live', sessionId = '' }) {
+  const viewHref = sessionId ? `/viewer?session=${encodeURIComponent(sessionId)}` : '/viewer';
+
   const tabs = [
     { key: 'live', label: 'Live', href: '/' },
     { key: 'study', label: 'Study', href: '/study' },
     { key: 'review', label: 'Review', href: '/review' },
+    { key: 'viewer', label: 'Viewer', href: viewHref },
   ];
 
   return (

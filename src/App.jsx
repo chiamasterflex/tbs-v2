@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Study from './Study';
 import Review from './Review';
+import Viewer from './Viewer';
 import ToolTabs from './ToolTabs';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
@@ -17,6 +18,10 @@ export default function App() {
     return <Review />;
   }
 
+  if (path === '/viewer') {
+    return <Viewer />;
+  }
+
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('idle');
   const [audioDebug, setAudioDebug] = useState({
@@ -24,6 +29,7 @@ export default function App() {
     totalBytes: 0,
     lastBytes: 0,
   });
+  const [copied, setCopied] = useState(false);
 
   const [liveChinese, setLiveChinese] = useState('');
   const [liveEnglish, setLiveEnglish] = useState('');
@@ -284,6 +290,18 @@ export default function App() {
     setStatus('stopped');
   };
 
+  const copyViewerLink = async () => {
+    if (!session?.id) return;
+    const url = `${window.location.origin}/viewer?session=${encodeURIComponent(session.id)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const getStatusLabel = () => {
     switch (status) {
       case 'listening':
@@ -349,7 +367,7 @@ export default function App() {
   return (
     <div style={styles.page}>
       <div style={styles.shell}>
-        <ToolTabs current="live" />
+        <ToolTabs current="live" sessionId={session.id} />
 
         <div style={styles.headerCard}>
           <div style={styles.eyebrow}>True Buddha School</div>
@@ -358,11 +376,15 @@ export default function App() {
             Real-time captions and translation for teachings, ceremonies, and practice.
           </p>
 
-          <div style={styles.statusRow}>
+          <div style={styles.headerActions}>
             <div style={styles.statusChip}>
               <div style={styles.statusDot} />
               <span>{getStatusLabel()}</span>
             </div>
+
+            <button onClick={copyViewerLink} style={styles.shareButton}>
+              {copied ? 'Viewer link copied' : 'Copy viewer link'}
+            </button>
           </div>
         </div>
 
@@ -527,10 +549,13 @@ const styles = {
     textAlign: 'left',
   },
 
-  statusRow: {
+  headerActions: {
     marginTop: '18px',
     display: 'flex',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '12px',
+    alignItems: 'center',
+    flexWrap: 'wrap',
   },
 
   statusChip: {
@@ -550,6 +575,17 @@ const styles = {
     height: '10px',
     borderRadius: '50%',
     background: '#ff6b35',
+  },
+
+  shareButton: {
+    border: 'none',
+    background: '#ff6b35',
+    color: '#111',
+    borderRadius: '999px',
+    padding: '12px 16px',
+    fontSize: '13px',
+    fontWeight: 800,
+    cursor: 'pointer',
   },
 
   languageRow: {
