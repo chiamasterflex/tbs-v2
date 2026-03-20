@@ -84,16 +84,27 @@ console.log(
   `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} sacredEntities=${sacredEntities.length} phraseMemory=${phraseMemory.length} ceremonyMemory=${ceremonyMemory.length} correctionMemory=${correctionMemory.length}`
 );
 
-let sessions = [
-  {
-    id: 'demo-session',
-    title: 'TBS Live Session',
-    eventMode: 'Dharma Talk',
-    sourceLanguage: 'Mandarin',
-    targetLanguage: 'English',
-    lines: [],
-  },
-];
+let sessions = [];
+
+function getOrCreateSession(id = 'live-session') {
+  let session = sessions.find((s) => s.id === id);
+
+  if (!session) {
+    session = {
+      id,
+      title: 'TBS Live Session',
+      eventMode: 'Dharma Talk',
+      sourceLanguage: 'Mandarin',
+      targetLanguage: 'English',
+      lines: [],
+    };
+    sessions.unshift(session);
+  }
+
+  return session;
+}
+
+getOrCreateSession('live-session');
 
 function normalizeSpaces(text) {
   return (text || '').replace(/\s+/g, ' ').trim();
@@ -728,28 +739,31 @@ function appendMishearLog(entry) {
 }
 
 app.get('/api/session/:id', (req, res) => {
-  const session = sessions.find((s) => s.id === req.params.id);
-  if (!session) return res.status(404).json({ error: 'Session not found' });
+  const session = getOrCreateSession(req.params.id);
   res.json(session);
 });
 
 app.post('/api/session', (req, res) => {
+  const requestedId = req.body?.id || 'live-session';
+  const session = getOrCreateSession(requestedId);
+
   const {
-    title = 'TBS Live Session',
-    eventMode = 'Dharma Talk',
-    sourceLanguage = 'Mandarin',
-    targetLanguage = 'English',
+    title = session.title,
+    eventMode = session.eventMode,
+    sourceLanguage = session.sourceLanguage,
+    targetLanguage = session.targetLanguage,
   } = req.body || {};
 
-  const id = `session-${Date.now()}`;
-  const session = { id, title, eventMode, sourceLanguage, targetLanguage, lines: [] };
-  sessions.unshift(session);
+  session.title = title;
+  session.eventMode = eventMode;
+  session.sourceLanguage = sourceLanguage;
+  session.targetLanguage = targetLanguage;
+
   res.json(session);
 });
 
 app.post('/api/session/:id/line', async (req, res) => {
-  const session = sessions.find((s) => s.id === req.params.id);
-  if (!session) return res.status(404).json({ error: 'Session not found' });
+  const session = getOrCreateSession(req.params.id);
 
   const rawCn = (req.body?.rawCn || '').trim();
   if (!rawCn) return res.status(400).json({ error: 'rawCn required' });
@@ -859,13 +873,7 @@ wss.on('connection', async (browserWs) => {
   let lastInterimSourceSent = '';
   let lastInterimSentAt = 0;
 
-  const activeSession = sessions[0] || {
-    id: 'demo-session',
-    eventMode: 'Dharma Talk',
-    sourceLanguage: 'Mandarin',
-    targetLanguage: 'English',
-    lines: [],
-  };
+  const activeSession = getOrCreateSession('live-session');
 
   function sendToBrowser(obj) {
     if (browserWs.readyState === 1) {

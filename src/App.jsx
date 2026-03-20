@@ -6,6 +6,7 @@ import ToolTabs from './ToolTabs';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
+const SHARED_SESSION_ID = 'live-session';
 
 export default function App() {
   const path = window.location.pathname;
@@ -52,7 +53,7 @@ export default function App() {
     fetch(`${API}/api/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ id: SHARED_SESSION_ID }),
     })
       .then((res) => res.json())
       .then((data) => setSession(data))
@@ -291,8 +292,7 @@ export default function App() {
   };
 
   const copyViewerLink = async () => {
-    if (!session?.id) return;
-    const url = `${window.location.origin}/viewer?session=${encodeURIComponent(session.id)}`;
+    const url = `${window.location.origin}/viewer?session=${encodeURIComponent(SHARED_SESSION_ID)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -357,7 +357,7 @@ export default function App() {
     return (
       <div style={styles.page}>
         <div style={styles.shell}>
-          <ToolTabs current="live" />
+          <ToolTabs current="live" sessionId={SHARED_SESSION_ID} />
           <div style={styles.loadingWrap}>Loading…</div>
         </div>
       </div>
@@ -367,7 +367,7 @@ export default function App() {
   return (
     <div style={styles.page}>
       <div style={styles.shell}>
-        <ToolTabs current="live" sessionId={session.id} />
+        <ToolTabs current="live" sessionId={SHARED_SESSION_ID} />
 
         <div style={styles.headerCard}>
           <div style={styles.eyebrow}>True Buddha School</div>
