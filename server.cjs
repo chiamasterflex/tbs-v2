@@ -356,6 +356,22 @@ function overlapScore(text, candidates = []) {
   return score;
 }
 
+function sourceWeightBonus(row = {}) {
+  let bonus = 0;
+
+  if (row.weight && Number.isFinite(Number(row.weight))) {
+    bonus += Number(row.weight);
+  }
+
+  const sourceType = String(row.source_type || '').toLowerCase();
+
+  if (sourceType.includes('tbsn')) bonus += 3;
+  if (sourceType.includes('official')) bonus += 2;
+  if (sourceType.includes('seed')) bonus += 1;
+
+  return bonus;
+}
+
 function stringOverlapLoose(a, b) {
   if (!a || !b) return 0;
   const aa = normalizeSpaces(a);
@@ -393,6 +409,8 @@ function retrieveSacredEntities(text, eventMode = 'Dharma Talk') {
       score += 2;
     }
 
+    score += sourceWeightBonus(entity);
+
     if (score >= (retrievalConfig.min_entity_score || 2)) {
       results.push({ ...entity, _score: score });
     }
@@ -418,6 +436,7 @@ function retrievePhraseMemory(text, eventMode = 'Dharma Talk') {
     score += stringOverlapLoose(text, candidateCn);
 
     if (row?.event_mode === eventMode || row?.eventMode === eventMode) score += 2;
+    score += sourceWeightBonus(row);
 
     if (score >= (retrievalConfig.min_phrase_score || 2)) {
       results.push({ ...row, _score: score });
@@ -446,6 +465,8 @@ function retrieveCeremonyMemory(text, eventMode = 'Dharma Talk') {
     if (mode && String(mode).toLowerCase().includes(String(eventMode).toLowerCase())) {
       score += 3;
     }
+
+    score += sourceWeightBonus(row);
 
     if (score >= (retrievalConfig.min_phrase_score || 2)) {
       results.push({ ...row, _score: score });
