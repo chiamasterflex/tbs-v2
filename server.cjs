@@ -35,12 +35,20 @@ function readJson(filePath, fallback) {
 }
 
 const resourcesDir = path.join(__dirname, 'Resources');
+
 const generatedGlossary = readJson(path.join(resourcesDir, 'glossary.generated.json'), []);
 const generatedCorrections = readJson(path.join(resourcesDir, 'corrections.generated.json'), []);
 const generatedPhrases = readJson(path.join(resourcesDir, 'phrases.generated.json'), []);
 
+const generatedDeities = readJson(path.join(resourcesDir, 'deities.generated.json'), []);
+const generatedPhoneticCorrections = readJson(
+  path.join(resourcesDir, 'phonetic_corrections.generated.json'),
+  []
+);
+const generatedTbsTerms = readJson(path.join(resourcesDir, 'tbs_terms.generated.json'), []);
+
 console.log(
-  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length}`
+  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length}`
 );
 
 let sessions = [
@@ -52,10 +60,15 @@ let sessions = [
   },
 ];
 
+function normalizeSpaces(text) {
+  return (text || '').replace(/\s+/g, ' ').trim();
+}
+
 function normalizeChineseText(text) {
   if (!text) return '';
-  let out = text.trim();
+  let out = normalizeSpaces(text);
 
+  // Base corrections first
   for (const rule of generatedCorrections) {
     if (rule?.wrong && rule?.correct && out.includes(rule.wrong)) {
       out = out.replaceAll(rule.wrong, rule.correct);
@@ -65,9 +78,168 @@ function normalizeChineseText(text) {
   return out;
 }
 
+function scoreContainsAny(text, candidates = []) {
+  const normalized = normalizeSpaces(text);
+  let score = 0;
+
+  for (const c of candidates) {
+    if (!c) continue;
+    if (normalized.includes(c)) score += Math.max(1, c.length);
+  }
+
+  return score;
+}
+
+function applyPhoneticBrain(text) {
+  if (!text) return '';
+
+  let out = normalizeSpaces(text);
+
+  // Strong explicit phonetic corrections first
+  for (const rule of generatedPhoneticCorrections) {
+    const wrongs = Array.isArray(rule?.wrong) ? rule.wrong : rule?.wrong ? [rule.wrong] : [];
+    const correct = rule?.correct || '';
+    if (!correct) continue;
+
+    for (const wrong of wrongs) {
+      if (wrong && out.includes(wrong)) {
+        out = out.replaceAll(wrong, correct);
+      }
+    }
+  }
+
+  // Deity aliases / transliteration variants
+  for (const deity of generatedDeities) {
+    const canonicalCn = deity?.cn || '';
+    if (!canonicalCn) continue;
+
+    const aliases = []
+      .concat(deity?.aliases || [])
+      .concat(deity?.mishears || [])
+      .filter(Boolean);
+
+    for (const alias of aliases) {
+      if (alias && out.includes(alias)) {
+        out = out.replaceAll(alias, canonicalCn);
+      }
+    }
+  }
+
+  // TBS term aliases / variants
+  for (const term of generatedTbsTerms) {
+    const canonicalCn = term?.cn || '';
+    if (!canonicalCn) continue;
+
+    const aliases = []
+      .concat(term?.aliases || [])
+      .concat(term?.mishears || [])
+      .filter(Boolean);
+
+    for (const alias of aliases) {
+      if (alias && out.includes(alias)) {
+        out = out.replaceAll(alias, canonicalCn);
+      }
+    }
+  }
+
+  return out;
+}
+
+function applyContextBias(text) {
+  if (!text) return '';
+
+  let out = text;
+
+  // Light contextual rescue rules for common sacred name misses.
+  // Keep this narrow to avoid over-correcting normal speech.
+  const biasRules = [
+    {
+      canonical: '吉祥天母',
+      triggers: ['炸雞', '炸鸡', '炸西', '札西', '扎西', '拉姆', '天母'],
+      minTriggerCount: 2,
+    },
+    {
+      canonical: '大白蓮花童子',
+      triggers: ['蓮花童子', '白蓮花童子', '莲花童子', '白莲花童子'],
+      minTriggerCount: 1,
+    },
+    {
+      canonical: '咕嚕咕咧佛母',
+      triggers: ['咕嚕咕咧', '咕噜咕咧', '佛母'],
+      minTriggerCount: 2,
+    },
+    {
+      canonical: '大幻化網金剛',
+      triggers: ['金剛', '金刚', '幻化'],
+      minTriggerCount: 2,
+    },
+    {
+      canonical: '大白傘蓋佛母',
+      triggers: ['白傘蓋', '白伞盖', '佛母'],
+      minTriggerCount: 2,
+    },
+    {
+      canonical: '摩利支天',
+      triggers: ['摩利支', '天'],
+      minTriggerCount: 2,
+    },
+    {
+      canonical: '瑪哈嘎拉',
+      triggers: ['瑪哈', '玛哈', '嘎拉', '伽拉'],
+      minTriggerCount: 2,
+    },
+  ];
+
+  for (const rule of biasRules) {
+    const hitCount = rule.triggers.reduce(
+      (count, t) => count + (out.includes(t) ? 1 : 0),
+      0
+    );
+
+    if (hitCount >= rule.minTriggerCount && !out.includes(rule.canonical)) {
+      out = `${rule.canonical} ${out}`;
+    }
+  }
+
+  return normalizeSpaces(out);
+}
+
+function runBrainNormalization(text) {
+  let out = normalizeChineseText(text);
+  out = applyPhoneticBrain(out);
+  out = applyContextBias(out);
+  return normalizeSpaces(out);
+}
+
+function buildCanonicalGlossary() {
+  const deityEntries = generatedDeities
+    .filter((d) => d?.cn && d?.en)
+    .map((d) => ({ cn: d.cn, en: d.en }));
+
+  const tbsEntries = generatedTbsTerms
+    .filter((t) => t?.cn && t?.en)
+    .map((t) => ({ cn: t.cn, en: t.en }));
+
+  const merged = [...generatedGlossary, ...deityEntries, ...tbsEntries];
+
+  const seen = new Set();
+  const deduped = [];
+
+  for (const entry of merged) {
+    const key = `${entry.cn}|||${entry.en}`;
+    if (!entry?.cn || !entry?.en || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(entry);
+  }
+
+  return deduped;
+}
+
+const canonicalGlossary = buildCanonicalGlossary();
+
 function applyGlossary(text) {
   const hits = [];
-  const sorted = [...generatedGlossary].sort(
+  const sorted = [...canonicalGlossary].sort(
     (a, b) => (b.cn?.length || 0) - (a.cn?.length || 0)
   );
 
@@ -317,7 +489,7 @@ app.post('/api/session/:id/line', async (req, res) => {
   const rawCn = (req.body?.rawCn || '').trim();
   if (!rawCn) return res.status(400).json({ error: 'rawCn required' });
 
-  const normalizedCn = normalizeChineseText(rawCn);
+  const normalizedCn = runBrainNormalization(rawCn);
   const hits = applyGlossary(normalizedCn);
   const en = await translateWithDeepSeek(normalizedCn, hits, 'final');
 
@@ -332,7 +504,7 @@ app.post('/api/translate-interim', async (req, res) => {
   const rawCn = (req.body?.rawCn || '').trim();
   if (!rawCn) return res.json({ en: '', normalizedCn: '', hits: [] });
 
-  const normalizedCn = normalizeChineseText(rawCn);
+  const normalizedCn = runBrainNormalization(rawCn);
   const hits = applyGlossary(normalizedCn);
 
   if (!isStableEnoughForInterim(normalizedCn)) {
@@ -423,7 +595,7 @@ wss.on('connection', async (browserWs) => {
         const rawText = data?.channel?.alternatives?.[0]?.transcript || '';
         if (!rawText.trim()) return;
 
-        const normalizedCn = normalizeChineseText(rawText);
+        const normalizedCn = runBrainNormalization(rawText);
         const hits = applyGlossary(normalizedCn);
 
         if (data.is_final) {
@@ -443,7 +615,6 @@ wss.on('connection', async (browserWs) => {
         } else {
           const now = Date.now();
 
-          // Send live source quickly, but not on every microscopic twitch.
           const hasMeaningfulChange =
             normalizedCn !== lastInterimSourceSent &&
             normalizedCn.length >= Math.max(4, lastInterimSourceSent.length);
