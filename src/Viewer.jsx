@@ -1,32 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import ToolTabs from './ToolTabs';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
-
-function getSessionIdFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('session') || '';
-}
+const FIXED_SESSION_ID = 'live-session';
 
 export default function Viewer() {
-  const [sessionId] = useState(getSessionIdFromUrl());
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('Loading...');
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let timer = null;
 
     const load = async () => {
-      if (!sessionId) {
-        setStatus('No session id found.');
-        return;
-      }
-
       try {
-        const res = await fetch(`${API}/api/session/${sessionId}`);
+        const res = await fetch(`${API}/api/session/${FIXED_SESSION_ID}`);
         if (!res.ok) {
-          setStatus('Session not found.');
+          setStatus('Waiting for live session...');
           return;
         }
 
@@ -45,42 +33,24 @@ export default function Viewer() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [sessionId]);
+  }, []);
 
   const lines = useMemo(() => {
     if (!session?.lines) return [];
     return [...session.lines].slice(0, 12);
   }, [session]);
 
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   return (
     <div style={styles.page}>
       <div style={styles.shell}>
-        <ToolTabs current="viewer" sessionId={sessionId} />
-
         <div style={styles.topBar}>
           <div style={styles.topLeft}>
             <div style={styles.eyebrow}>TBS V2</div>
-            <h1 style={styles.title}>Viewer Mode</h1>
-            <div style={styles.subline}>
-              {sessionId ? `Session: ${sessionId}` : 'No session selected'}
-            </div>
+            <h1 style={styles.title}>Live Viewer</h1>
           </div>
 
           <div style={styles.topRight}>
             <div style={styles.statusChip}>{status}</div>
-            <button onClick={copyLink} style={styles.copyButton}>
-              {copied ? 'Copied' : 'Copy link'}
-            </button>
           </div>
         </div>
 
@@ -141,12 +111,6 @@ const styles = {
     letterSpacing: '-0.04em',
     textAlign: 'left',
   },
-  subline: {
-    marginTop: '10px',
-    color: '#bbb',
-    fontSize: '14px',
-    textAlign: 'left',
-  },
   topRight: {
     display: 'flex',
     alignItems: 'center',
@@ -160,16 +124,6 @@ const styles = {
     padding: '10px 14px',
     fontSize: '13px',
     fontWeight: 700,
-  },
-  copyButton: {
-    border: 'none',
-    background: '#ff6b35',
-    color: '#111',
-    borderRadius: '999px',
-    padding: '10px 14px',
-    fontSize: '13px',
-    fontWeight: 800,
-    cursor: 'pointer',
   },
   viewerCard: {
     background: '#181818',
