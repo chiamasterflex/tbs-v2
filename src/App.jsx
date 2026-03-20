@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Study from './Study';
+import Review from './Review';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
@@ -7,9 +8,14 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
 export default function App() {
   const path = window.location.pathname;
 
-if (path === '/study') {
-  return <Study />;
-}
+  if (path === '/study') {
+    return <Study />;
+  }
+
+  if (path === '/review') {
+    return <Review />;
+  }
+
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('idle');
   const [audioDebug, setAudioDebug] = useState({
@@ -21,7 +27,6 @@ if (path === '/study') {
   const [liveChinese, setLiveChinese] = useState('');
   const [liveEnglish, setLiveEnglish] = useState('');
   const [historyLines, setHistoryLines] = useState([]);
-  const [manualInput, setManualInput] = useState('');
   const [sourceLanguage, setSourceLanguage] = useState('Mandarin');
   const [targetLanguage, setTargetLanguage] = useState('English');
 
@@ -278,24 +283,6 @@ if (path === '/study') {
     setStatus('stopped');
   };
 
-  const pushLine = async () => {
-    if (!manualInput.trim() || !session) return;
-
-    try {
-      const res = await fetch(`${API}/api/session/${session.id}/line`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawCn: manualInput }),
-      });
-
-      const data = await res.json();
-      setHistoryLines((prev) => [data, ...prev].slice(0, 150));
-      setManualInput('');
-    } catch (err) {
-      console.error('manual input failed', err);
-    }
-  };
-
   const getStatusLabel = () => {
     switch (status) {
       case 'listening':
@@ -450,21 +437,6 @@ if (path === '/study') {
               ))
             )}
           </div>
-        </div>
-
-        <div style={styles.manualCard}>
-          <div style={styles.cardLabel}>Manual Test</div>
-          <div style={styles.manualTitle}>Paste Chinese text</div>
-          <textarea
-            value={manualInput}
-            onChange={(e) => setManualInput(e.target.value)}
-            rows={4}
-            style={styles.textarea}
-            placeholder="Paste source text here for testing…"
-          />
-          <button onClick={pushLine} style={styles.secondaryButton}>
-            Translate manually
-          </button>
         </div>
       </div>
 
@@ -740,47 +712,6 @@ const styles = {
     color: '#666',
     fontSize: '15px',
     textAlign: 'left',
-  },
-
-  manualCard: {
-    background: '#efece6',
-    borderRadius: '24px',
-    padding: '18px',
-    textAlign: 'left',
-  },
-
-  manualTitle: {
-    fontSize: '22px',
-    fontWeight: 800,
-    letterSpacing: '-0.03em',
-    marginBottom: '12px',
-    textAlign: 'left',
-  },
-
-  textarea: {
-    width: '100%',
-    border: '2px solid #ddd',
-    borderRadius: '18px',
-    padding: '14px 16px',
-    fontSize: '16px',
-    resize: 'vertical',
-    outline: 'none',
-    boxSizing: 'border-box',
-    marginBottom: '14px',
-    fontFamily: 'inherit',
-    background: '#fff',
-    textAlign: 'left',
-  },
-
-  secondaryButton: {
-    border: 'none',
-    background: '#111',
-    color: '#fff',
-    borderRadius: '999px',
-    padding: '14px 18px',
-    fontSize: '15px',
-    fontWeight: 700,
-    cursor: 'pointer',
   },
 
   floatingBar: {
