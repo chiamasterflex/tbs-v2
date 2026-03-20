@@ -15,15 +15,11 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 8787;
 
-server.listen(PORT, () => {
-  console.log(`TBS V2 API running on http://localhost:${PORT}`);
-});
-
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
 if (!DEEPGRAM_API_KEY) {
-  console.error('Missing DEEPGRAM_API_KEY in .env');
+  console.error('Missing DEEPGRAM_API_KEY in environment variables');
   process.exit(1);
 }
 
@@ -34,13 +30,12 @@ function readJson(filePath, fallback) {
     if (!fs.existsSync(filePath)) return fallback;
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch (err) {
-    console.error(`Failed to read ${filePath}`, err.message);
+    console.error(`Failed to read ${filePath}:`, err.message);
     return fallback;
   }
 }
 
 const resourcesDir = path.join(__dirname, 'Resources');
-
 const generatedGlossary = readJson(path.join(resourcesDir, 'glossary.generated.json'), []);
 const generatedCorrections = readJson(path.join(resourcesDir, 'corrections.generated.json'), []);
 const generatedPhrases = readJson(path.join(resourcesDir, 'phrases.generated.json'), []);
@@ -58,13 +53,8 @@ let sessions = [
   },
 ];
 
-function newId() {
-  return crypto.randomBytes(16).toString('hex');
-}
-
 function normalizeChineseText(text) {
   if (!text) return '';
-
   let out = text.trim();
 
   for (const rule of generatedCorrections) {
@@ -115,11 +105,8 @@ function findPhraseMatch(text, mode = 'final') {
 
   const normalized = text.trim();
   if (!normalized) return null;
-
-  // Never use fuzzy phrase matching for tiny fragments.
   if (isShortFragment(normalized)) return null;
 
-  // Exact match always wins.
   for (const phrase of generatedPhrases) {
     if (!phrase?.cn || !phrase?.en) continue;
     const candidate = phrase.cn.trim();
@@ -130,7 +117,6 @@ function findPhraseMatch(text, mode = 'final') {
     }
   }
 
-  // For interim mode, be much stricter and only allow near-complete long matches.
   const minLength = mode === 'interim' ? 12 : 10;
   let best = null;
 
@@ -140,14 +126,12 @@ function findPhraseMatch(text, mode = 'final') {
     const candidate = phrase.cn.trim();
     if (!candidate || candidate.length < minLength) continue;
 
-    // Strong containment only, no loose fuzzy cleverness.
     if (normalized.includes(candidate)) {
       const score = candidate.length;
       if (!best || score > best.score) {
         best = { ...phrase, score, confidence: 'contains' };
       }
     } else if (candidate.includes(normalized)) {
-      // Only allow this on final mode, and only when very close in length.
       if (mode === 'final') {
         const ratio = normalized.length / candidate.length;
         if (ratio >= 0.8) {
@@ -187,31 +171,19 @@ function literalFallbackTranslate(text, hits) {
 function conservativeInterimTranslate(text, hits) {
   const t = text.trim();
   if (!t) return '';
-
-  // For very short fragments, do almost nothing. Better blank than nonsense.
   if (t.length <= 1) return '';
-  if (t.length <= 2) {
-    return applyGlossaryToEnglish(t, hits);
-  }
-
+  if (t.length <= 2) return applyGlossaryToEnglish(t, hits);
   return literalFallbackTranslate(t, hits);
 }
 
 async function translateWithDeepSeek(text, hits, mode = 'final') {
   if (!text || !text.trim()) return '';
 
-  // Strict phrase matching first.
   const phraseMatch = findPhraseMatch(text, mode);
   if (phraseMatch?.en) return phraseMatch.en;
 
-  // Interim/live translation should stay conservative.
   if (mode === 'interim') {
-    if (!DEEPSEEK_API_KEY) {
-      return conservativeInterimTranslate(text, hits);
-    }
-
-    // For short live fragments, don't ask the model to be clever.
-    if (isShortFragment(text)) {
+    if (!DEEPSEEK_API_KEY || isShortFragment(text)) {
       return conservativeInterimTranslate(text, hits);
     }
   }
@@ -231,7 +203,6 @@ async function translateWithDeepSeek(text, hits, mode = 'final') {
     mode === 'interim'
       ? `
 You are the official translator for True Buddha School (TBS).
-
 Translate spoken Chinese into short, conservative live subtitle English.
 
 Rules:
@@ -244,7 +215,6 @@ Rules:
 `.trim()
       : `
 You are the official translator for True Buddha School (TBS).
-
 Translate spoken Chinese into natural English for final subtitles.
 
 Rules:
@@ -498,7 +468,9 @@ wss.on('connection', async (browserWs) => {
       totalBytes += data.length;
 
       if (frameCount % 20 === 0) {
-        console.log(`[Browser audio] frames=${frameCount} totalBytes=${totalBytes} lastBytes=${data.length}`);
+        console.log(
+          `[Browser audio] frames=${frameCount} totalBytes=${totalBytes} lastBytes=${data.length}`
+        );
       }
 
       sendToBrowser({
@@ -539,7 +511,7 @@ wss.on('connection', async (browserWs) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`TBS V2 API running on http://localhost:${PORT}`);
-  console.log(`TBS V2 WS bridge running on ws://localhost:${PORT}/ws`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`TBS V2 API running on http://0.0.0.0:${PORT}`);
+  console.log(`TBS V2 WS bridge running on ws://0.0.0.0:${PORT}/ws`);
 });
