@@ -46,30 +46,12 @@ export default function App() {
     fetch(`${API}/api/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sourceLanguage,
-        targetLanguage,
-        eventMode: 'Dharma Talk',
-      }),
+      body: JSON.stringify({}),
     })
       .then((res) => res.json())
       .then((data) => setSession(data))
       .catch((err) => console.error('session init failed', err));
   }, []);
-
-  useEffect(() => {
-    if (!session?.id) return;
-
-    fetch(`${API}/api/session/${session.id}/settings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sourceLanguage,
-        targetLanguage,
-        eventMode: 'Dharma Talk',
-      }),
-    }).catch((err) => console.error('session settings update failed', err));
-  }, [sourceLanguage, targetLanguage, session?.id]);
 
   const downsampleBuffer = (buffer, inputRate, outputRate) => {
     if (inputRate === outputRate) return buffer;
@@ -127,12 +109,7 @@ export default function App() {
         const res = await fetch(`${API}/api/translate-interim`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            rawCn: text,
-            sourceLanguage,
-            targetLanguage,
-            eventMode: 'Dharma Talk',
-          }),
+          body: JSON.stringify({ rawCn: text }),
         });
 
         const data = await res.json();
@@ -152,16 +129,6 @@ export default function App() {
 
       ws.onopen = async () => {
         setStatus('ws_open');
-
-        ws.send(
-          JSON.stringify({
-            type: 'config',
-            sourceLanguage,
-            targetLanguage,
-            eventMode: 'Dharma Talk',
-            sessionId: session?.id || 'demo-session',
-          })
-        );
 
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
