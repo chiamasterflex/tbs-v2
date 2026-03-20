@@ -1,112 +1,163 @@
 [
   {
-    "wrong": "炸鸡拉姆",
-    "correct": "吉祥天母",
-    "reason": "phonetic deity correction"
+    "wrong": ["炸雞拉姆", "炸鸡拉姆", "炸雞拉莫", "炸鸡拉莫", "炸雞", "炸鸡", "扎雞拉姆", "札雞拉姆"],
+    "correct": "札基拉姆",
+    "category": "deity",
+    "weight": 10,
+    "notes": "Drashi Lhamo common ASR confusion"
   },
   {
-    "wrong": "炸雞拉姆",
-    "correct": "吉祥天母",
-    "reason": "phonetic deity correction"
+    "wrong": ["瑪哈嘎啦", "玛哈嘎啦", "馬哈嘎拉", "马哈嘎拉", "大黑田"],
+    "correct": "瑪哈嘎拉",
+    "category": "protector",
+    "weight": 9,
+    "notes": "Mahakala variants"
   },
   {
-    "wrong": "扎西拉姆",
-    "correct": "吉祥天母",
-    "reason": "phonetic deity correction"
-  },
-  {
-    "wrong": "札西拉姆",
-    "correct": "吉祥天母",
-    "reason": "phonetic deity correction"
-  },
-  {
-    "wrong": "吉祥天目",
-    "correct": "吉祥天母",
-    "reason": "ASR confusion"
-  },
-  {
-    "wrong": "大白莲花童子",
-    "correct": "大白蓮花童子",
-    "reason": "simplified to canonical"
-  },
-  {
-    "wrong": "连花童子",
-    "correct": "蓮花童子",
-    "reason": "ASR common confusion"
-  },
-  {
-    "wrong": "咕噜咕列",
-    "correct": "咕嚕咕咧佛母",
-    "reason": "phonetic deity correction"
-  },
-  {
-    "wrong": "咕噜咕咧",
-    "correct": "咕嚕咕咧佛母",
-    "reason": "phonetic deity correction"
-  },
-  {
-    "wrong": "古鲁古列",
-    "correct": "咕嚕咕咧佛母",
-    "reason": "phonetic deity correction"
-  },
-  {
-    "wrong": "孔雀明王母",
+    "wrong": ["孔雀名王", "孔雀冥王", "孔雀明亡"],
     "correct": "孔雀明王",
-    "reason": "normalize"
+    "category": "deity",
+    "weight": 8,
+    "notes": "Mahamayuri common mishear"
   },
   {
-    "wrong": "瑶池金母",
-    "correct": "瑤池金母",
-    "reason": "simplified to canonical"
-  },
-  {
-    "wrong": "准提佛母",
+    "wrong": ["準題佛母", "准提佛目", "準提佛目", "准提佛母"],
     "correct": "準提佛母",
-    "reason": "simplified to canonical"
+    "category": "deity",
+    "weight": 8,
+    "notes": "Cundi variants"
   },
   {
-    "wrong": "观世音菩萨",
+    "wrong": ["觀音不撒", "观音不撒", "觀世音不撒", "观世音不撒"],
     "correct": "觀世音菩薩",
-    "reason": "simplified to canonical"
+    "category": "deity",
+    "weight": 8,
+    "notes": "Avalokitesvara common ASR errors"
   },
   {
-    "wrong": "阿弥陀佛",
-    "correct": "阿彌陀佛",
-    "reason": "simplified to canonical"
-  },
-  {
-    "wrong": "地藏王菩萨",
+    "wrong": ["地藏王不撒", "地藏王不萨", "地藏不撒"],
     "correct": "地藏王菩薩",
-    "reason": "simplified to canonical"
+    "category": "deity",
+    "weight": 8,
+    "notes": "Ksitigarbha common ASR errors"
   },
   {
-    "wrong": "药师佛",
-    "correct": "藥師佛",
-    "reason": "simplified to canonical"
+    "wrong": ["文書師利菩薩", "文書師利", "文殊師力"],
+    "correct": "文殊師利菩薩",
+    "category": "deity",
+    "weight": 8,
+    "notes": "Manjushri variants"
   },
   {
-    "wrong": "绿度母",
+    "wrong": ["普賢不撒", "普贤不撒"],
+    "correct": "普賢菩薩",
+    "category": "deity",
+    "weight": 7,
+    "notes": "Samantabhadra common ASR errors"
+  },
+  {
+    "wrong": ["大白傘蓋佛目", "白傘蓋佛母", "白伞盖佛母"],
+    "correct": "大白傘蓋佛母",
+    "category": "deity",
+    "weight": 8,
+    "notes": "Sitatapatra variants"
+  },
+  {
+    "wrong": ["綠度木", "绿度木", "綠杜母"],
     "correct": "綠度母",
-    "reason": "simplified to canonical"
+    "category": "deity",
+    "weight": 7,
+    "notes": "Green Tara ASR errors"
   },
   {
-    "wrong": "白度目",
+    "wrong": ["白度木", "白杜母"],
     "correct": "白度母",
-    "reason": "ASR common confusion"
+    "category": "deity",
+    "weight": 7,
+    "notes": "White Tara ASR errors"
   },
   {
-    "wrong": "一记佛母",
-    "correct": "一髻佛母",
-    "reason": "phonetic deity correction"
+    "wrong": ["藥師流離光王佛", "药师流离光王佛", "藥師琉璃光王福"],
+    "correct": "藥師琉璃光王佛",
+    "category": "buddha",
+    "weight": 8,
+    "notes": "Medicine Buddha variants"
   },
   {
-    "wrong": "一祭佛母",
-    "correct": "一髻佛母",
-    "reason": "phonetic deity correction"
+    "wrong": ["阿密陀佛", "阿彌多佛", "阿米陀佛"],
+    "correct": "阿彌陀佛",
+    "category": "buddha",
+    "weight": 8,
+    "notes": "Amitabha common mishears"
   },
   {
-    "wrong": "大黑天神",
-    "correct": "大黑天",
-    "reason": "normalize"
+    "wrong": ["釋迦摩尼佛", "释迦摩尼佛", "石家摩尼佛"],
+    "correct": "釋迦牟尼佛",
+    "category": "buddha",
+    "weight": 8,
+    "notes": "Shakyamuni variants"
+  },
+  {
+    "wrong": ["大日如來佛", "大日如来佛"],
+    "correct": "大日如來",
+    "category": "buddha",
+    "weight": 7,
+    "notes": "Vairocana variants"
+  },
+  {
+    "wrong": ["金剛總池", "金刚总池"],
+    "correct": "金剛總持",
+    "category": "deity",
+    "weight": 8,
+    "notes": "Vajradhara common mishears"
+  },
+  {
+    "wrong": ["不動名王", "不动名王"],
+    "correct": "不動明王",
+    "category": "deity",
+    "weight": 8,
+    "notes": "Acala common ASR errors"
+  },
+  {
+    "wrong": ["愛染名王", "爱染名王"],
+    "correct": "愛染明王",
+    "category": "deity",
+    "weight": 8,
+    "notes": "Ragaraja common ASR errors"
+  },
+  {
+    "wrong": ["瑤池金目", "瑶池金目", "搖池金母", "摇池金母"],
+    "correct": "瑤池金母",
+    "category": "deity",
+    "weight": 9,
+    "notes": "Golden Mother variants"
+  },
+  {
+    "wrong": ["蓮花童子", "白蓮花童子", "白莲花童子"],
+    "correct": "大白蓮花童子",
+    "category": "deity",
+    "weight": 8,
+    "notes": "Padmakumara variants"
+  },
+  {
+    "wrong": ["蓮花活佛", "莲花活佛"],
+    "correct": "蓮生活佛",
+    "category": "title",
+    "weight": 7,
+    "notes": "Living Buddha Lian Sheng ASR variants"
+  },
+  {
+    "wrong": ["護摩法會", "护摩法会"],
+    "correct": "護摩法會",
+    "category": "ritual",
+    "weight": 6,
+    "notes": "normalized duplicate for consistency"
+  },
+  {
+    "wrong": ["灌頂", "灌顶"],
+    "correct": "灌頂",
+    "category": "ritual",
+    "weight": 6,
+    "notes": "normalized duplicate for consistency"
   }
 ]
