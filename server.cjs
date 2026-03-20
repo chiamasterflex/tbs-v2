@@ -61,11 +61,27 @@ const generatedCeremonyPhrases = readJson(
   path.join(resourcesDir, 'ceremony_phrases.generated.json'),
   []
 );
+
+const sacredEntities = readJson(path.join(resourcesDir, 'sacred_entities.json'), []);
+const phraseMemory = readJson(path.join(resourcesDir, 'phrase_memory.json'), []);
+const ceremonyMemory = readJson(path.join(resourcesDir, 'ceremony_memory.json'), []);
+
 const asrMishearLogPath = path.join(resourcesDir, 'asr_mishear_log.json');
 let asrMishearLog = readJson(asrMishearLogPath, []);
 
+const correctionMemoryPath = path.join(resourcesDir, 'correction_memory.json');
+let correctionMemory = readJson(correctionMemoryPath, []);
+
+const retrievalConfig = readJson(path.join(resourcesDir, 'retrieval_config.json'), {
+  top_sacred_entities: 6,
+  top_phrase_matches: 4,
+  top_ceremony_matches: 4,
+  min_phrase_score: 2,
+  min_entity_score: 2,
+});
+
 console.log(
-  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} mishearLog=${asrMishearLog.length}`
+  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} sacredEntities=${sacredEntities.length} phraseMemory=${phraseMemory.length} ceremonyMemory=${ceremonyMemory.length} correctionMemory=${correctionMemory.length}`
 );
 
 let sessions = [
@@ -73,6 +89,8 @@ let sessions = [
     id: 'demo-session',
     title: 'TBS Live Session',
     eventMode: 'Dharma Talk',
+    sourceLanguage: 'Mandarin',
+    targetLanguage: 'English',
     lines: [],
   },
 ];
@@ -113,14 +131,14 @@ function applyPhoneticBrain(text) {
   return out;
 }
 
-function applyAliasSet(out, canonical, aliases = []) {
-  let next = out;
+function applyAliasSet(text, canonical, aliases = []) {
+  let out = text;
   for (const alias of aliases.filter(Boolean)) {
-    if (alias && next.includes(alias) && !next.includes(canonical)) {
-      next = next.replaceAll(alias, canonical);
+    if (alias && out.includes(alias) && !out.includes(canonical)) {
+      out = out.replaceAll(alias, canonical);
     }
   }
-  return next;
+  return out;
 }
 
 function applySacredNameBrain(text) {
@@ -164,6 +182,19 @@ function applySacredNameBrain(text) {
     out = applyAliasSet(out, canonicalCn, aliases);
   }
 
+  for (const entity of sacredEntities) {
+    const canonicalCn = entity?.cn || '';
+    if (!canonicalCn) continue;
+
+    const aliases = []
+      .concat(entity?.aliases || [])
+      .concat(entity?.mishears || [])
+      .concat(entity?.variants || [])
+      .filter(Boolean);
+
+    out = applyAliasSet(out, canonicalCn, aliases);
+  }
+
   return normalizeSpaces(out);
 }
 
@@ -195,11 +226,6 @@ function applyContextBias(text) {
     {
       canonical: '大白傘蓋佛母',
       triggers: ['白傘蓋', '白伞盖', '佛母'],
-      minTriggerCount: 2,
-    },
-    {
-      canonical: '摩利支天',
-      triggers: ['摩利支', '天'],
       minTriggerCount: 2,
     },
     {
@@ -249,7 +275,17 @@ function buildCanonicalGlossary() {
     .filter((s) => s?.cn && s?.en)
     .map((s) => ({ cn: s.cn, en: s.en }));
 
-  const merged = [...generatedGlossary, ...deityEntries, ...tbsEntries, ...sacredEntries];
+  const corpusEntries = sacredEntities
+    .filter((s) => s?.cn && s?.en)
+    .map((s) => ({ cn: s.cn, en: s.en }));
+
+  const merged = [
+    ...generatedGlossary,
+    ...deityEntries,
+    ...tbsEntries,
+    ...sacredEntries,
+    ...corpusEntries,
+  ];
 
   const seen = new Set();
   const deduped = [];
@@ -309,6 +345,118 @@ function isStableEnoughForInterim(text) {
   return false;
 }
 
+function overlapScore(text, candidates = []) {
+  const normalized = normalizeSpaces(text);
+  if (!normalized) return 0;
+
+  let score = 0;
+  for (const c of candidates.filter(Boolean)) {
+    if (normalized.includes(c)) score += Math.max(1, c.length);
+  }
+  return score;
+}
+
+function stringOverlapLoose(a, b) {
+  if (!a || !b) return 0;
+  const aa = normalizeSpaces(a);
+  const bb = normalizeSpaces(b);
+  if (!aa || !bb) return 0;
+
+  let score = 0;
+  const chunks = aa.length > 12 ? aa.match(/.{1,4}/g) || [aa] : [aa];
+
+  for (const chunk of chunks) {
+    if (chunk.length >= 2 && bb.includes(chunk)) {
+      score += chunk.length;
+    }
+  }
+
+  return score;
+}
+
+function retrieveSacredEntities(text, eventMode = 'Dharma Talk') {
+  const results = [];
+
+  for (const entity of sacredEntities) {
+    const candidateCn = entity?.cn || '';
+    const aliases = []
+      .concat(entity?.aliases || [])
+      .concat(entity?.mishears || [])
+      .concat(entity?.variants || [])
+      .filter(Boolean);
+
+    let score = 0;
+    score += overlapScore(text, [candidateCn]);
+    score += overlapScore(text, aliases);
+
+    if (Array.isArray(entity?.event_modes) && entity.event_modes.includes(eventMode)) {
+      score += 2;
+    }
+
+    if (score >= (retrievalConfig.min_entity_score || 2)) {
+      results.push({ ...entity, _score: score });
+    }
+  }
+
+  return results
+    .sort((a, b) => b._score - a._score || (b.cn?.length || 0) - (a.cn?.length || 0))
+    .slice(0, retrievalConfig.top_sacred_entities || 6);
+}
+
+function retrievePhraseMemory(text, eventMode = 'Dharma Talk') {
+  const pools = [...phraseMemory, ...generatedPhrases];
+  const results = [];
+
+  for (const row of pools) {
+    const candidateCn = row?.cn || '';
+    if (!candidateCn) continue;
+
+    let score = 0;
+    if (text === candidateCn) score += 100;
+    if (text.includes(candidateCn)) score += candidateCn.length * 2;
+    if (candidateCn.includes(text) && text.length >= 8) score += text.length;
+    score += stringOverlapLoose(text, candidateCn);
+
+    if (row?.event_mode === eventMode || row?.eventMode === eventMode) score += 2;
+
+    if (score >= (retrievalConfig.min_phrase_score || 2)) {
+      results.push({ ...row, _score: score });
+    }
+  }
+
+  return results
+    .sort((a, b) => b._score - a._score || (b.cn?.length || 0) - (a.cn?.length || 0))
+    .slice(0, retrievalConfig.top_phrase_matches || 4);
+}
+
+function retrieveCeremonyMemory(text, eventMode = 'Dharma Talk') {
+  const pools = [...ceremonyMemory, ...generatedCeremonyPhrases];
+  const results = [];
+
+  for (const row of pools) {
+    const candidateCn = row?.cn || '';
+    if (!candidateCn) continue;
+
+    let score = 0;
+    if (text === candidateCn) score += 100;
+    if (text.includes(candidateCn)) score += candidateCn.length * 2;
+    score += stringOverlapLoose(text, candidateCn);
+
+    const mode = row?.event_mode || row?.eventMode || row?.category;
+    if (mode && String(mode).toLowerCase().includes(String(eventMode).toLowerCase())) {
+      score += 3;
+    }
+
+    if (score >= (retrievalConfig.min_phrase_score || 2)) {
+      results.push({ ...row, _score: score });
+    }
+  }
+
+  return results
+    .sort((a, b) => b._score - a._score || (b.cn?.length || 0) - (a.cn?.length || 0))
+    .slice(0, retrievalConfig.top_ceremony_matches || 4);
+}
+
 function findPhraseMatch(text, mode = 'final') {
   if (!text) return null;
 
@@ -316,7 +464,12 @@ function findPhraseMatch(text, mode = 'final') {
   if (!normalized) return null;
   if (isShortFragment(normalized)) return null;
 
-  const allPhraseSources = [...generatedPhrases, ...generatedCeremonyPhrases];
+  const allPhraseSources = [
+    ...generatedPhrases,
+    ...generatedCeremonyPhrases,
+    ...phraseMemory,
+    ...ceremonyMemory,
+  ];
 
   for (const phrase of allPhraseSources) {
     if (!phrase?.cn || !phrase?.en) continue;
@@ -333,7 +486,6 @@ function findPhraseMatch(text, mode = 'final') {
 
   for (const phrase of allPhraseSources) {
     if (!phrase?.cn || !phrase?.en) continue;
-
     const candidate = phrase.cn.trim();
     if (!candidate || candidate.length < minLength) continue;
 
@@ -366,8 +518,8 @@ function literalFallbackTranslate(text, hits) {
     .replaceAll('我們先', 'let us first')
     .replaceAll('接下來是', 'next is')
     .replaceAll('開示', 'teaching')
-    .replaceAll('法會', 'dharma ceremony')
-    .replaceAll('修行', 'spiritual practice')
+    .replaceAll('法會', 'Dharma ceremony')
+    .replaceAll('修行', 'practice')
     .replaceAll('眾生', 'sentient beings')
     .replaceAll('離苦得樂', 'be freed from suffering and attain happiness')
     .replaceAll('一心敬禮', 'wholeheartedly pay homage')
@@ -385,7 +537,7 @@ function conservativeInterimTranslate(text, hits) {
   return literalFallbackTranslate(t, hits);
 }
 
-async function translateWithDeepSeek(text, hits, mode = 'final') {
+async function translateWithDeepSeek(text, hits, mode = 'final', retrieval = {}, eventMode = 'Dharma Talk') {
   if (!text || !text.trim()) return '';
 
   const phraseMatch = findPhraseMatch(text, mode);
@@ -408,6 +560,23 @@ async function translateWithDeepSeek(text, hits, mode = 'final') {
       ? hits.map((t) => `${t.cn} => ${t.en}`).join('\n')
       : 'No glossary hits';
 
+  const sacredBlock =
+    (retrieval.sacredEntities || []).length > 0
+      ? retrieval.sacredEntities
+          .map((x) => `${x.cn} => ${x.en}${x.category ? ` [${x.category}]` : ''}`)
+          .join('\n')
+      : 'No sacred entity hits';
+
+  const phraseBlock =
+    (retrieval.phraseMatches || []).length > 0
+      ? retrieval.phraseMatches.map((x) => `${x.cn} => ${x.en}`).join('\n')
+      : 'No phrase memory hits';
+
+  const ceremonyBlock =
+    (retrieval.ceremonyMatches || []).length > 0
+      ? retrieval.ceremonyMatches.map((x) => `${x.cn} => ${x.en}`).join('\n')
+      : 'No ceremony phrase hits';
+
   const systemPrompt =
     mode === 'interim'
       ? `
@@ -418,9 +587,10 @@ Rules:
 1. Output English only.
 2. Be literal and restrained.
 3. Do not guess missing context.
-4. Preserve TBS terms exactly from the glossary.
+4. Preserve TBS terms exactly from the glossary and sacred entity list.
 5. If the input is fragmentary, translate only what is clearly present.
 6. Keep it very short.
+7. Prefer retrieved sacred names and phrase memory over generic wording.
 `.trim()
       : `
 You are the official translator for True Buddha School (TBS).
@@ -428,11 +598,14 @@ Translate spoken Chinese into natural English for final subtitles.
 
 Rules:
 1. Output English only.
-2. Preserve TBS terminology exactly when given in the glossary.
+2. Preserve TBS terminology exactly when given in the glossary and sacred entity list.
 3. No explanations.
-4. Keep it clear and subtitle-friendly.
+4. Keep it clear, natural, and subtitle-friendly.
 5. Prefer accuracy over flourish.
 6. Do not invent implied meanings.
+7. Prefer retrieved phrase examples and ceremony language where relevant.
+8. Use culturally and doctrinally appropriate TBS English wording.
+Event mode: ${eventMode}
 `.trim();
 
   const userPrompt = `
@@ -443,6 +616,15 @@ ${text}
 
 Glossary:
 ${glossaryBlock}
+
+Sacred entity matches:
+${sacredBlock}
+
+Phrase memory matches:
+${phraseBlock}
+
+Ceremony phrase matches:
+${ceremonyBlock}
 `.trim();
 
   try {
@@ -488,15 +670,28 @@ ${glossaryBlock}
   }
 }
 
-function buildLine(rawCn, normalizedCn, en, hits) {
+function buildLine(rawCn, normalizedCn, en, hits, retrieval = {}) {
   return {
     id: Date.now() + Math.floor(Math.random() * 1000),
     rawCn,
     normalizedCn,
     en,
     hits,
+    retrieval,
     time: new Date().toLocaleTimeString(),
   };
+}
+
+function appendCorrectionMemory(entry) {
+  const row = {
+    id: Date.now(),
+    at: new Date().toISOString(),
+    ...entry,
+  };
+  correctionMemory.unshift(row);
+  correctionMemory = correctionMemory.slice(0, 1000);
+  writeJson(correctionMemoryPath, correctionMemory);
+  return row;
 }
 
 function appendMishearLog(entry) {
@@ -518,9 +713,15 @@ app.get('/api/session/:id', (req, res) => {
 });
 
 app.post('/api/session', (req, res) => {
-  const { title = 'TBS Live Session', eventMode = 'Dharma Talk' } = req.body || {};
+  const {
+    title = 'TBS Live Session',
+    eventMode = 'Dharma Talk',
+    sourceLanguage = 'Mandarin',
+    targetLanguage = 'English',
+  } = req.body || {};
+
   const id = `session-${Date.now()}`;
-  const session = { id, title, eventMode, lines: [] };
+  const session = { id, title, eventMode, sourceLanguage, targetLanguage, lines: [] };
   sessions.unshift(session);
   res.json(session);
 });
@@ -534,9 +735,22 @@ app.post('/api/session/:id/line', async (req, res) => {
 
   const normalizedCn = runBrainNormalization(rawCn);
   const hits = applyGlossary(normalizedCn);
-  const en = await translateWithDeepSeek(normalizedCn, hits, 'final');
 
-  const line = buildLine(rawCn, normalizedCn, en, hits);
+  const retrieval = {
+    sacredEntities: retrieveSacredEntities(normalizedCn, session.eventMode),
+    phraseMatches: retrievePhraseMemory(normalizedCn, session.eventMode),
+    ceremonyMatches: retrieveCeremonyMemory(normalizedCn, session.eventMode),
+  };
+
+  const en = await translateWithDeepSeek(
+    normalizedCn,
+    hits,
+    'final',
+    retrieval,
+    session.eventMode
+  );
+
+  const line = buildLine(rawCn, normalizedCn, en, hits, retrieval);
   session.lines.unshift(line);
   session.lines = session.lines.slice(0, 100);
 
@@ -545,6 +759,8 @@ app.post('/api/session/:id/line', async (req, res) => {
 
 app.post('/api/translate-interim', async (req, res) => {
   const rawCn = (req.body?.rawCn || '').trim();
+  const eventMode = req.body?.eventMode || 'Dharma Talk';
+
   if (!rawCn) return res.json({ en: '', normalizedCn: '', hits: [] });
 
   const normalizedCn = runBrainNormalization(rawCn);
@@ -554,8 +770,21 @@ app.post('/api/translate-interim', async (req, res) => {
     return res.json({ en: '', normalizedCn, hits });
   }
 
-  const en = await translateWithDeepSeek(normalizedCn, hits, 'interim');
-  res.json({ en, normalizedCn, hits });
+  const retrieval = {
+    sacredEntities: retrieveSacredEntities(normalizedCn, eventMode),
+    phraseMatches: retrievePhraseMemory(normalizedCn, eventMode),
+    ceremonyMatches: retrieveCeremonyMemory(normalizedCn, eventMode),
+  };
+
+  const en = await translateWithDeepSeek(
+    normalizedCn,
+    hits,
+    'interim',
+    retrieval,
+    eventMode
+  );
+
+  res.json({ en, normalizedCn, hits, retrieval });
 });
 
 app.get('/api/asr-mishear-log', (req, res) => {
@@ -569,6 +798,27 @@ app.post('/api/asr-mishear-log', (req, res) => {
   }
 
   const row = appendMishearLog({ heard, corrected, category, notes });
+  res.json({ ok: true, row });
+});
+
+app.get('/api/correction-memory', (req, res) => {
+  res.json(correctionMemory);
+});
+
+app.post('/api/correction-memory', (req, res) => {
+  const {
+    heard,
+    corrected,
+    category = 'unknown',
+    eventMode = 'Dharma Talk',
+    notes = '',
+  } = req.body || {};
+
+  if (!heard || !corrected) {
+    return res.status(400).json({ error: 'heard and corrected are required' });
+  }
+
+  const row = appendCorrectionMemory({ heard, corrected, category, eventMode, notes });
   res.json({ ok: true, row });
 });
 
@@ -587,6 +837,14 @@ wss.on('connection', async (browserWs) => {
 
   let lastInterimSourceSent = '';
   let lastInterimSentAt = 0;
+
+  const activeSession = sessions[0] || {
+    id: 'demo-session',
+    eventMode: 'Dharma Talk',
+    sourceLanguage: 'Mandarin',
+    targetLanguage: 'English',
+    lines: [],
+  };
 
   function sendToBrowser(obj) {
     if (browserWs.readyState === 1) {
@@ -656,14 +914,24 @@ wss.on('connection', async (browserWs) => {
         const hits = applyGlossary(normalizedCn);
 
         if (data.is_final) {
-          const en = await translateWithDeepSeek(normalizedCn, hits, 'final');
-          const line = buildLine(rawText, normalizedCn, en, hits);
+          const retrieval = {
+            sacredEntities: retrieveSacredEntities(normalizedCn, activeSession.eventMode),
+            phraseMatches: retrievePhraseMemory(normalizedCn, activeSession.eventMode),
+            ceremonyMatches: retrieveCeremonyMemory(normalizedCn, activeSession.eventMode),
+          };
 
-          const session = sessions[0];
-          if (session) {
-            session.lines.unshift(line);
-            session.lines = session.lines.slice(0, 100);
-          }
+          const en = await translateWithDeepSeek(
+            normalizedCn,
+            hits,
+            'final',
+            retrieval,
+            activeSession.eventMode
+          );
+
+          const line = buildLine(rawText, normalizedCn, en, hits, retrieval);
+
+          activeSession.lines.unshift(line);
+          activeSession.lines = activeSession.lines.slice(0, 100);
 
           lastInterimSourceSent = '';
           lastInterimSentAt = 0;
