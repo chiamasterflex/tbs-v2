@@ -6,7 +6,7 @@ import ToolTabs from './ToolTabs';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
-const SHARED_SESSION_ID = 'live-session';
+const FIXED_SESSION_ID = 'live-session';
 
 export default function App() {
   const path = window.location.pathname;
@@ -50,14 +50,37 @@ export default function App() {
   const lastLiveSnapshotRef = useRef('');
 
   useEffect(() => {
-    fetch(`${API}/api/session`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: SHARED_SESSION_ID }),
-    })
-      .then((res) => res.json())
-      .then((data) => setSession(data))
-      .catch((err) => console.error('session init failed', err));
+    const init = async () => {
+      try {
+        const existing = await fetch(`${API}/api/session/${FIXED_SESSION_ID}`);
+        if (existing.ok) {
+          const data = await existing.json();
+          setSession(data);
+          setHistoryLines(data.lines || []);
+          return;
+        }
+
+        const create = await fetch(`${API}/api/session/fixed`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: FIXED_SESSION_ID,
+            title: 'TBS Live Session',
+            eventMode: 'Dharma Talk',
+            sourceLanguage: 'Mandarin',
+            targetLanguage: 'English',
+          }),
+        });
+
+        const created = await create.json();
+        setSession(created);
+        setHistoryLines(created.lines || []);
+      } catch (err) {
+        console.error('session init failed', err);
+      }
+    };
+
+    init();
   }, []);
 
   const downsampleBuffer = (buffer, inputRate, outputRate) => {
@@ -292,13 +315,29 @@ export default function App() {
   };
 
   const copyViewerLink = async () => {
-    const url = `${window.location.origin}/viewer?session=${encodeURIComponent(SHARED_SESSION_ID)}`;
+    const url = `${window.location.origin}/viewer`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const clearHistory = async () => {
+    try {
+      await fetch(`${API}/api/session/${FIXED_SESSION_ID}/clear`, {
+        method: 'POST',
+      });
+
+      setHistoryLines([]);
+      setLiveChinese('');
+      setLiveEnglish('');
+      lastTranslatedChineseRef.current = '';
+      lastLiveSnapshotRef.current = '';
+    } catch (err) {
+      console.error('clear history failed', err);
     }
   };
 
@@ -357,7 +396,7 @@ export default function App() {
     return (
       <div style={styles.page}>
         <div style={styles.shell}>
-          <ToolTabs current="live" sessionId={SHARED_SESSION_ID} />
+          <ToolTabs current="live" />
           <div style={styles.loadingWrap}>Loading…</div>
         </div>
       </div>
@@ -367,7 +406,7 @@ export default function App() {
   return (
     <div style={styles.page}>
       <div style={styles.shell}>
-        <ToolTabs current="live" sessionId={SHARED_SESSION_ID} />
+        <ToolTabs current="live" />
 
         <div style={styles.headerCard}>
           <div style={styles.eyebrow}>True Buddha School</div>
@@ -382,9 +421,15 @@ export default function App() {
               <span>{getStatusLabel()}</span>
             </div>
 
-            <button onClick={copyViewerLink} style={styles.shareButton}>
-              {copied ? 'Viewer link copied' : 'Copy viewer link'}
-            </button>
+            <div style={styles.actionButtons}>
+              <button onClick={copyViewerLink} style={styles.shareButton}>
+                {copied ? 'Viewer link copied' : 'Copy viewer link'}
+              </button>
+
+              <button onClick={clearHistory} style={styles.clearButton}>
+                Clear
+              </button>
+            </div>
           </div>
         </div>
 
@@ -558,6 +603,12 @@ const styles = {
     flexWrap: 'wrap',
   },
 
+  actionButtons: {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+
   statusChip: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -581,6 +632,17 @@ const styles = {
     border: 'none',
     background: '#ff6b35',
     color: '#111',
+    borderRadius: '999px',
+    padding: '12px 16px',
+    fontSize: '13px',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+
+  clearButton: {
+    border: 'none',
+    background: '#222',
+    color: '#fff',
     borderRadius: '999px',
     padding: '12px 16px',
     fontSize: '13px',
