@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ToolTabs from './ToolTabs';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -50,11 +51,13 @@ export default function Review() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
+        <ToolTabs current="review" />
+
         <div style={styles.card}>
           <div style={styles.eyebrow}>TBS V2</div>
           <h1 style={styles.title}>Memory Review</h1>
           <p style={styles.subtitle}>
-            Save incorrect hearing or translation so the system can improve over time.
+            Save incorrect hearing or translation so the system improves over time.
           </p>
 
           <div style={styles.field}>
