@@ -149,7 +149,7 @@
   },
   {
     "cn": "蓮生活佛",
-    "en": "Living Buddha Lian-sheng",
+    "en": "English Indonesian",
     "pinyin": "lián shēng huó fó",
     "aliases": [
       "莲生活佛",
@@ -164,7 +164,21 @@
     "related": [
       "真佛宗",
       "盧勝彥"
-    ]
+    ],
+    "source_url": "https://tbsn.org/master/index.html#",
+    "source_type": "tbsn_faxiang",
+    "keywords": [
+      "灌頂",
+      "咒",
+      "護法",
+      "菩薩",
+      "如來",
+      "佛母",
+      "度母",
+      "明王"
+    ],
+    "weight": 4,
+    "id": "English Indonesian"
   },
   {
     "cn": "盧勝彥",
@@ -187,7 +201,7 @@
   },
   {
     "cn": "真佛宗",
-    "en": "True Buddha School",
+    "en": "English Indonesian",
     "pinyin": "zhēn fó zōng",
     "aliases": [
       "真佛"
@@ -200,7 +214,21 @@
     "related": [
       "蓮生活佛",
       "傳承"
-    ]
+    ],
+    "source_url": "https://tbsn.org/master/index.html#",
+    "source_type": "tbsn_faxiang",
+    "keywords": [
+      "灌頂",
+      "咒",
+      "護法",
+      "菩薩",
+      "如來",
+      "佛母",
+      "度母",
+      "明王"
+    ],
+    "weight": 4,
+    "id": "English Indonesian"
   },
   {
     "cn": "根本傳承上師",
@@ -270,5 +298,425 @@
       "功德",
       "祈願"
     ]
+  },
+  {
+    "cn": "關於蓮生活佛",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/page/index.html?id=2",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "本尊",
+      "菩薩",
+      "如來"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "蓮生活佛傳承",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/aboutm/index",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "護摩",
+      "灌頂",
+      "咒",
+      "菩薩"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "蓮生活佛文集",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/wordm/index.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "菩薩"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "蓮生活佛開示",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/guidem/index.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "本尊",
+      "菩薩",
+      "如來",
+      "佛母",
+      "明王"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "真佛金句",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/verse/index.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "觀想",
+      "菩薩"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "真佛短片",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/bvideo/index.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "菩薩",
+      "度母"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "蓮生活佛畫作",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/paintm/index.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "菩薩"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "關於真佛宗",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/page/index.html?id=4",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "觀想",
+      "本尊",
+      "菩薩",
+      "如來",
+      "佛母"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "真佛密法",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/index.html#",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "護法",
+      "菩薩",
+      "如來",
+      "佛母",
+      "度母",
+      "明王"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "真佛儀軌",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://ch.tbsn.org/ritual",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "本尊",
+      "菩薩",
+      "如來",
+      "佛母",
+      "度母",
+      "明王"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "真佛園地",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/tb_garden/index.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "菩薩"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "佛菩薩聖誕",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/buddhabirthday/index.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "菩薩",
+      "佛母"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "龍尊王佛",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/detail/104/%E9%BE%8D%E5%B0%8A%E7%8E%8B%E4%BD%9B.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "觀想",
+      "護法",
+      "菩薩"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "大日如來",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/detail/17/%E5%A4%A7%E6%97%A5%E5%A6%82%E4%BE%86.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "本尊",
+      "菩薩",
+      "如來",
+      "佛母"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "阿達爾瑪佛",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/detail/16/%E9%98%BF%E9%81%94%E7%88%BE%E7%91%AA%E4%BD%9B.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "護摩",
+      "灌頂",
+      "咒",
+      "印",
+      "觀想",
+      "本尊",
+      "護法",
+      "菩薩",
+      "如來",
+      "佛母"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "阿彌陀佛",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/detail/15/%E9%98%BF%E5%BD%8C%E9%99%80%E4%BD%9B.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "觀想",
+      "本尊",
+      "菩薩",
+      "如來"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "長壽佛",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/detail/8/%E9%95%B7%E5%A3%BD%E4%BD%9B.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "本尊",
+      "護法",
+      "菩薩",
+      "如來",
+      "佛母",
+      "度母"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "金剛總持",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/detail/79/%E9%87%91%E5%89%9B%E7%B8%BD%E6%8C%81.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "菩薩",
+      "如來"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "妙色身如來",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/detail/81/%E5%A6%99%E8%89%B2%E8%BA%AB%E5%A6%82%E4%BE%86.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "菩薩",
+      "如來"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "藥師琉璃光王佛",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/detail/18/%E8%97%A5%E5%B8%AB%E7%90%89%E7%92%83%E5%85%89%E7%8E%8B%E4%BD%9B.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "護摩",
+      "灌頂",
+      "咒",
+      "印",
+      "本尊",
+      "護法",
+      "菩薩",
+      "如來",
+      "明王"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
+  },
+  {
+    "cn": "釋迦牟尼佛",
+    "en": "English Indonesian",
+    "category": "bodhisattva",
+    "source_url": "https://tbsn.org/master/detail/19/%E9%87%8B%E8%BF%A6%E7%89%9F%E5%B0%BC%E4%BD%9B.html",
+    "source_type": "tbsn_faxiang",
+    "aliases": [],
+    "mishears": [],
+    "keywords": [
+      "灌頂",
+      "咒",
+      "印",
+      "本尊",
+      "菩薩"
+    ],
+    "weight": 4,
+    "variants": [],
+    "id": "English Indonesian"
   }
 ]

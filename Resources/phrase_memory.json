@@ -68,5 +68,35 @@
     "topic": "title",
     "event_type": "homa",
     "source": "seed"
+  },
+  {
+    "source_lang": "zh",
+    "target_lang": "en",
+    "cn": "現在開始護摩法會",
+    "en": "We will now begin the Homa Fire Offering Ceremony.",
+    "event_mode": "Homa",
+    "source_url": "https://tbsn.org/master/index.html",
+    "source_type": "tbsn_phrase",
+    "weight": 4
+  },
+  {
+    "source_lang": "zh",
+    "target_lang": "en",
+    "cn": "請大家合掌",
+    "en": "Please put your palms together.",
+    "event_mode": "General",
+    "source_url": "https://tbsn.org/master/index.html",
+    "source_type": "tbsn_phrase",
+    "weight": 4
+  },
+  {
+    "source_lang": "zh",
+    "target_lang": "en",
+    "cn": "一心敬禮根本傳承上師",
+    "en": "Wholeheartedly pay homage to the Root Lineage Guru.",
+    "event_mode": "Liturgy",
+    "source_url": "https://tbsn.org/master/index.html",
+    "source_type": "tbsn_phrase",
+    "weight": 4
   }
 ]

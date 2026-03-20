@@ -34,5 +34,71 @@
     "en": "Om. Guru. Lian-sheng Siddhi. Hum.",
     "event_type": "mantra",
     "category": "mantra"
+  },
+  {
+    "cn": "真佛儀軌",
+    "en": "True Buddha Ritual Manual",
+    "event_mode": "Liturgy",
+    "category": "ritual",
+    "source_type": "tbsn_ritual",
+    "weight": 4,
+    "source_url": "https://ch.tbsn.org/ritual",
+    "source_lang": "zh",
+    "target_lang": "en"
+  },
+  {
+    "cn": "灌頂類別",
+    "en": "Empowerment Categories",
+    "event_mode": "Liturgy",
+    "category": "ritual",
+    "source_type": "tbsn_ritual",
+    "weight": 4,
+    "source_url": "https://tbsn.org/empowerment/index.html",
+    "source_lang": "zh",
+    "target_lang": "en"
+  },
+  {
+    "cn": "密法百問",
+    "en": "One Hundred Questions on Vajrayana Practice",
+    "event_mode": "General",
+    "category": "teaching",
+    "source_type": "tbsn_ritual",
+    "weight": 4,
+    "source_url": "https://tbsn.org/means/index.html",
+    "source_lang": "zh",
+    "target_lang": "en"
+  },
+  {
+    "cn": "入門手冊",
+    "en": "Beginner's Handbook",
+    "event_mode": "General",
+    "category": "teaching",
+    "source_type": "tbsn_ritual",
+    "weight": 4,
+    "source_url": "https://tbsn.org/beginner/index.html",
+    "source_lang": "zh",
+    "target_lang": "en"
+  },
+  {
+    "cn": "經藏部",
+    "en": "Sutra Collection",
+    "event_mode": "General",
+    "category": "scripture",
+    "source_type": "tbsn_ritual",
+    "weight": 4,
+    "source_url": "https://tbsn.org/scripture/index.html",
+    "source_lang": "zh",
+    "target_lang": "en"
+  },
+  {
+    "cn": "戒律部",
+    "en": "Vinaya Collection",
+    "event_mode": "General",
+    "category": "scripture",
+    "source_type": "tbsn_ritual",
+    "weight": 4,
+    "source_url": "https://tbsn.org/page/index/戒律部.html",
+    "source_lang": "zh",
+    "target_lang": "en"
   }
 ]
