@@ -569,7 +569,7 @@ const styles = {
     overflow: 'hidden',
     background:
       'radial-gradient(circle at top, rgba(255,106,61,0.10) 0%, rgba(15,15,15,1) 42%), linear-gradient(180deg, #0b0b0c 0%, #121214 100%)',
-    padding: '20px 16px 80px',
+    padding: '20px 16px 108px',
     fontFamily:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     color: '#fff',
@@ -702,23 +702,30 @@ const styles = {
     zIndex: 3,
   },
   floatingMicWrap: {
-    position: 'absolute',
-    left: '50%',
-    top: 0,
-    transform: 'translate(-50%, -20%)',
-    zIndex: 5,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '10px 12px',
-    borderRadius: '999px',
-    background: 'rgba(20,20,20,0.66)',
-    backdropFilter: 'blur(18px)',
-    WebkitBackdropFilter: 'blur(18px)',
-    border: '1px solid rgba(255,255,255,0.14)',
-    boxShadow:
-      '0 10px 26px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
-  },
+  position: 'fixed',
+  left: '50%',
+  bottom: '24px',
+  transform: 'translateX(-50%)',
+  zIndex: 999,
+
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  padding: '10px 14px',
+
+  borderRadius: '999px',
+  background: 'rgba(20,20,20,0.65)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+
+  border: '1px solid rgba(255,255,255,0.14)',
+
+  boxShadow: `
+    0 20px 50px rgba(0,0,0,0.35),
+    0 4px 12px rgba(0,0,0,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.08)
+  `,
+},
   floatingStatus: {
     color: '#fff',
     fontSize: '14px',
@@ -728,8 +735,8 @@ const styles = {
     whiteSpace: 'nowrap',
   },
   micButton: {
-    width: '58px',
-    height: '58px',
+    width: '62px',
+    height: '62px',
     borderRadius: '50%',
     border: '1px solid rgba(255,255,255,0.18)',
     background: 'rgba(255,255,255,0.86)',
