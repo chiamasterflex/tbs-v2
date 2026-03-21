@@ -1069,3 +1069,14 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`TBS V2 API running on http://0.0.0.0:${PORT}`);
   console.log(`TBS V2 WS bridge running on ws://0.0.0.0:${PORT}/ws`);
 });
+app.post('/api/session/:id/clear', (req, res) => {
+  const { id } = req.params;
+
+  if (!sessions[id]) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  sessions[id].lines = [];
+
+  res.json({ ok: true });
+});
