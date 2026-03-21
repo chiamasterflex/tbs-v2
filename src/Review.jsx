@@ -73,11 +73,6 @@ export default function Review() {
               <div style={styles.statLabel}>Purpose</div>
               <div style={styles.statValue}>Correction Memory</div>
             </div>
-
-            <div style={styles.statCard}>
-              <div style={styles.statLabel}>Status</div>
-              <div style={styles.statValue}>{status || 'Ready'}</div>
-            </div>
           </div>
         </div>
 
@@ -262,6 +257,7 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '18px',
     padding: '14px 16px',
+    textAlign: 'left',
   },
   statLabel: {
     fontSize: '11px',
@@ -270,11 +266,13 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '8px',
+    textAlign: 'left',
   },
   statValue: {
     fontSize: '15px',
     fontWeight: 800,
     color: '#fff',
+    textAlign: 'left',
   },
   mainCard: {
     background: '#fff7ef',
@@ -334,6 +332,7 @@ const styles = {
     fontFamily: 'inherit',
     background: '#fff',
     color: '#111',
+    textAlign: 'left',
   },
   buttonRow: {
     display: 'flex',

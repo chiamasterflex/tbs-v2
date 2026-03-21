@@ -51,7 +51,7 @@ export default function Study() {
           <div style={styles.eyebrow}>TBS V2</div>
           <h1 style={styles.title}>Study Translation</h1>
           <p style={styles.subtitle}>
-            Paste Chinese text and get a TBS-aware translation with normalized source handling.
+            Paste Chinese text and get a TBS-aware translation with normalised source handling.
           </p>
 
           <div style={styles.statRow}>
@@ -63,11 +63,6 @@ export default function Study() {
             <div style={styles.statCard}>
               <div style={styles.statLabel}>Engine</div>
               <div style={styles.statValue}>Server Brain</div>
-            </div>
-
-            <div style={styles.statCard}>
-              <div style={styles.statLabel}>Status</div>
-              <div style={styles.statValue}>{loading ? 'Translating' : 'Ready'}</div>
             </div>
           </div>
         </div>
@@ -108,7 +103,7 @@ export default function Study() {
             <div style={styles.resultsWrap}>
               {normalizedCn ? (
                 <div style={styles.resultCard}>
-                  <div style={styles.resultLabel}>Normalized Chinese</div>
+                  <div style={styles.resultLabel}>Normalised Chinese</div>
                   <div style={styles.resultTextChinese}>{normalizedCn}</div>
                 </div>
               ) : null}
@@ -211,6 +206,7 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '18px',
     padding: '14px 16px',
+    textAlign: 'left',
   },
   statLabel: {
     fontSize: '11px',
@@ -219,11 +215,13 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '8px',
+    textAlign: 'left',
   },
   statValue: {
     fontSize: '15px',
     fontWeight: 800,
     color: '#fff',
+    textAlign: 'left',
   },
   mainCard: {
     background: '#fff7ef',

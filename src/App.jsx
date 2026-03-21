@@ -3,6 +3,7 @@ import Study from './Study';
 import Review from './Review';
 import Viewer from './Viewer';
 import ToolTabs from './ToolTabs';
+import micIcon from './assets/mic.svg';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
@@ -429,23 +430,9 @@ export default function App() {
         <ToolTabs current="live" />
 
         <div style={styles.headerCard}>
-          <div style={styles.eyebrow}>True Buddha School</div>
-          <h1 style={styles.title}>Live Translation</h1>
-          <p style={styles.subtitle}>
-            Real-time captions and translation for teachings, ceremonies, and practice.
-          </p>
+          <h1 style={styles.title}>True Buddha School Live Translation</h1>
 
           <div style={styles.headerActions}>
-            <div style={styles.statusChip}>
-              <div
-                style={{
-                  ...styles.statusDot,
-                  ...(isListening ? styles.statusDotLive : {}),
-                }}
-              />
-              <span>{getStatusLabel()}</span>
-            </div>
-
             <div style={styles.actionButtons}>
               <button onClick={copyViewerLink} style={styles.primaryButton}>
                 {copied ? 'Viewer link copied' : 'Copy viewer link'}
@@ -459,13 +446,8 @@ export default function App() {
 
           <div style={styles.topStats}>
             <div style={styles.topStatCard}>
-              <div style={styles.topStatLabel}>Session</div>
-              <div style={styles.topStatValue}>{session?.title || 'TBS Live Session'}</div>
-            </div>
-
-            <div style={styles.topStatCard}>
               <div style={styles.topStatLabel}>Mode</div>
-              <div style={styles.topStatValue}>{session?.eventMode || 'Dharma Talk'}</div>
+              <div style={styles.topStatValue}>Live</div>
             </div>
 
             <div style={styles.topStatCard}>
@@ -475,37 +457,53 @@ export default function App() {
           </div>
         </div>
 
-        <div style={styles.languageRow}>
-          <div style={styles.selectCard}>
-            <div style={styles.selectLabel}>From</div>
-            <select
-              value={sourceLanguage}
-              onChange={(e) => setSourceLanguage(e.target.value)}
-              style={styles.select}
+        <div style={styles.languageAndMicWrap}>
+          <div style={styles.floatingMicWrap}>
+            <div style={styles.floatingStatus}>{getStatusLabel()}</div>
+
+            <button
+              onClick={isListening ? stopAudio : startAudio}
+              style={{
+                ...styles.micButton,
+                ...(isListening ? styles.micButtonActive : {}),
+              }}
             >
-              <option>Mandarin</option>
-              <option>Cantonese</option>
-              <option>Bahasa</option>
-              <option>English</option>
-              <option>Auto Detect</option>
-            </select>
+              <img src={micIcon} alt="Microphone" style={styles.micSvg} />
+            </button>
           </div>
 
-          <div style={styles.swapWrap}>
-            <div style={styles.swapIcon}>⇄</div>
-          </div>
+          <div style={styles.languageRow}>
+            <div style={styles.selectCard}>
+              <div style={styles.selectLabel}>From</div>
+              <select
+                value={sourceLanguage}
+                onChange={(e) => setSourceLanguage(e.target.value)}
+                style={styles.select}
+              >
+                <option>Mandarin</option>
+                <option>Cantonese</option>
+                <option>Bahasa</option>
+                <option>English</option>
+                <option>Auto Detect</option>
+              </select>
+            </div>
 
-          <div style={styles.selectCard}>
-            <div style={styles.selectLabel}>To</div>
-            <select
-              value={targetLanguage}
-              onChange={(e) => setTargetLanguage(e.target.value)}
-              style={styles.select}
-            >
-              <option>English</option>
-              <option>Chinese</option>
-              <option>Bahasa</option>
-            </select>
+            <div style={styles.swapWrap}>
+              <div style={styles.swapIcon}>⇄</div>
+            </div>
+
+            <div style={styles.selectCard}>
+              <div style={styles.selectLabel}>To</div>
+              <select
+                value={targetLanguage}
+                onChange={(e) => setTargetLanguage(e.target.value)}
+                style={styles.select}
+              >
+                <option>English</option>
+                <option>Chinese</option>
+                <option>Bahasa</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -560,22 +558,6 @@ export default function App() {
           </div>
         </div>
       </div>
-
-      <div style={styles.floatingBar}>
-        <div style={styles.floatingInner}>
-          <div style={styles.floatingStatus}>{getStatusLabel()}</div>
-
-          <button
-            onClick={isListening ? stopAudio : startAudio}
-            style={{
-              ...styles.micButton,
-              ...(isListening ? styles.micButtonActive : {}),
-            }}
-          >
-            <span style={styles.micIcon}>{isListening ? '■' : '🎙'}</span>
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -587,7 +569,7 @@ const styles = {
     overflow: 'hidden',
     background:
       'radial-gradient(circle at top, rgba(255,106,61,0.10) 0%, rgba(15,15,15,1) 42%), linear-gradient(180deg, #0b0b0c 0%, #121214 100%)',
-    padding: '20px 16px 120px',
+    padding: '20px 16px 80px',
     fontFamily:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     color: '#fff',
@@ -640,15 +622,6 @@ const styles = {
     textAlign: 'left',
     backdropFilter: 'blur(14px)',
   },
-  eyebrow: {
-    fontSize: '12px',
-    fontWeight: 800,
-    textTransform: 'uppercase',
-    letterSpacing: '0.10em',
-    color: '#8d8d95',
-    marginBottom: '10px',
-    textAlign: 'left',
-  },
   title: {
     margin: 0,
     fontSize: '42px',
@@ -658,18 +631,10 @@ const styles = {
     color: '#fff',
     textAlign: 'left',
   },
-  subtitle: {
-    margin: '12px 0 0',
-    fontSize: '16px',
-    lineHeight: 1.5,
-    color: '#b8b8c2',
-    maxWidth: '620px',
-    textAlign: 'left',
-  },
   headerActions: {
     marginTop: '18px',
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     gap: '12px',
     alignItems: 'center',
     flexWrap: 'wrap',
@@ -678,28 +643,6 @@ const styles = {
     display: 'flex',
     gap: '10px',
     flexWrap: 'wrap',
-  },
-  statusChip: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '10px',
-    background: 'rgba(255,255,255,0.06)',
-    color: '#fff',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: '999px',
-    padding: '10px 14px',
-    fontSize: '13px',
-    fontWeight: 700,
-  },
-  statusDot: {
-    width: '10px',
-    height: '10px',
-    borderRadius: '50%',
-    background: '#9ca3af',
-  },
-  statusDotLive: {
-    background: '#22c55e',
-    boxShadow: '0 0 0 6px rgba(34,197,94,0.14)',
   },
   primaryButton: {
     border: 'none',
@@ -727,12 +670,14 @@ const styles = {
     gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
     gap: '12px',
     marginTop: '18px',
+    maxWidth: '420px',
   },
   topStatCard: {
     background: 'rgba(255,255,255,0.04)',
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '18px',
     padding: '14px 16px',
+    textAlign: 'left',
   },
   topStatLabel: {
     fontSize: '11px',
@@ -741,12 +686,69 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '8px',
+    textAlign: 'left',
   },
   topStatValue: {
     fontSize: '15px',
     fontWeight: 800,
     color: '#fff',
     lineHeight: 1.35,
+    textAlign: 'left',
+  },
+  languageAndMicWrap: {
+    position: 'relative',
+    paddingTop: '10px',
+    marginTop: '-4px',
+    zIndex: 3,
+  },
+  floatingMicWrap: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    transform: 'translate(-50%, -20%)',
+    zIndex: 5,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '10px 12px',
+    borderRadius: '999px',
+    background: 'rgba(20,20,20,0.66)',
+    backdropFilter: 'blur(18px)',
+    WebkitBackdropFilter: 'blur(18px)',
+    border: '1px solid rgba(255,255,255,0.14)',
+    boxShadow:
+      '0 10px 26px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
+  },
+  floatingStatus: {
+    color: '#fff',
+    fontSize: '14px',
+    fontWeight: 700,
+    textAlign: 'left',
+    paddingLeft: '6px',
+    whiteSpace: 'nowrap',
+  },
+  micButton: {
+    width: '58px',
+    height: '58px',
+    borderRadius: '50%',
+    border: '1px solid rgba(255,255,255,0.18)',
+    background: 'rgba(255,255,255,0.86)',
+    color: '#111',
+    display: 'grid',
+    placeItems: 'center',
+    cursor: 'pointer',
+    boxShadow:
+      '0 8px 18px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.55)',
+    backdropFilter: 'blur(8px)',
+  },
+  micButtonActive: {
+    background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
+  },
+  micSvg: {
+    width: '24px',
+    height: '24px',
+    objectFit: 'contain',
+    display: 'block',
   },
   languageRow: {
     display: 'grid',
@@ -916,54 +918,5 @@ const styles = {
     color: '#666',
     fontSize: '15px',
     textAlign: 'left',
-  },
-  floatingBar: {
-    position: 'fixed',
-    left: '50%',
-    bottom: '18px',
-    transform: 'translateX(-50%)',
-    width: 'calc(100% - 24px)',
-    maxWidth: '920px',
-    pointerEvents: 'none',
-  },
-  floatingInner: {
-    pointerEvents: 'auto',
-    background: 'rgba(20,20,20,0.92)',
-    backdropFilter: 'blur(12px)',
-    borderRadius: '999px',
-    padding: '12px 14px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    boxShadow: '0 16px 40px rgba(0,0,0,0.35)',
-    border: '1px solid rgba(255,255,255,0.08)',
-  },
-  floatingStatus: {
-    color: '#fff',
-    fontSize: '14px',
-    fontWeight: 700,
-    textAlign: 'left',
-    paddingLeft: '4px',
-  },
-  micButton: {
-    width: '58px',
-    height: '58px',
-    borderRadius: '50%',
-    border: 'none',
-    background: '#ffffff',
-    color: '#111',
-    display: 'grid',
-    placeItems: 'center',
-    cursor: 'pointer',
-    fontWeight: 800,
-    boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
-  },
-  micButtonActive: {
-    background: '#ff6b35',
-    color: '#111',
-  },
-  micIcon: {
-    fontSize: '22px',
-    lineHeight: 1,
   },
 };
