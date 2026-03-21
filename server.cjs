@@ -1072,11 +1072,13 @@ server.listen(PORT, '0.0.0.0', () => {
 app.post('/api/session/:id/clear', (req, res) => {
   const { id } = req.params;
 
-  if (!sessions[id]) {
+  const session = sessions.find(s => s.id === id);
+
+  if (!session) {
     return res.status(404).json({ error: 'Session not found' });
   }
 
-  sessions[id].lines = [];
+  session.lines = [];
 
   res.json({ ok: true });
 });
