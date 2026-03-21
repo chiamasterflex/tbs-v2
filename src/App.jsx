@@ -8,6 +8,19 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
 const FIXED_SESSION_ID = 'live-session';
 
+function formatTime(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+
+  return d.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+}
+
 export default function App() {
   const path = window.location.pathname;
 
@@ -370,16 +383,18 @@ export default function App() {
         chinese: liveChinese,
         english: liveEnglish,
         isLive: true,
+        at: new Date().toISOString(),
       });
     }
 
     historyLines.forEach((line) => {
       items.push({
         id: line.id,
-        time: line.time,
+        time: line.time || formatTime(line.at),
         chinese: line.normalizedCn || line.rawCn,
         english: line.en,
         isLive: false,
+        at: line.at,
       });
     });
 
@@ -395,6 +410,8 @@ export default function App() {
   if (!session) {
     return (
       <div style={styles.page}>
+        <div style={styles.bgOrbA} />
+        <div style={styles.bgOrbB} />
         <div style={styles.shell}>
           <ToolTabs current="live" />
           <div style={styles.loadingWrap}>Loading…</div>
@@ -405,6 +422,9 @@ export default function App() {
 
   return (
     <div style={styles.page}>
+      <div style={styles.bgOrbA} />
+      <div style={styles.bgOrbB} />
+
       <div style={styles.shell}>
         <ToolTabs current="live" />
 
@@ -417,18 +437,40 @@ export default function App() {
 
           <div style={styles.headerActions}>
             <div style={styles.statusChip}>
-              <div style={styles.statusDot} />
+              <div
+                style={{
+                  ...styles.statusDot,
+                  ...(isListening ? styles.statusDotLive : {}),
+                }}
+              />
               <span>{getStatusLabel()}</span>
             </div>
 
             <div style={styles.actionButtons}>
-              <button onClick={copyViewerLink} style={styles.shareButton}>
+              <button onClick={copyViewerLink} style={styles.primaryButton}>
                 {copied ? 'Viewer link copied' : 'Copy viewer link'}
               </button>
 
-              <button onClick={clearHistory} style={styles.clearButton}>
+              <button onClick={clearHistory} style={styles.secondaryButtonDark}>
                 Clear
               </button>
+            </div>
+          </div>
+
+          <div style={styles.topStats}>
+            <div style={styles.topStatCard}>
+              <div style={styles.topStatLabel}>Session</div>
+              <div style={styles.topStatValue}>{session?.title || 'TBS Live Session'}</div>
+            </div>
+
+            <div style={styles.topStatCard}>
+              <div style={styles.topStatLabel}>Mode</div>
+              <div style={styles.topStatValue}>{session?.eventMode || 'Dharma Talk'}</div>
+            </div>
+
+            <div style={styles.topStatCard}>
+              <div style={styles.topStatLabel}>Lines</div>
+              <div style={styles.topStatValue}>{historyLines.length}</div>
             </div>
           </div>
         </div>
@@ -469,7 +511,11 @@ export default function App() {
 
         <div style={styles.transcriptCard}>
           <div style={styles.transcriptHeader}>
-            <div style={styles.cardLabel}>Transcript</div>
+            <div>
+              <div style={styles.cardLabel}>Transcript</div>
+              <div style={styles.cardHint}>Draft line appears first, then settles into history.</div>
+            </div>
+
             <div style={styles.debugChip}>
               {audioDebug.lastBytes ? `Audio ${audioDebug.lastBytes}b` : 'Audio idle'}
             </div>
@@ -488,13 +534,17 @@ export default function App() {
                   }}
                 >
                   <div style={styles.feedMetaRow}>
-                    <div style={styles.feedMeta}>{item.time}</div>
+                    <div style={styles.feedMetaLeft}>
+                      <div style={styles.feedMeta}>{item.time}</div>
+                      {!item.isLive && item.at ? (
+                        <div style={styles.feedTimePill}>{formatTime(item.at)}</div>
+                      ) : null}
+                    </div>
+
                     {item.isLive && <div style={styles.liveBadge}>Draft</div>}
                   </div>
 
-                  <div style={styles.feedChinese}>
-                    {item.chinese || '…'}
-                  </div>
+                  <div style={styles.feedChinese}>{item.chinese || '…'}</div>
 
                   <div
                     style={{
@@ -533,22 +583,47 @@ export default function App() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background: '#111111',
+    position: 'relative',
+    overflow: 'hidden',
+    background:
+      'radial-gradient(circle at top, rgba(255,106,61,0.10) 0%, rgba(15,15,15,1) 42%), linear-gradient(180deg, #0b0b0c 0%, #121214 100%)',
     padding: '20px 16px 120px',
     fontFamily:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    color: '#111',
+    color: '#fff',
   },
-
+  bgOrbA: {
+    position: 'absolute',
+    top: '-120px',
+    left: '-80px',
+    width: '300px',
+    height: '300px',
+    borderRadius: '999px',
+    background: 'rgba(255,107,53,0.10)',
+    filter: 'blur(60px)',
+    pointerEvents: 'none',
+  },
+  bgOrbB: {
+    position: 'absolute',
+    right: '-100px',
+    bottom: '-100px',
+    width: '320px',
+    height: '320px',
+    borderRadius: '999px',
+    background: 'rgba(59,130,246,0.10)',
+    filter: 'blur(70px)',
+    pointerEvents: 'none',
+  },
   shell: {
+    position: 'relative',
+    zIndex: 1,
     width: '100%',
-    maxWidth: '760px',
+    maxWidth: '980px',
     margin: '0 auto',
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
   },
-
   loadingWrap: {
     minHeight: '50vh',
     display: 'grid',
@@ -557,43 +632,40 @@ const styles = {
     fontSize: '24px',
     fontWeight: 700,
   },
-
   headerCard: {
-    background: '#fff7ef',
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '28px',
     padding: '24px 22px',
     textAlign: 'left',
+    backdropFilter: 'blur(14px)',
   },
-
   eyebrow: {
     fontSize: '12px',
     fontWeight: 800,
     textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: '#666',
+    letterSpacing: '0.10em',
+    color: '#8d8d95',
     marginBottom: '10px',
     textAlign: 'left',
   },
-
   title: {
     margin: 0,
-    fontSize: '38px',
-    lineHeight: 0.96,
+    fontSize: '42px',
+    lineHeight: 1,
     letterSpacing: '-0.04em',
     fontWeight: 800,
-    color: '#111',
+    color: '#fff',
     textAlign: 'left',
   },
-
   subtitle: {
     margin: '12px 0 0',
     fontSize: '16px',
-    lineHeight: 1.45,
-    color: '#444',
-    maxWidth: '520px',
+    lineHeight: 1.5,
+    color: '#b8b8c2',
+    maxWidth: '620px',
     textAlign: 'left',
   },
-
   headerActions: {
     marginTop: '18px',
     display: 'flex',
@@ -602,46 +674,47 @@ const styles = {
     alignItems: 'center',
     flexWrap: 'wrap',
   },
-
   actionButtons: {
     display: 'flex',
     gap: '10px',
     flexWrap: 'wrap',
   },
-
   statusChip: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '10px',
-    background: '#111',
+    background: 'rgba(255,255,255,0.06)',
     color: '#fff',
+    border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '999px',
     padding: '10px 14px',
     fontSize: '13px',
     fontWeight: 700,
   },
-
   statusDot: {
     width: '10px',
     height: '10px',
     borderRadius: '50%',
-    background: '#ff6b35',
+    background: '#9ca3af',
   },
-
-  shareButton: {
+  statusDotLive: {
+    background: '#22c55e',
+    boxShadow: '0 0 0 6px rgba(34,197,94,0.14)',
+  },
+  primaryButton: {
     border: 'none',
-    background: '#ff6b35',
+    background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
     color: '#111',
     borderRadius: '999px',
     padding: '12px 16px',
     fontSize: '13px',
     fontWeight: 800,
     cursor: 'pointer',
+    boxShadow: '0 10px 24px rgba(255,107,53,0.22)',
   },
-
-  clearButton: {
-    border: 'none',
-    background: '#222',
+  secondaryButtonDark: {
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.04)',
     color: '#fff',
     borderRadius: '999px',
     padding: '12px 16px',
@@ -649,21 +722,45 @@ const styles = {
     fontWeight: 800,
     cursor: 'pointer',
   },
-
+  topStats: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+    gap: '12px',
+    marginTop: '18px',
+  },
+  topStatCard: {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '18px',
+    padding: '14px 16px',
+  },
+  topStatLabel: {
+    fontSize: '11px',
+    fontWeight: 800,
+    color: '#8d8d95',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginBottom: '8px',
+  },
+  topStatValue: {
+    fontSize: '15px',
+    fontWeight: 800,
+    color: '#fff',
+    lineHeight: 1.35,
+  },
   languageRow: {
     display: 'grid',
     gridTemplateColumns: '1fr auto 1fr',
     gap: '12px',
     alignItems: 'center',
   },
-
   selectCard: {
-    background: '#ffffff',
+    background: 'rgba(255,255,255,0.92)',
     borderRadius: '20px',
     padding: '12px 14px',
     textAlign: 'left',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
   },
-
   selectLabel: {
     fontSize: '11px',
     fontWeight: 800,
@@ -673,7 +770,6 @@ const styles = {
     marginBottom: '6px',
     textAlign: 'left',
   },
-
   select: {
     width: '100%',
     border: 'none',
@@ -684,32 +780,30 @@ const styles = {
     color: '#111',
     textAlign: 'left',
   },
-
   swapWrap: {
     display: 'grid',
     placeItems: 'center',
   },
-
   swapIcon: {
     width: '38px',
     height: '38px',
     borderRadius: '50%',
-    background: '#ffffff',
+    background: 'rgba(255,255,255,0.88)',
     display: 'grid',
     placeItems: 'center',
     fontSize: '16px',
     fontWeight: 700,
     color: '#111',
+    boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
   },
-
   transcriptCard: {
     background: '#ff764a',
     borderRadius: '28px',
     padding: '18px',
     color: '#111',
     textAlign: 'left',
+    boxShadow: '0 24px 60px rgba(0,0,0,0.22)',
   },
-
   transcriptHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -718,7 +812,6 @@ const styles = {
     marginBottom: '14px',
     flexWrap: 'wrap',
   },
-
   cardLabel: {
     fontSize: '12px',
     fontWeight: 800,
@@ -727,7 +820,12 @@ const styles = {
     color: '#5a3a2e',
     textAlign: 'left',
   },
-
+  cardHint: {
+    marginTop: '6px',
+    fontSize: '14px',
+    color: '#6a4130',
+    textAlign: 'left',
+  },
   debugChip: {
     background: '#111',
     color: '#fff',
@@ -736,7 +834,6 @@ const styles = {
     fontSize: '12px',
     fontWeight: 700,
   },
-
   transcriptFeed: {
     display: 'flex',
     flexDirection: 'column',
@@ -748,18 +845,15 @@ const styles = {
     padding: '6px 0',
     scrollBehavior: 'smooth',
   },
-
   feedRow: {
     padding: '14px 16px 16px',
     borderBottom: '1px solid rgba(17,17,17,0.08)',
     textAlign: 'left',
     transition: 'background 160ms ease',
   },
-
   feedRowLive: {
     background: '#fff0e8',
   },
-
   feedMetaRow: {
     display: 'flex',
     alignItems: 'center',
@@ -767,14 +861,26 @@ const styles = {
     gap: '12px',
     marginBottom: '8px',
   },
-
+  feedMetaLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
   feedMeta: {
     fontSize: '12px',
     fontWeight: 700,
     color: '#777',
     textAlign: 'left',
   },
-
+  feedTimePill: {
+    background: '#f3e7d8',
+    color: '#5b4b40',
+    borderRadius: '999px',
+    padding: '5px 8px',
+    fontSize: '11px',
+    fontWeight: 800,
+  },
   liveBadge: {
     fontSize: '11px',
     fontWeight: 800,
@@ -783,49 +889,43 @@ const styles = {
     borderRadius: '999px',
     padding: '6px 9px',
   },
-
   feedChinese: {
-    fontSize: '22px',
-    lineHeight: 1.22,
-    fontWeight: 700,
+    fontSize: '24px',
+    lineHeight: 1.26,
+    fontWeight: 800,
     color: '#111',
     marginBottom: '8px',
     textAlign: 'left',
     wordBreak: 'break-word',
   },
-
   feedEnglish: {
-    fontSize: '19px',
-    lineHeight: 1.32,
-    fontWeight: 600,
+    fontSize: '20px',
+    lineHeight: 1.4,
+    fontWeight: 700,
     color: '#2450d8',
     textAlign: 'left',
     wordBreak: 'break-word',
     transition: 'opacity 160ms ease, color 160ms ease',
   },
-
   feedEnglishDraft: {
     color: '#5c72c9',
-    opacity: 0.8,
+    opacity: 0.82,
   },
-
   emptyState: {
     padding: '18px 16px',
     color: '#666',
     fontSize: '15px',
     textAlign: 'left',
   },
-
   floatingBar: {
     position: 'fixed',
     left: '50%',
     bottom: '18px',
     transform: 'translateX(-50%)',
     width: 'calc(100% - 24px)',
-    maxWidth: '720px',
+    maxWidth: '920px',
     pointerEvents: 'none',
   },
-
   floatingInner: {
     pointerEvents: 'auto',
     background: 'rgba(20,20,20,0.92)',
@@ -836,8 +936,8 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     boxShadow: '0 16px 40px rgba(0,0,0,0.35)',
+    border: '1px solid rgba(255,255,255,0.08)',
   },
-
   floatingStatus: {
     color: '#fff',
     fontSize: '14px',
@@ -845,7 +945,6 @@ const styles = {
     textAlign: 'left',
     paddingLeft: '4px',
   },
-
   micButton: {
     width: '58px',
     height: '58px',
@@ -859,12 +958,10 @@ const styles = {
     fontWeight: 800,
     boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
   },
-
   micButtonActive: {
     background: '#ff6b35',
     color: '#111',
   },
-
   micIcon: {
     fontSize: '22px',
     lineHeight: 1,

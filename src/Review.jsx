@@ -50,36 +50,60 @@ export default function Review() {
 
   return (
     <div style={styles.page}>
+      <div style={styles.bgOrbA} />
+      <div style={styles.bgOrbB} />
+
       <div style={styles.container}>
         <ToolTabs current="review" />
 
-        <div style={styles.card}>
+        <div style={styles.heroCard}>
           <div style={styles.eyebrow}>TBS V2</div>
           <h1 style={styles.title}>Memory Review</h1>
           <p style={styles.subtitle}>
             Save incorrect hearing or translation so the system improves over time.
           </p>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Heard</label>
-            <textarea
-              value={heard}
-              onChange={(e) => setHeard(e.target.value)}
-              placeholder="What the system heard..."
-              style={styles.textarea}
-              rows={3}
-            />
-          </div>
+          <div style={styles.statRow}>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>Mode</div>
+              <div style={styles.statValue}>Review</div>
+            </div>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Should be</label>
-            <textarea
-              value={corrected}
-              onChange={(e) => setCorrected(e.target.value)}
-              placeholder="Correct wording..."
-              style={styles.textarea}
-              rows={3}
-            />
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>Purpose</div>
+              <div style={styles.statValue}>Correction Memory</div>
+            </div>
+
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>Status</div>
+              <div style={styles.statValue}>{status || 'Ready'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.mainCard}>
+          <div style={styles.grid}>
+            <div style={styles.field}>
+              <label style={styles.label}>Heard</label>
+              <textarea
+                value={heard}
+                onChange={(e) => setHeard(e.target.value)}
+                placeholder="What the system heard..."
+                style={styles.textarea}
+                rows={4}
+              />
+            </div>
+
+            <div style={styles.field}>
+              <label style={styles.label}>Should be</label>
+              <textarea
+                value={corrected}
+                onChange={(e) => setCorrected(e.target.value)}
+                placeholder="Correct wording..."
+                style={styles.textarea}
+                rows={4}
+              />
+            </div>
           </div>
 
           <div style={styles.row}>
@@ -125,13 +149,27 @@ export default function Review() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Optional notes..."
               style={styles.textarea}
-              rows={3}
+              rows={4}
             />
           </div>
 
-          <button onClick={submitCorrection} style={styles.button}>
-            Save correction
-          </button>
+          <div style={styles.buttonRow}>
+            <button onClick={submitCorrection} style={styles.primaryButton}>
+              Save correction
+            </button>
+
+            <button
+              onClick={() => {
+                setHeard('');
+                setCorrected('');
+                setNotes('');
+                setStatus('');
+              }}
+              style={styles.secondaryButton}
+            >
+              Clear form
+            </button>
+          </div>
 
           {status ? <div style={styles.status}>{status}</div> : null}
         </div>
@@ -143,57 +181,124 @@ export default function Review() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background: '#111111',
-    padding: '24px 16px',
+    position: 'relative',
+    overflow: 'hidden',
+    background:
+      'radial-gradient(circle at top, rgba(255,106,61,0.10) 0%, rgba(15,15,15,1) 42%), linear-gradient(180deg, #0b0b0c 0%, #121214 100%)',
+    padding: '24px 16px 40px',
     fontFamily:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    color: '#fff',
+  },
+  bgOrbA: {
+    position: 'absolute',
+    top: '-120px',
+    left: '-80px',
+    width: '300px',
+    height: '300px',
+    borderRadius: '999px',
+    background: 'rgba(255,107,53,0.10)',
+    filter: 'blur(60px)',
+    pointerEvents: 'none',
+  },
+  bgOrbB: {
+    position: 'absolute',
+    right: '-100px',
+    bottom: '-100px',
+    width: '320px',
+    height: '320px',
+    borderRadius: '999px',
+    background: 'rgba(59,130,246,0.10)',
+    filter: 'blur(70px)',
+    pointerEvents: 'none',
   },
   container: {
-    maxWidth: '760px',
+    position: 'relative',
+    zIndex: 1,
+    maxWidth: '980px',
     margin: '0 auto',
   },
-  card: {
-    background: '#fff7ef',
+  heroCard: {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '28px',
-    padding: '24px',
+    padding: '24px 22px',
+    marginBottom: '16px',
+    backdropFilter: 'blur(14px)',
   },
   eyebrow: {
     fontSize: '12px',
     fontWeight: 800,
     textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: '#666',
+    letterSpacing: '0.10em',
+    color: '#8d8d95',
     marginBottom: '10px',
     textAlign: 'left',
   },
   title: {
     margin: 0,
-    fontSize: '36px',
+    fontSize: '42px',
     lineHeight: 1,
     letterSpacing: '-0.04em',
     fontWeight: 800,
-    color: '#111',
+    color: '#fff',
     textAlign: 'left',
   },
   subtitle: {
-    margin: '12px 0 20px',
-    fontSize: '16px',
-    lineHeight: 1.45,
-    color: '#444',
+    margin: '12px 0 18px',
+    fontSize: '15px',
+    lineHeight: 1.5,
+    color: '#b8b8c2',
     textAlign: 'left',
+    maxWidth: '680px',
+  },
+  statRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: '12px',
+  },
+  statCard: {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '18px',
+    padding: '14px 16px',
+  },
+  statLabel: {
+    fontSize: '11px',
+    fontWeight: 800,
+    color: '#8d8d95',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginBottom: '8px',
+  },
+  statValue: {
+    fontSize: '15px',
+    fontWeight: 800,
+    color: '#fff',
+  },
+  mainCard: {
+    background: '#fff7ef',
+    borderRadius: '28px',
+    padding: '22px',
+    color: '#111',
+    boxShadow: '0 24px 60px rgba(0,0,0,0.22)',
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '14px',
+    marginBottom: '14px',
   },
   field: {
-    marginBottom: '16px',
-  },
-  fieldHalf: {
-    flex: 1,
+    marginBottom: '14px',
   },
   row: {
-    display: 'flex',
-    gap: '12px',
-    marginBottom: '16px',
-    flexWrap: 'wrap',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '14px',
+    marginBottom: '14px',
   },
+  fieldHalf: {},
   label: {
     display: 'block',
     fontSize: '12px',
@@ -207,7 +312,7 @@ const styles = {
   textarea: {
     width: '100%',
     boxSizing: 'border-box',
-    border: '2px solid #ddd',
+    border: '1px solid rgba(17,17,17,0.10)',
     borderRadius: '18px',
     padding: '14px 16px',
     fontSize: '16px',
@@ -216,34 +321,54 @@ const styles = {
     fontFamily: 'inherit',
     background: '#fff',
     textAlign: 'left',
+    lineHeight: 1.6,
   },
   select: {
     width: '100%',
     boxSizing: 'border-box',
-    border: '2px solid #ddd',
+    border: '1px solid rgba(17,17,17,0.10)',
     borderRadius: '18px',
     padding: '14px 16px',
     fontSize: '16px',
     outline: 'none',
     fontFamily: 'inherit',
     background: '#fff',
-    textAlign: 'left',
+    color: '#111',
   },
-  button: {
+  buttonRow: {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap',
+    marginTop: '8px',
+  },
+  primaryButton: {
     border: 'none',
-    background: '#111',
-    color: '#fff',
+    background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
+    color: '#111',
     borderRadius: '999px',
     padding: '14px 18px',
     fontSize: '15px',
-    fontWeight: 700,
+    fontWeight: 800,
+    cursor: 'pointer',
+    boxShadow: '0 10px 24px rgba(255,107,53,0.22)',
+  },
+  secondaryButton: {
+    border: '1px solid rgba(17,17,17,0.10)',
+    background: '#fff',
+    color: '#111',
+    borderRadius: '999px',
+    padding: '14px 18px',
+    fontSize: '15px',
+    fontWeight: 800,
     cursor: 'pointer',
   },
   status: {
-    marginTop: '14px',
-    fontSize: '14px',
+    marginTop: '16px',
+    padding: '14px 16px',
+    borderRadius: '18px',
+    background: 'rgba(17,17,17,0.05)',
+    color: '#111',
     fontWeight: 700,
-    color: '#444',
     textAlign: 'left',
   },
 };
