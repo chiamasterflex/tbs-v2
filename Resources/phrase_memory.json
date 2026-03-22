@@ -1,439 +1,322 @@
 [
   {
-    "cn": "我們先迴向給所有眾生",
-    "en": "First, let us dedicate the merits to all sentient beings.",
-    "topic": "dedication",
-    "event_mode": "General",
-    "source_type": "seed",
-    "weight": 5
+    "cn": "佛陀",
+    "en": "Buddha",
+    "category": "deity",
+    "source_type": "generic",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 10
   },
   {
-    "cn": "今天我來講解這個法的修持重點",
-    "en": "Today I will explain the key points of this practice.",
-    "topic": "teaching",
-    "event_mode": "Dharma Talk",
-    "source_type": "seed",
-    "weight": 5
-  },
-  {
-    "cn": "請大家一心敬禮根本傳承上師",
-    "en": "Please wholeheartedly pay homage to the Root Lineage Guru.",
-    "topic": "invocation",
-    "event_mode": "Liturgy",
-    "source_type": "seed",
-    "weight": 6
-  },
-  {
-    "cn": "這是一個非常殊勝的法會",
-    "en": "This is a very auspicious Dharma ceremony.",
-    "topic": "ceremony",
-    "event_mode": "Homa",
-    "source_type": "seed",
-    "weight": 4
-  },
-  {
-    "cn": "真佛密法重視傳承與實修",
-    "en": "True Buddha Tantric practice places importance on lineage and actual practice.",
-    "topic": "teaching",
-    "event_mode": "Dharma Talk",
-    "source_type": "seed",
-    "weight": 5
-  },
-  {
-    "cn": "接下來是迴向",
-    "en": "Next, we will do the dedication of merits.",
-    "topic": "dedication",
-    "event_mode": "General",
-    "source_type": "seed",
-    "weight": 5
-  },
-  {
-    "cn": "師尊今天開示",
-    "en": "Grand Master is giving today's Dharma teaching.",
-    "topic": "teaching",
-    "event_mode": "Dharma Talk",
-    "source_type": "seed",
-    "weight": 5
-  },
-  {
-    "cn": "祈請金母加持",
-    "en": "We pray for the blessing of Golden Mother.",
-    "topic": "prayer",
-    "event_mode": "Ceremony",
-    "source_type": "seed",
-    "weight": 5
-  },
-  {
-    "cn": "祈請吉祥天母加持",
-    "en": "We pray for the blessing of Drashi Lhamo.",
-    "topic": "prayer",
-    "event_mode": "Ceremony",
-    "source_type": "seed",
-    "weight": 6
-  },
-  {
-    "cn": "佛母大孔雀明王護摩法會",
-    "en": "Mahamayuri Homa Ceremony.",
-    "topic": "title",
-    "event_mode": "Homa",
-    "source_type": "seed",
-    "weight": 7
-  },
-  {
-    "cn": "現在開始護摩法會",
-    "en": "We will now begin the Homa Fire Offering Ceremony.",
-    "event_mode": "Homa",
-    "source_type": "tbsn_phrase",
-    "weight": 7
-  },
-  {
-    "cn": "請大家合掌",
-    "en": "Please put your palms together.",
-    "event_mode": "General",
-    "source_type": "tbsn_phrase",
-    "weight": 6
-  },
-  {
-    "cn": "一心敬禮根本傳承上師",
-    "en": "Wholeheartedly pay homage to the Root Lineage Guru.",
-    "event_mode": "Liturgy",
-    "source_type": "tbsn_phrase",
-    "weight": 7
-  },
-  {
-    "cn": "我們現在開始",
-    "en": "We will now begin.",
-    "event_mode": "General",
-    "source_type": "seed",
-    "weight": 6
-  },
-  {
-    "cn": "接下來",
-    "en": "Next,",
-    "event_mode": "General",
-    "source_type": "seed",
-    "weight": 4
-  },
-  {
-    "cn": "請大家一起",
-    "en": "Everyone, please join together.",
-    "event_mode": "General",
-    "source_type": "seed",
-    "weight": 5
-  },
-  {
-    "cn": "這個意思是",
-    "en": "This means",
-    "event_mode": "Dharma Talk",
-    "source_type": "seed",
-    "weight": 4
-  },
-  {
-    "cn": "不是這個意思",
-    "en": "That is not what it means.",
-    "event_mode": "Dharma Talk",
-    "source_type": "seed",
-    "weight": 5
-  },
-  {
-    "cn": "都要做護法神",
-    "en": "Everyone should become Dharma protectors.",
-    "event_mode": "Dharma Talk",
-    "source_type": "seed",
-    "weight": 8
-  },
-  {
-    "cn": "回向",
-    "en": "dedicate the merit",
-    "event_mode": "General",
-    "source_type": "seed",
-    "weight": 5
-  },
-  {
-    "cn": "加持",
-    "en": "blessing",
-    "event_mode": "General",
-    "source_type": "seed",
-    "weight": 4
-  },
-  {
-    "cn": "皈依",
-    "en": "take refuge",
-    "event_mode": "General",
-    "source_type": "seed",
-    "weight": 5
-  },
-  {
-    "cn": "護法神",
-    "en": "Dharma protectors",
-    "event_mode": "General",
-    "source_type": "seed",
-    "weight": 7
-  },
-  {
-    "cn": "淨光祕密佛",
-    "en": "Pure Light Secret Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "法藏佛",
-    "en": "Dharma Treasury Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "獅子吼神足幽王佛",
-    "en": "Lion's Roar Tranquil King Buddha with Divine Powers",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "須彌燈王佛",
-    "en": "Sumeru Lamp King Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "法護佛",
-    "en": "Dharma Protector Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "金剛藏獅子遊戲佛",
-    "en": "Vajra Treasury Lion Sport Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "寶勝佛",
-    "en": "Precious Victory Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "神通佛",
-    "en": "Supernatural Power Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "藥師琉璃光王佛",
-    "en": "Medicine Crystal Light King Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
-  },
-  {
-    "cn": "普光功德山王佛",
-    "en": "Universal Light Merit Mountain King Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "善住功德寶王佛",
-    "en": "Well-Abiding Merit Jewel King Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "定光佛",
-    "en": "Fixed Light Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "東方寶光月殿月妙尊音王佛",
-    "en": "Eastern Precious Light Moon Palace Sublime Voice King Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "南方樹根花王佛",
-    "en": "Southern Tree-Root Flower King Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "西方皂王神通燄花王佛",
-    "en": "Western Soot King Supernatural Flame Flower King Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "北方月殿清淨佛",
-    "en": "Northern Moon Palace Pure Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "上方無數精進寶首佛",
-    "en": "Upper Infinite Diligent Jewel-Crown Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "下方善寂月音王佛",
-    "en": "Lower Good Tranquility Moon Sound King Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 6
-  },
-  {
-    "cn": "多寶佛",
-    "en": "Many Treasures Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
-  },
-  {
-    "cn": "釋迦牟尼佛",
-    "en": "Shakyamuni Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 8
-  },
-  {
-    "cn": "彌勒佛",
-    "en": "Maitreya Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
-  },
-  {
-    "cn": "阿閦佛",
-    "en": "Aksobhya Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
-  },
-  {
-    "cn": "彌陀佛",
-    "en": "Amitabha Buddha",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 8
-  },
-  {
-    "cn": "大明觀世音",
-    "en": "Great Bright Avalokitesvara",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
-  },
-  {
-    "cn": "觀明觀世音",
-    "en": "Observing Brightness Avalokitesvara",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
-  },
-  {
-    "cn": "高明觀世音",
-    "en": "Lofty Brightness Avalokitesvara",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
-  },
-  {
-    "cn": "開明觀世音",
-    "en": "Opening Brightness Avalokitesvara",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
-  },
-  {
-    "cn": "大慈悲救苦觀世音",
-    "en": "Great Compassionate Avalokitesvara Who Relieves Suffering",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 8
-  },
-  {
-    "cn": "藥王菩薩",
-    "en": "Medicine King Bodhisattva",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
-  },
-  {
-    "cn": "藥上菩薩",
-    "en": "Supreme Medicine Bodhisattva",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 7
+    "cn": "觀世音菩薩",
+    "en": "Avalokitesvara Bodhisattva",
+    "category": "deity",
+    "source_type": "generic",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 9
   },
   {
     "cn": "文殊師利菩薩",
     "en": "Manjushri Bodhisattva",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 8
-  },
-  {
-    "cn": "普賢菩薩",
-    "en": "Samantabhadra Bodhisattva",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
-    "weight": 8
-  },
-  {
-    "cn": "虛空藏菩薩",
-    "en": "Akasagarbha Bodhisattva",
-    "event_mode": "Sutra",
-    "source_type": "high_king_sutra",
+    "category": "deity",
+    "source_type": "generic",
+    "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 8
   },
   {
     "cn": "地藏王菩薩",
     "en": "Ksitigarbha Bodhisattva",
-    "event_mode": "Sutra",
+    "category": "deity",
+    "source_type": "generic",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 8
+  },
+  {
+    "cn": "淨光祕密佛",
+    "en": "Pure Light Secret Buddha",
+    "category": "sutra_deity",
     "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "法藏佛",
+    "en": "Dharma Treasury Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "獅子吼神足幽王佛",
+    "en": "Lion's Roar Tranquil King Buddha with Divine Powers",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "須彌燈王佛",
+    "en": "Sumeru Lamp King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "法護佛",
+    "en": "Dharma Protector Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "金剛藏獅子遊戲佛",
+    "en": "Vajra Treasury Lion Sport Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "寶勝佛",
+    "en": "Precious Victory Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "神通佛",
+    "en": "Supernatural Power Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "藥師琉璃光王佛",
+    "en": "Medicine Crystal Light King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "普光功德山王佛",
+    "en": "Universal Light Merit Mountain King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "善住功德寶王佛",
+    "en": "Well-Abiding Merit Jewel King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "定光佛",
+    "en": "Fixed Light Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "東方寶光月殿月妙尊音王佛",
+    "en": "Eastern Precious Light Moon Palace Sublime Voice King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "南方樹根花王佛",
+    "en": "Southern Tree-Root Flower King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "西方皂王神通燄花王佛",
+    "en": "Western Soot King Supernatural Flame Flower King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "北方月殿清淨佛",
+    "en": "Northern Moon Palace Pure Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "上方無數精進寶首佛",
+    "en": "Upper Infinite Diligent Jewel-Crown Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "下方善寂月音王佛",
+    "en": "Lower Good Tranquility Moon Sound King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "多寶佛",
+    "en": "Many Treasures Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "釋迦牟尼佛",
+    "en": "Shakyamuni Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 8
+  },
+  {
+    "cn": "彌勒佛",
+    "en": "Maitreya Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "阿閦佛",
+    "en": "Aksobhya Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "彌陀佛",
+    "en": "Amitabha Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 8
+  },
+  {
+    "cn": "大明觀世音",
+    "en": "Great Bright Avalokitesvara",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "觀明觀世音",
+    "en": "Observing Brightness Avalokitesvara",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "高明觀世音",
+    "en": "Lofty Brightness Avalokitesvara",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "開明觀世音",
+    "en": "Opening Brightness Avalokitesvara",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "大慈悲救苦觀世音",
+    "en": "Great Compassionate Avalokitesvara Who Relieves Suffering",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 8
+  },
+  {
+    "cn": "藥王菩薩",
+    "en": "Medicine King Bodhisattva",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "藥上菩薩",
+    "en": "Supreme Medicine Bodhisattva",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "普賢菩薩",
+    "en": "Samantabhadra Bodhisattva",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 8
+  },
+  {
+    "cn": "虛空藏菩薩",
+    "en": "Akasagarbha Bodhisattva",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 8
   },
   {
     "cn": "清涼寶山億萬菩薩",
     "en": "Countless Bodhisattvas of Clear Cool Jewel Mountain",
-    "event_mode": "Sutra",
+    "category": "sutra_deity",
     "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 6
   },
   {
     "cn": "普光王如來化勝菩薩",
     "en": "Victorious Manifestation Bodhisattva of Universal Light King Tathagata",
-    "event_mode": "Sutra",
+    "category": "sutra_deity",
     "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 6
   },
   {
     "cn": "十方觀世音",
     "en": "Avalokitesvara of the Ten Directions",
-    "event_mode": "Sutra",
+    "category": "sutra_deity",
     "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 7
   },
   {
     "cn": "高王觀世音",
     "en": "High King Avalokitesvara",
-    "event_mode": "Sutra",
+    "category": "sutra_deity",
     "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 8
   }
 ]

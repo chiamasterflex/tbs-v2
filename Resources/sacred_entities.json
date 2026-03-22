@@ -587,5 +587,53 @@
     "source_type": "high_king_sutra",
     "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 8
+  },
+  {
+    "cn": "普賢王如來",
+    "en": "Samantabhadra Tathagata",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "寶勝如來",
+    "en": "Ratnavabhasa Tathagata",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "妙色身如來",
+    "en": "Vairócana Tathagata of Sublime Form",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "廣博身如來",
+    "en": "Amitabha Tathagata of Vast Body",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "離怖畏如來",
+    "en": "Abhaya Tathagata",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "甘露王如來",
+    "en": "Amrita-raja Tathagata",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
   }
 ]

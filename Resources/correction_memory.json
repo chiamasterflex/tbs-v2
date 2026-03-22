@@ -1,26 +1,72 @@
 [
   {
     "heard": "炸雞拉姆",
-    "corrected": "吉祥天母",
+    "intendedChinese": "吉祥天母",
+    "correctedEnglish": "Drashi Lhamo",
     "category": "deity",
-    "notes": "ASR phonetic miss for Drashi Lhamo"
+    "eventMode": "Homa",
+    "notes": "ASR phonetic miss for Drashi Lhamo",
+    "tags": ["phonetic", "deity", "tbs"],
+    "weight": 10
   },
   {
     "heard": "炸鸡",
-    "corrected": "吉祥天母",
+    "intendedChinese": "吉祥天母",
+    "correctedEnglish": "Drashi Lhamo",
     "category": "deity",
-    "notes": "short phonetic miss in deity context"
+    "eventMode": "Homa",
+    "notes": "Short phonetic miss in deity context",
+    "tags": ["phonetic", "deity"],
+    "weight": 8
   },
   {
     "heard": "孔雀名王",
-    "corrected": "佛母大孔雀明王",
+    "intendedChinese": "佛母大孔雀明王",
+    "correctedEnglish": "Mahamayuri Wisdom King",
     "category": "deity",
-    "notes": "common mishear"
+    "eventMode": "Homa",
+    "notes": "Common mishear",
+    "tags": ["phonetic", "deity"],
+    "weight": 8
   },
   {
     "heard": "連生活佛",
-    "corrected": "蓮生活佛",
+    "intendedChinese": "蓮生活佛",
+    "correctedEnglish": "Living Buddha Lian Sheng",
     "category": "lineage",
-    "notes": "common character substitution"
+    "eventMode": "Dharma Talk",
+    "notes": "Common character substitution",
+    "tags": ["lineage", "title"],
+    "weight": 7
+  },
+  {
+    "heard": "都要做屁股神",
+    "intendedChinese": "都要做護法神",
+    "correctedEnglish": "Everyone should become Dharma protectors.",
+    "category": "phrase",
+    "eventMode": "Dharma Talk",
+    "notes": "Absurd literal ASR corruption",
+    "tags": ["phonetic", "phrase", "absurd-literal"],
+    "weight": 10
+  },
+  {
+    "heard": "begin the homa",
+    "intendedChinese": "",
+    "correctedEnglish": "begin the homa",
+    "category": "protected_english",
+    "eventMode": "Homa",
+    "notes": "Already English, should be preserved",
+    "tags": ["english", "protected"],
+    "weight": 9
+  },
+  {
+    "heard": "dedicate the merit",
+    "intendedChinese": "",
+    "correctedEnglish": "dedicate the merit",
+    "category": "protected_english",
+    "eventMode": "General",
+    "notes": "Already English, should be preserved",
+    "tags": ["english", "protected"],
+    "weight": 9
   }
 ]
