@@ -230,135 +230,7 @@
     "source_type": "true_buddha_tantra_pdf",
     "event_modes": ["Dharma Talk", "Sadhana"],
     "weight": 7
-  }
-,{
-  "cn": "四無量心觀",
-  "en": "Meditation on the Four Immeasurable Minds.",
-  "category": "practice_instruction",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Liturgy", "Sadhana"],
-  "weight": 9
-},
-{
-  "cn": "四皈依觀",
-  "en": "Meditation on the Fourfold Refuge.",
-  "category": "practice_instruction",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Liturgy", "Sadhana"],
-  "weight": 9
-},
-{
-  "cn": "披甲護身",
-  "en": "Armor Protection of the Body.",
-  "category": "practice_instruction",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Liturgy", "Sadhana"],
-  "weight": 8
-},
-{
-  "cn": "誦高王觀世音真經",
-  "en": "Recite the High King Avalokitesvara Sutra.",
-  "category": "practice_instruction",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Liturgy", "Sadhana", "Sutra"],
-  "weight": 8
-},
-{
-  "cn": "唸根本上師心咒",
-  "en": "Recite the Root Guru Heart Mantra.",
-  "category": "practice_instruction",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Liturgy", "Sadhana"],
-  "weight": 8
-},
-{
-  "cn": "入三摩地",
-  "en": "Enter into samadhi.",
-  "category": "ritual_phrase",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Liturgy", "Sadhana"],
-  "weight": 10
-},
-{
-  "cn": "出三摩地",
-  "en": "Emerge from samadhi.",
-  "category": "ritual_phrase",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Liturgy", "Sadhana"],
-  "weight": 10
-},
-{
-  "cn": "迴向",
-  "en": "Dedication of merits.",
-  "category": "dedication_phrase",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Liturgy", "Sadhana", "Dharma Talk"],
-  "weight": 9
-},
-{
-  "cn": "大黑天護法讚",
-  "en": "Praise to Mahakala, the Dharma Protector.",
-  "category": "ritual_phrase",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Liturgy", "Sadhana"],
-  "weight": 8
-},
-{
-  "cn": "未經灌頂不得修持此法",
-  "en": "Do not practice this sadhana without first receiving empowerment.",
-  "category": "teaching_phrase",
-  "source_type": "mahakala_sadhana_pdf",
-  "event_modes": ["Dharma Talk", "Sadhana"],
-  "weight": 10
-},
-{
-  "cn": "觀想紅度母於虛空中現前",
-  "en": "Visualize Red Tara appearing in space before you",
-  "type": "visualization",
-  "source_type": "red_tara_sadhana_pdf"
-},
-{
-  "cn": "持誦紅度母心咒",
-  "en": "Recite the Red Tara heart mantra",
-  "type": "mantra_instruction",
-  "source_type": "red_tara_sadhana_pdf"
-},
-{
-  "cn": "結紅度母手印",
-  "en": "Form the Red Tara mudra",
-  "type": "ritual_instruction",
-  "source_type": "red_tara_sadhana_pdf"
-},
-{
-  "cn": "觀想紅度母種子字放光",
-  "en": "Visualize the Red Tara seed syllable radiating light",
-  "type": "visualization",
-  "source_type": "red_tara_sadhana_pdf"
-},
-{
-  "cn": "修持敬愛法以攝受眾生",
-  "en": "Practice the magnetising method to attract and benefit beings",
-  "type": "practice_instruction",
-  "source_type": "red_tara_sadhana_pdf"
-},
-{
-  "cn": "入三摩地與紅度母相應",
-  "en": "Enter samadhi and unite with Red Tara",
-  "type": "meditative_state",
-  "source_type": "red_tara_sadhana_pdf"
-},
-{
-  "cn": "以紅度母光明加持自身",
-  "en": "Receive empowerment from Red Tara's radiant light",
-  "type": "blessing",
-  "source_type": "red_tara_sadhana_pdf"
-},
-{
-  "cn": "迴向一切功德",
-  "en": "Dedicate all merits",
-  "type": "closing",
-  "source_type": "red_tara_sadhana_pdf"
-},
+  },
   {
     "cn": "四無量心觀",
     "en": "Meditation on the Four Immeasurable Minds.",
@@ -502,4 +374,61 @@
     "source_type": "red_tara_sadhana_pdf",
     "event_modes": ["Liturgy", "Sadhana", "Dharma Talk"],
     "weight": 8
-   },
+  },
+  {
+    "cn": "一心不亂",
+    "en": "single-minded concentration",
+    "category": "practice",
+    "source_type": "tbsn",
+    "weight": 8
+  },
+  {
+    "cn": "往生西方極樂世界",
+    "en": "be reborn in the Western Pure Land",
+    "category": "pure_land",
+    "source_type": "tbsn",
+    "weight": 9
+  },
+  {
+    "cn": "帶業往生",
+    "en": "rebirth with karmic burdens carried",
+    "category": "doctrine",
+    "source_type": "tbsn",
+    "weight": 8
+  },
+  {
+    "cn": "九品蓮華生",
+    "en": "rebirth in the nine grades of the lotus",
+    "category": "pure_land",
+    "source_type": "tbsn",
+    "weight": 8
+  },
+  {
+    "cn": "十念法",
+    "en": "the ten-breath recitation method",
+    "category": "practice",
+    "source_type": "tbsn",
+    "weight": 7
+  },
+  {
+    "cn": "觀相唸佛",
+    "en": "visualized recitation of the Buddha",
+    "category": "practice",
+    "source_type": "tbsn",
+    "weight": 7
+  },
+  {
+    "cn": "持明唸佛",
+    "en": "mantra-style Buddha recitation",
+    "category": "practice",
+    "source_type": "tbsn",
+    "weight": 7
+  },
+  {
+    "cn": "彌陀大法",
+    "en": "Amitabha Great Practice",
+    "category": "practice",
+    "source_type": "tbsn",
+    "weight": 9
+  }
+]
