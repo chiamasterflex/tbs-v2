@@ -636,4 +636,155 @@
     "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 7
   }
+,
+{
+  "cn": "白大白蓮花童子",
+  "en": "White Mahapadmakumara",
+  "aliases": ["白大白蓮華童子", "白大白蓮花童子尊者"],
+  "mishears": ["白大白蓮花童女", "白大白蓮花童子"],
+  "category": "lineage",
+  "related": ["蓮生活佛", "大白蓮花童子", "真佛宗"],
+  "source_type": "tbs_handbook",
+  "weight": 10
+},
+{
+  "cn": "蓮華生大士",
+  "en": "Guru Padmasambhava",
+  "aliases": ["蓮師", "咕嚕仁波切", "咕噜仁波切", "Guru Rinpoche", "Padmasambhava"],
+  "mishears": ["蓮花生大士", "蓮師大士"],
+  "category": "lineage",
+  "related": ["根本傳承上師", "真佛宗", "金剛總持"],
+  "source_type": "tbs_handbook",
+  "weight": 10
+},
+{
+  "cn": "大日遍照佛",
+  "en": "Mahavairocana Buddha",
+  "aliases": ["大日如來", "毘盧遮那佛", "摩訶毘盧遮那佛"],
+  "mishears": ["大日遍照佛陀"],
+  "category": "buddha",
+  "related": ["法身佛", "真佛經"],
+  "source_type": "tbs_handbook",
+  "weight": 9
+},
+{
+  "cn": "佛眼佛母",
+  "en": "Buddhalocana",
+  "aliases": ["佛眼佛母尊"],
+  "mishears": ["佛眼佛目"],
+  "category": "deity",
+  "related": ["真佛經", "大日遍照佛", "蓮生活佛"],
+  "source_type": "tbs_handbook",
+  "weight": 8
+},
+{
+  "cn": "大威德金剛",
+  "en": "Yamantaka",
+  "aliases": ["閻曼德迦", "降閻魔尊"],
+  "mishears": ["大威德金鋼", "閻曼德加"],
+  "category": "yidam",
+  "related": ["本尊", "密教"],
+  "source_type": "tbs_handbook",
+  "weight": 8
+},
+{
+  "cn": "時輪金剛",
+  "en": "Kalachakra",
+  "aliases": ["時輪佛", "時輪尊"],
+  "mishears": ["石輪金剛", "時輪金鋼"],
+  "category": "yidam",
+  "related": ["密教", "本尊"],
+  "source_type": "tbs_handbook",
+  "weight": 8
+},
+{
+  "cn": "真佛經",
+  "en": "True Buddha Sutra",
+  "aliases": ["真佛真經"],
+  "mishears": ["真佛精", "真佛金"],
+  "category": "scripture",
+  "related": ["蓮生活佛", "真佛宗"],
+  "source_type": "tbs_handbook",
+  "weight": 8
+},
+{
+  "cn": "高王觀世音真經",
+  "en": "High King Avalokitesvara Sutra",
+  "aliases": ["高王觀世音經", "高王觀音經"],
+  "mishears": ["高王觀世音真金", "高王觀音真經"],
+  "category": "scripture",
+  "related": ["高王觀世音", "觀世音菩薩"],
+  "source_type": "tbs_handbook",
+  "weight": 9
+},
+{
+  "cn": "四加行",
+  "en": "Four Preliminary Practices",
+  "aliases": ["四前行", "四加行法"],
+  "mishears": ["四家行", "四家形"],
+  "category": "practice",
+  "related": ["真佛宗", "修法", "根本傳承上師"],
+  "source_type": "tbs_handbook",
+  "weight": 8
+},
+{
+  "cn": "根本上師相應法",
+  "en": "Root Guru Practice",
+  "aliases": ["上師相應法", "根本上師相應"],
+  "mishears": ["根本上師相應發", "根本上師相應佛"],
+  "category": "practice",
+  "related": ["根本傳承上師", "修法", "真佛宗"],
+  "source_type": "tbs_handbook",
+  "weight": 8
+},
+{
+  "cn": "寶瓶氣",
+  "en": "Treasure Vase Breathing",
+  "aliases": ["寶瓶氣法", "寶瓶呼吸"],
+  "mishears": ["寶平氣", "保瓶氣"],
+  "category": "practice",
+  "related": ["內法", "修法"],
+  "source_type": "tbs_handbook",
+  "weight": 7
+},
+{
+  "cn": "拙火",
+  "en": "Inner Fire Yoga",
+  "aliases": ["拙火法", "內火"],
+  "mishears": ["卓火", "捉火"],
+  "category": "practice",
+  "related": ["內法", "修法"],
+  "source_type": "tbs_handbook",
+  "weight": 7
+},
+{
+  "cn": "大圓滿",
+  "en": "Great Perfection",
+  "aliases": ["大圓滿法", "Dzogchen"],
+  "mishears": ["大元滿", "大圓慢"],
+  "category": "practice",
+  "related": ["密教", "真佛宗"],
+  "source_type": "tbs_handbook",
+  "weight": 8
+},
+{
+  "cn": "拏吉尼",
+  "en": "dakini",
+  "aliases": ["空行母", "Dakini"],
+  "mishears": ["那吉尼", "達吉尼"],
+  "category": "ritual_term",
+  "related": ["護法", "修法"],
+  "source_type": "tbs_handbook",
+  "weight": 6
+},
+{
+  "cn": "空行勇父",
+  "en": "daka",
+  "aliases": ["空行勇士", "Daka"],
+  "mishears": ["空行永父", "空行勇夫"],
+  "category": "ritual_term",
+  "related": ["護法", "修法"],
+  "source_type": "tbs_handbook",
+  "weight": 6
+}
 ]
