@@ -1,13 +1,11 @@
 {
-  "top_k_sacred_entities": 8,
-  "top_k_phrase_memory": 6,
-  "top_k_ceremony_memory": 4,
+  "top_sacred_entities": 8,
+  "top_phrase_matches": 6,
+  "top_ceremony_matches": 4,
+  "top_correction_matches": 5,
+  "min_phrase_score": 2,
+  "min_entity_score": 2,
+  "min_correction_score": 2,
   "interim_min_chars": 6,
-  "final_bias_event_modes": [
-    "dharma_talk",
-    "homa",
-    "repentance",
-    "announcement",
-    "chanting"
-  ]
+  "context_window_lines": 5
 }
