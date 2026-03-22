@@ -1097,4 +1097,54 @@
   "source_type": "mahakala_sadhana_pdf",
   "weight": 7
 }
+,{
+  "cn": "紅度母",
+  "en": "Red Tara",
+  "aliases": ["紅救度母", "紅度母尊"],
+  "mishears": ["洪度母", "紅度木"],
+  "category": "deity",
+  "related": ["度母", "敬愛", "修法"],
+  "source_type": "red_tara_sadhana_pdf",
+  "weight": 9
+},
+{
+  "cn": "紅度母心咒",
+  "en": "Red Tara Heart Mantra",
+  "aliases": ["紅度母咒", "救度母心咒"],
+  "mishears": ["紅度母新咒", "紅度母心周"],
+  "category": "mantra",
+  "related": ["紅度母", "咒語", "修法"],
+  "source_type": "red_tara_sadhana_pdf",
+  "weight": 8
+},
+{
+  "cn": "紅度母手印",
+  "en": "Red Tara Mudra",
+  "aliases": ["紅度母印", "救度母手印"],
+  "mishears": ["紅度母手應", "紅度母首印"],
+  "category": "ritual_term",
+  "related": ["紅度母", "手印", "觀想"],
+  "source_type": "red_tara_sadhana_pdf",
+  "weight": 7
+},
+{
+  "cn": "紅度母種子字",
+  "en": "Red Tara Seed Syllable",
+  "aliases": ["紅度母種子", "救度母種子字"],
+  "mishears": ["紅度母中子字", "紅度母種字"],
+  "category": "ritual_term",
+  "related": ["紅度母", "種子字", "觀想"],
+  "source_type": "red_tara_sadhana_pdf",
+  "weight": 7
+},
+{
+  "cn": "敬愛法",
+  "en": "Magnetising Practice",
+  "aliases": ["敬愛修法", "愛敬法"],
+  "mishears": ["敬愛發", "敬愛佛"],
+  "category": "practice",
+  "related": ["紅度母", "四法", "修法"],
+  "source_type": "red_tara_sadhana_pdf",
+  "weight": 8
+}
 ]
