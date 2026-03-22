@@ -231,4 +231,84 @@
     "event_modes": ["Dharma Talk", "Sadhana"],
     "weight": 7
   }
+,{
+  "cn": "四無量心觀",
+  "en": "Meditation on the Four Immeasurable Minds.",
+  "category": "practice_instruction",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Liturgy", "Sadhana"],
+  "weight": 9
+},
+{
+  "cn": "四皈依觀",
+  "en": "Meditation on the Fourfold Refuge.",
+  "category": "practice_instruction",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Liturgy", "Sadhana"],
+  "weight": 9
+},
+{
+  "cn": "披甲護身",
+  "en": "Armor Protection of the Body.",
+  "category": "practice_instruction",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Liturgy", "Sadhana"],
+  "weight": 8
+},
+{
+  "cn": "誦高王觀世音真經",
+  "en": "Recite the High King Avalokitesvara Sutra.",
+  "category": "practice_instruction",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Liturgy", "Sadhana", "Sutra"],
+  "weight": 8
+},
+{
+  "cn": "唸根本上師心咒",
+  "en": "Recite the Root Guru Heart Mantra.",
+  "category": "practice_instruction",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Liturgy", "Sadhana"],
+  "weight": 8
+},
+{
+  "cn": "入三摩地",
+  "en": "Enter into samadhi.",
+  "category": "ritual_phrase",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Liturgy", "Sadhana"],
+  "weight": 10
+},
+{
+  "cn": "出三摩地",
+  "en": "Emerge from samadhi.",
+  "category": "ritual_phrase",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Liturgy", "Sadhana"],
+  "weight": 10
+},
+{
+  "cn": "迴向",
+  "en": "Dedication of merits.",
+  "category": "dedication_phrase",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Liturgy", "Sadhana", "Dharma Talk"],
+  "weight": 9
+},
+{
+  "cn": "大黑天護法讚",
+  "en": "Praise to Mahakala, the Dharma Protector.",
+  "category": "ritual_phrase",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Liturgy", "Sadhana"],
+  "weight": 8
+},
+{
+  "cn": "未經灌頂不得修持此法",
+  "en": "Do not practice this sadhana without first receiving empowerment.",
+  "category": "teaching_phrase",
+  "source_type": "mahakala_sadhana_pdf",
+  "event_modes": ["Dharma Talk", "Sadhana"],
+  "weight": 10
+}
 ]
