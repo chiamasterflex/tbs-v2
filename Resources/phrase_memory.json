@@ -390,5 +390,165 @@
     "source_type": "high_king_sutra",
     "event_modes": ["Sutra"],
     "weight": 8
+  },
+  {
+    "cn": "皈依是修行的開始",
+    "en": "Taking refuge is the beginning of cultivation.",
+    "category": "teaching_phrase",
+    "source_type": "root_guru_pdf",
+    "event_modes": ["Dharma Talk", "Liturgy"],
+    "weight": 9
+  },
+  {
+    "cn": "先皈依再修法",
+    "en": "First take refuge, then begin the practice.",
+    "category": "teaching_phrase",
+    "source_type": "root_guru_pdf",
+    "event_modes": ["Dharma Talk", "Liturgy", "Sadhana"],
+    "weight": 10
+  },
+  {
+    "cn": "沒有灌頂不能修法",
+    "en": "Without empowerment, one cannot practice the sadhana.",
+    "category": "teaching_phrase",
+    "source_type": "root_guru_pdf",
+    "event_modes": ["Dharma Talk", "Liturgy", "Sadhana"],
+    "weight": 10
+  },
+  {
+    "cn": "上師的加持最重要",
+    "en": "The Guru's blessing is most important.",
+    "category": "teaching_phrase",
+    "source_type": "root_guru_pdf",
+    "event_modes": ["Dharma Talk", "Liturgy"],
+    "weight": 9
+  },
+  {
+    "cn": "視上師如佛",
+    "en": "Regard the Guru as a Buddha.",
+    "category": "teaching_phrase",
+    "source_type": "root_guru_pdf",
+    "event_modes": ["Dharma Talk", "Liturgy"],
+    "weight": 9
+  },
+  {
+    "cn": "上師就是一切加持的根源",
+    "en": "The Root Guru is the very source of all blessings.",
+    "category": "teaching_phrase",
+    "source_type": "root_guru_pdf",
+    "event_modes": ["Dharma Talk", "Liturgy"],
+    "weight": 9
+  },
+  {
+    "cn": "修法要依止根本上師",
+    "en": "In practice, one must rely on the Root Guru.",
+    "category": "teaching_phrase",
+    "source_type": "root_guru_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 9
+  },
+  {
+    "cn": "觀想根本上師住頂",
+    "en": "Visualize the Root Guru above your crown.",
+    "category": "practice_instruction",
+    "source_type": "root_guru_pdf",
+    "event_modes": ["Liturgy", "Sadhana"],
+    "weight": 8
+  },
+  {
+    "cn": "祈請根本上師加持",
+    "en": "Pray for the blessings of the Root Guru.",
+    "category": "practice_instruction",
+    "source_type": "root_guru_pdf",
+    "event_modes": ["Liturgy", "Sadhana", "Dharma Talk"],
+    "weight": 9
+  },
+  {
+    "cn": "先修四加行",
+    "en": "Begin with the Four Preliminary Practices.",
+    "category": "practice_instruction",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 8
+  },
+  {
+    "cn": "再修根本上師相應法",
+    "en": "Then cultivate the Root Guru Practice.",
+    "category": "practice_instruction",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 8
+  },
+  {
+    "cn": "再修本尊法",
+    "en": "Then cultivate the Personal Deity Practice.",
+    "category": "practice_instruction",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 8
+  },
+  {
+    "cn": "修法要依照次第",
+    "en": "Practice must follow the proper sequence.",
+    "category": "teaching_phrase",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 9
+  },
+  {
+    "cn": "由外法進入內法",
+    "en": "Proceed from the outer practices into the inner practices.",
+    "category": "teaching_phrase",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 8
+  },
+  {
+    "cn": "由生起次第進入圓滿次第",
+    "en": "Proceed from the Generation Stage into the Completion Stage.",
+    "category": "teaching_phrase",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 8
+  },
+  {
+    "cn": "真佛密法適合現代人",
+    "en": "The True Buddha Tantra is suited for modern people.",
+    "category": "teaching_phrase",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "真佛密法重實修不重理論",
+    "en": "The True Buddha Tantra emphasizes actual practice over theory.",
+    "category": "teaching_phrase",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk"],
+    "weight": 8
+  },
+  {
+    "cn": "持咒是為了對治口業",
+    "en": "Mantra recitation remedies speech karma.",
+    "category": "teaching_phrase",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 7
+  },
+  {
+    "cn": "入三摩地是為了對治散亂",
+    "en": "Entering samadhi remedies distraction.",
+    "category": "teaching_phrase",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 7
+  },
+  {
+    "cn": "觀想空性是為了對治不空",
+    "en": "Visualization of emptiness remedies non-emptiness.",
+    "category": "teaching_phrase",
+    "source_type": "true_buddha_tantra_pdf",
+    "event_modes": ["Dharma Talk", "Sadhana"],
+    "weight": 7
   }
 ]
