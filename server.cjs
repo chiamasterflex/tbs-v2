@@ -101,11 +101,130 @@ function getOrCreateSession(id = 'live-session') {
       sourceLanguage: 'Mandarin',
       targetLanguage: 'English',
       lines: [],
+      brainState: {
+        activeTopic: null,
+        activeTopicEn: null,
+        activeTopicType: null,
+        activeTopicConfidence: 0,
+        lockedUntilLineCount: 0,
+        lastTopics: [],
+      },
     };
     sessions.unshift(session);
   }
 
   return session;
+}
+
+function ensureSessionBrainState(session) {
+  if (!session) return null;
+
+  if (!session.brainState) {
+    session.brainState = {
+      activeTopic: null,
+      activeTopicEn: null,
+      activeTopicType: null,
+      activeTopicConfidence: 0,
+      lockedUntilLineCount: 0,
+      lastTopics: [],
+    };
+  }
+
+  return session.brainState;
+}
+
+function getSessionLineCount(session) {
+  return Array.isArray(session?.lines) ? session.lines.length : 0;
+}
+
+function scoreTopicCandidate(entity = {}, normalizedCn = '', eventMode = 'Dharma Talk') {
+  if (!entity?.cn) return 0;
+
+  let score = 0;
+  const cn = entity.cn || '';
+  const aliases = []
+    .concat(entity?.aliases || [])
+    .concat(entity?.mishears || [])
+    .concat(entity?.variants || [])
+    .filter(Boolean);
+
+  if (normalizedCn === cn) score += 100;
+  if (normalizedCn.includes(cn)) score += cn.length * 3;
+  score += overlapScore(normalizedCn, aliases);
+  score += sourceWeightBonus(entity);
+
+  if (Array.isArray(entity?.event_modes) && entity.event_modes.includes(eventMode)) {
+    score += 4;
+  }
+
+  return score;
+}
+
+function updateSessionTopic(session, normalizedCn, retrieval = {}, eventMode = 'Dharma Talk') {
+  const brainState = ensureSessionBrainState(session);
+  if (!brainState) return null;
+
+  const candidates = [];
+
+  for (const entity of retrieval.sacredEntities || []) {
+    const score = scoreTopicCandidate(entity, normalizedCn, eventMode);
+    if (score > 0) {
+      candidates.push({
+        cn: entity.cn,
+        en: entity.en,
+        type: entity.category || 'entity',
+        confidence: score,
+      });
+    }
+  }
+
+  candidates.sort((a, b) => b.confidence - a.confidence);
+  const best = candidates[0] || null;
+
+  const lineCount = getSessionLineCount(session);
+  const lockActive = brainState.lockedUntilLineCount > lineCount;
+
+  if (best && best.confidence >= 8) {
+    brainState.activeTopic = best.cn;
+    brainState.activeTopicEn = best.en;
+    brainState.activeTopicType = best.type;
+    brainState.activeTopicConfidence = best.confidence;
+    brainState.lockedUntilLineCount = lineCount + 5;
+    brainState.lastTopics.unshift({
+      cn: best.cn,
+      en: best.en,
+      type: best.type,
+      confidence: best.confidence,
+      at: new Date().toISOString(),
+    });
+    brainState.lastTopics = brainState.lastTopics.slice(0, 10);
+    return brainState;
+  }
+
+  if (lockActive && brainState.activeTopic) {
+    return brainState;
+  }
+
+  if (!lockActive) {
+    brainState.activeTopic = null;
+    brainState.activeTopicEn = null;
+    brainState.activeTopicType = null;
+    brainState.activeTopicConfidence = 0;
+  }
+
+  return brainState;
+}
+
+function getActiveTopicContext(brainState) {
+  if (!brainState?.activeTopic) return null;
+
+  return {
+    cn: brainState.activeTopic,
+    en: brainState.activeTopicEn || '',
+    type: brainState.activeTopicType || 'entity',
+    confidence: brainState.activeTopicConfidence || 0,
+    lockedUntilLineCount: brainState.lockedUntilLineCount || 0,
+  };
 }
 
 getOrCreateSession('live-session');
@@ -227,6 +346,7 @@ async function translateMixedSegments({
   retrieval,
   eventMode,
   contextWindow,
+  activeTopic = null,
 }) {
   const rawSegments = normalizeSegmentSpacing(segmentMixedText(text));
   if (!rawSegments.length) return text;
@@ -280,7 +400,8 @@ async function translateMixedSegments({
       },
       eventMode,
       contextWindow,
-      'chinese'
+      'chinese',
+      activeTopic
     );
 
     translatedSegments.push(translated || trimmed);
@@ -927,6 +1048,7 @@ function buildDeepSeekPrompts({
   contextWindow,
   inputMode,
   forceAntiLiteral = false,
+  activeTopic = null,
 }) {
   const glossaryBlock =
     hits.length > 0
@@ -966,8 +1088,12 @@ function buildDeepSeekPrompts({
       ? contextWindow.map((x, i) => `${i + 1}. CN: ${x.cn} || EN: ${x.en}`).join('\n')
       : 'No recent context';
 
+  const activeTopicBlock = activeTopic?.cn
+    ? `Active topic: ${activeTopic.cn}${activeTopic.en ? ` => ${activeTopic.en}` : ''}\nType: ${activeTopic.type || 'entity'}\nConfidence: ${activeTopic.confidence || 0}`
+    : 'No active topic';
+
   const antiLiteralRule = forceAntiLiteral
-    ? '\n10. The previous draft looked absurd or over-literal. Prefer the intended religious meaning over literal nonsense.\n11. Never output comic body-part deity phrases or other obviously cursed literal renderings.\n12. If correction memory suggests a likely intended phrase, follow it.'
+    ? '\n10. The previous draft looked absurd or over-literal. Prefer the intended religious meaning over literal nonsense.\n11. Never output comic body-part deity phrases or other obviously cursed literal renderings.\n12. If correction memory suggests a likely intended phrase, follow it.\n13. If an active topic is present, prefer that interpretation when the input is ambiguous.'
     : '';
 
   const systemPrompt =
@@ -985,7 +1111,8 @@ Rules:
 6. Keep it very short and subtitle-safe.
 7. Do not re-translate English into different English.
 8. Avoid absurd literal output.
-9. Prefer clean devotional or teaching language over strange word-for-word renderings.${antiLiteralRule}
+9. Prefer clean devotional or teaching language over strange word-for-word renderings.
+10. If an active topic is present, prefer that interpretation when the input is ambiguous.${antiLiteralRule}
 `.trim()
       : `
 You are the official translator for True Buddha School (TBS).
@@ -1000,7 +1127,8 @@ Rules:
 6. Avoid absurd literal output.
 7. No explanations, no notes, no brackets unless essential.
 8. Keep it clear, natural, and subtitle-friendly.
-9. Use culturally and doctrinally appropriate TBS English wording.${antiLiteralRule}
+9. Use culturally and doctrinally appropriate TBS English wording.
+10. If an active topic is present, prefer that interpretation when the input is ambiguous.${antiLiteralRule}
 Event mode: ${eventMode}
 Input mode: ${inputMode}
 `.trim();
@@ -1013,6 +1141,9 @@ ${text}
 
 Recent context:
 ${contextBlock}
+
+Active topic:
+${activeTopicBlock}
 
 Glossary:
 ${glossaryBlock}
@@ -1048,7 +1179,8 @@ async function translateWithDeepSeek(
   retrieval = {},
   eventMode = 'Dharma Talk',
   contextWindow = [],
-  inputMode = 'chinese'
+  inputMode = 'chinese',
+  activeTopic = null
 ) {
   if (!text || !text.trim()) return '';
 
@@ -1066,6 +1198,7 @@ async function translateWithDeepSeek(
       retrieval,
       eventMode,
       contextWindow,
+      activeTopic,
     });
   }
 
@@ -1090,6 +1223,7 @@ async function translateWithDeepSeek(
     contextWindow,
     inputMode,
     forceAntiLiteral: false,
+    activeTopic,
   });
 
   try {
@@ -1139,6 +1273,7 @@ async function translateWithDeepSeek(
         contextWindow,
         inputMode,
         forceAntiLiteral: true,
+        activeTopic,
       }));
 
       const retryOut = await requestOnce(systemPrompt, userPrompt);
@@ -1237,6 +1372,10 @@ app.post('/api/session/:id/line', async (req, res) => {
       prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, session.eventMode),
   };
 
+  const activeTopic = getActiveTopicContext(
+    updateSessionTopic(session, normalizedCn, retrieval, session.eventMode)
+  );
+
   const en = await translateWithDeepSeek(
     normalizedCn,
     hits,
@@ -1244,7 +1383,8 @@ app.post('/api/session/:id/line', async (req, res) => {
     retrieval,
     session.eventMode,
     getContextWindow(session),
-    prepared.inputMode
+    prepared.inputMode,
+    activeTopic
   );
 
   const line = buildLine(rawCn, normalizedCn, en, hits, retrieval, {
@@ -1285,6 +1425,10 @@ app.post('/api/translate-interim', async (req, res) => {
       prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, eventMode),
   };
 
+  const activeTopic = getActiveTopicContext(
+    updateSessionTopic(session, normalizedCn, retrieval, eventMode)
+  );
+
   const en = await translateWithDeepSeek(
     normalizedCn,
     hits,
@@ -1292,7 +1436,8 @@ app.post('/api/translate-interim', async (req, res) => {
     retrieval,
     eventMode,
     getContextWindow(session),
-    prepared.inputMode
+    prepared.inputMode,
+    activeTopic
   );
 
   res.json({
@@ -1465,6 +1610,10 @@ wss.on('connection', async (browserWs) => {
               retrieveCorrectionMemory(normalizedCn, activeSession.eventMode),
           };
 
+          const activeTopic = getActiveTopicContext(
+            updateSessionTopic(activeSession, normalizedCn, retrieval, activeSession.eventMode)
+          );
+
           const en = await translateWithDeepSeek(
             normalizedCn,
             hits,
@@ -1472,7 +1621,8 @@ wss.on('connection', async (browserWs) => {
             retrieval,
             activeSession.eventMode,
             getContextWindow(activeSession),
-            prepared.inputMode
+            prepared.inputMode,
+            activeTopic
           );
 
           const line = buildLine(rawText, normalizedCn, en, hits, retrieval, {
