@@ -974,6 +974,63 @@ function findPhraseMatch(text, mode = 'final') {
   return best;
 }
 
+function computeConfidenceBand(score = 0) {
+  if (score >= 80) return 'high';
+  if (score >= 55) return 'medium';
+  return 'low';
+}
+
+function buildTranslationMeta({
+  normalizedCn,
+  en,
+  hits = [],
+  retrieval = {},
+  inputMode = 'unknown',
+  activeTopic = null,
+  mode = 'final',
+}) {
+  const phraseMatch = findPhraseMatch(normalizedCn, mode);
+  const correctionCount = (retrieval.correctionMatches || []).length;
+  const entityCount = (retrieval.sacredEntities || []).length;
+  const phraseCount = (retrieval.phraseMatches || []).length;
+  const ceremonyCount = (retrieval.ceremonyMatches || []).length;
+  const glossaryCount = hits.length;
+
+  let score = 20;
+
+  if (inputMode === 'english') score = 95;
+  if (inputMode === 'mixed') score += 8;
+  if (containsChinese(normalizedCn)) score += 8;
+  if (glossaryCount > 0) score += Math.min(18, glossaryCount * 4);
+  if (entityCount > 0) score += Math.min(20, entityCount * 5);
+  if (phraseCount > 0) score += Math.min(20, phraseCount * 5);
+  if (ceremonyCount > 0) score += Math.min(12, ceremonyCount * 4);
+  if (correctionCount > 0) score += Math.min(16, correctionCount * 4);
+  if (phraseMatch?.en) score += 18;
+  if (activeTopic?.cn) score += Math.min(12, 4 + Math.floor((activeTopic.confidence || 0) / 6));
+  if (looksAbsurdOutput(en)) score -= 45;
+  if (!en || !en.trim()) score -= 25;
+  if (en && normalizedCn && normalizeSpaces(en) === normalizeSpaces(normalizedCn)) score -= 18;
+
+  score = Math.max(0, Math.min(100, score));
+  const band = computeConfidenceBand(score);
+
+  return {
+    score,
+    band,
+    phraseMatched: Boolean(phraseMatch?.en),
+    activeTopic: activeTopic?.cn || null,
+    activeTopicEn: activeTopic?.en || null,
+    glossaryCount,
+    entityCount,
+    phraseCount,
+    ceremonyCount,
+    correctionCount,
+    shouldShowSourceProminently: band === 'low',
+    recommendedDisplayMode: band === 'low' ? 'source_plus_translation' : 'translation_primary',
+  };
+}
+
 function literalFallbackTranslate(text, hits) {
   let out = text;
   out = applyGlossaryToEnglish(out, hits);
@@ -1301,6 +1358,7 @@ function buildLine(rawCn, normalizedCn, en, hits, retrieval = {}, extra = {}) {
     retrieval,
     inputMode: extra.inputMode || 'unknown',
     correctionHits: extra.correctionHits || [],
+    translationMeta: extra.translationMeta || null,
     time: new Date().toLocaleTimeString(),
     at: new Date().toISOString(),
   };
@@ -1387,9 +1445,20 @@ app.post('/api/session/:id/line', async (req, res) => {
     activeTopic
   );
 
+  const translationMeta = buildTranslationMeta({
+    normalizedCn,
+    en,
+    hits,
+    retrieval,
+    inputMode: prepared.inputMode,
+    activeTopic,
+    mode: 'final',
+  });
+
   const line = buildLine(rawCn, normalizedCn, en, hits, retrieval, {
     inputMode: prepared.inputMode,
     correctionHits: prepared.correctionHits,
+    translationMeta,
   });
   session.lines.unshift(line);
   session.lines = session.lines.slice(0, 100);
@@ -1440,12 +1509,23 @@ app.post('/api/translate-interim', async (req, res) => {
     activeTopic
   );
 
+  const translationMeta = buildTranslationMeta({
+    normalizedCn,
+    en,
+    hits,
+    retrieval,
+    inputMode: prepared.inputMode,
+    activeTopic,
+    mode: 'interim',
+  });
+
   res.json({
     en,
     normalizedCn,
     hits,
     retrieval,
     inputMode: prepared.inputMode,
+    translationMeta,
   });
 });
 
@@ -1625,9 +1705,20 @@ wss.on('connection', async (browserWs) => {
             activeTopic
           );
 
+          const translationMeta = buildTranslationMeta({
+            normalizedCn,
+            en,
+            hits,
+            retrieval,
+            inputMode: prepared.inputMode,
+            activeTopic,
+            mode: 'final',
+          });
+
           const line = buildLine(rawText, normalizedCn, en, hits, retrieval, {
             inputMode: prepared.inputMode,
             correctionHits: prepared.correctionHits,
+            translationMeta,
           });
 
           activeSession.lines.unshift(line);
