@@ -48,6 +48,7 @@ export default function App() {
 
   const [liveChinese, setLiveChinese] = useState('');
   const [liveEnglish, setLiveEnglish] = useState('');
+  const [liveTranslationMeta, setLiveTranslationMeta] = useState(null);
   const [historyLines, setHistoryLines] = useState([]);
   const [sourceLanguage, setSourceLanguage] = useState('Mandarin');
   const [targetLanguage, setTargetLanguage] = useState('English');
@@ -158,6 +159,7 @@ export default function App() {
 
         const data = await res.json();
         setLiveEnglish(data.en || '');
+        setLiveTranslationMeta(data.translationMeta || null);
       } catch (err) {
         console.error('interim translate failed', err);
       }
@@ -258,6 +260,7 @@ export default function App() {
             setHistoryLines((prev) => [line, ...prev].slice(0, 150));
             setLiveChinese('');
             setLiveEnglish('');
+            setLiveTranslationMeta(null);
             lastTranslatedChineseRef.current = '';
             lastLiveSnapshotRef.current = '';
           }
@@ -348,6 +351,7 @@ export default function App() {
       setHistoryLines([]);
       setLiveChinese('');
       setLiveEnglish('');
+      setLiveTranslationMeta(null);
       lastTranslatedChineseRef.current = '';
       lastLiveSnapshotRef.current = '';
     } catch (err) {
@@ -385,6 +389,7 @@ export default function App() {
         english: liveEnglish,
         isLive: true,
         at: new Date().toISOString(),
+        translationMeta: liveTranslationMeta,
       });
     }
 
@@ -396,11 +401,12 @@ export default function App() {
         english: line.en,
         isLive: false,
         at: line.at,
+        translationMeta: line.translationMeta || null,
       });
     });
 
     return items;
-  }, [liveChinese, liveEnglish, historyLines]);
+  }, [liveChinese, liveEnglish, liveTranslationMeta, historyLines]);
 
   useEffect(() => {
     const el = transcriptFeedRef.current;
@@ -542,16 +548,43 @@ export default function App() {
                     {item.isLive && <div style={styles.liveBadge}>Draft</div>}
                   </div>
 
-                  <div style={styles.feedChinese}>{item.chinese || '…'}</div>
+                  {(() => {
+                    const meta = item.translationMeta || {};
+                    const confidence = meta.band || 'high';
+                    const isLow = confidence === 'low';
+                    const isMedium = confidence === 'medium';
 
-                  <div
-                    style={{
-                      ...styles.feedEnglish,
-                      ...(item.isLive ? styles.feedEnglishDraft : {}),
-                    }}
-                  >
-                    {item.english || (item.isLive ? 'Translating…' : '…')}
-                  </div>
+                    return (
+                      <>
+                        <div
+                          style={{
+                            ...styles.feedChinese,
+                            ...(isLow
+                              ? styles.feedChineseLowConfidence
+                              : isMedium
+                                ? styles.feedChineseMediumConfidence
+                                : styles.feedChineseHighConfidence),
+                          }}
+                        >
+                          {item.chinese || '…'}
+                        </div>
+
+                        <div
+                          style={{
+                            ...styles.feedEnglish,
+                            ...(item.isLive ? styles.feedEnglishDraft : {}),
+                            ...(isLow
+                              ? styles.feedEnglishLowConfidence
+                              : isMedium
+                                ? styles.feedEnglishMediumConfidence
+                                : styles.feedEnglishHighConfidence),
+                          }}
+                        >
+                          {item.english || (item.isLive ? 'Translating…' : '…')}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               ))
             )}
@@ -907,6 +940,19 @@ const styles = {
     textAlign: 'left',
     wordBreak: 'break-word',
   },
+  feedChineseHighConfidence: {
+    fontSize: '24px',
+    opacity: 0.68,
+  },
+  feedChineseMediumConfidence: {
+    fontSize: '18px',
+    opacity: 0.88,
+  },
+  feedChineseLowConfidence: {
+    fontSize: '28px',
+    opacity: 1,
+    color: '#111',
+  },
   feedEnglish: {
     fontSize: '20px',
     lineHeight: 1.4,
@@ -915,6 +961,18 @@ const styles = {
     textAlign: 'left',
     wordBreak: 'break-word',
     transition: 'opacity 160ms ease, color 160ms ease',
+  },
+  feedEnglishHighConfidence: {
+    opacity: 1,
+    color: '#2450d8',
+  },
+  feedEnglishMediumConfidence: {
+    opacity: 0.86,
+    color: '#3b5fd6',
+  },
+  feedEnglishLowConfidence: {
+    opacity: 0.62,
+    color: '#6678b5',
   },
   feedEnglishDraft: {
     color: '#5c72c9',

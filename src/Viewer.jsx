@@ -235,6 +235,10 @@ export default function Viewer() {
               const cn = line.normalizedCn || line.rawCn || '';
               const rawCn = line.rawCn || '';
               const en = line.en || '—';
+              const meta = line.translationMeta || {};
+              const confidence = meta.band || 'high';
+              const isLow = confidence === 'low';
+              const isMedium = confidence === 'medium';
 
               return (
                 <article key={line.id || `${timestamp}-${index}`} style={styles.lineCard}>
@@ -263,12 +267,34 @@ export default function Viewer() {
 
                   <div style={styles.cnBlock}>
                     <div style={styles.blockLabel}>Chinese</div>
-                    <div style={styles.cn}>{cn}</div>
+                    <div
+                      style={{
+                        ...styles.cn,
+                        ...(isLow
+                          ? styles.feedChineseLowConfidence
+                          : isMedium
+                            ? styles.feedChineseMediumConfidence
+                            : styles.feedChineseHighConfidence),
+                      }}
+                    >
+                      {cn}
+                    </div>
                   </div>
 
                   <div style={styles.enBlock}>
                     <div style={styles.blockLabel}>English</div>
-                    <div style={styles.en}>{en}</div>
+                    <div
+                      style={{
+                        ...styles.en,
+                        ...(isLow
+                          ? styles.feedEnglishLowConfidence
+                          : isMedium
+                            ? styles.feedEnglishMediumConfidence
+                            : styles.feedEnglishHighConfidence),
+                      }}
+                    >
+                      {en}
+                    </div>
                   </div>
                 </article>
               );
@@ -603,6 +629,19 @@ const styles = {
     textAlign: 'left',
     wordBreak: 'break-word',
   },
+  feedChineseHighConfidence: {
+    fontSize: '34px',
+    opacity: 0.68,
+  },
+  feedChineseMediumConfidence: {
+    fontSize: '24px',
+    opacity: 0.88,
+  },
+  feedChineseLowConfidence: {
+    fontSize: '38px',
+    opacity: 1,
+    color: '#111',
+  },
   enBlock: {},
   en: {
     fontSize: '28px',
@@ -611,6 +650,18 @@ const styles = {
     color: '#2450d8',
     textAlign: 'left',
     wordBreak: 'break-word',
+  },
+  feedEnglishHighConfidence: {
+    opacity: 1,
+    color: '#2450d8',
+  },
+  feedEnglishMediumConfidence: {
+    opacity: 0.86,
+    color: '#3b5fd6',
+  },
+  feedEnglishLowConfidence: {
+    opacity: 0.62,
+    color: '#6678b5',
   },
   emptyState: {
     color: '#ddd',
