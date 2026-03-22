@@ -65,6 +65,7 @@ const generatedCeremonyPhrases = readJson(
 const sacredEntities = readJson(path.join(resourcesDir, 'sacred_entities.json'), []);
 const phraseMemory = readJson(path.join(resourcesDir, 'phrase_memory.json'), []);
 const ceremonyMemory = readJson(path.join(resourcesDir, 'ceremony_memory.json'), []);
+const canonicalCorpus = readJson(path.join(resourcesDir, 'canonical_corpus.json'), []);
 
 const asrMishearLogPath = path.join(resourcesDir, 'asr_mishear_log.json');
 let asrMishearLog = readJson(asrMishearLogPath, []);
@@ -85,7 +86,7 @@ const retrievalConfig = readJson(path.join(resourcesDir, 'retrieval_config.json'
 });
 
 console.log(
-  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} sacredEntities=${sacredEntities.length} phraseMemory=${phraseMemory.length} ceremonyMemory=${ceremonyMemory.length} correctionMemory=${correctionMemory.length}`
+  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} sacredEntities=${sacredEntities.length} phraseMemory=${phraseMemory.length} ceremonyMemory=${ceremonyMemory.length} canonicalCorpus=${canonicalCorpus.length} correctionMemory=${correctionMemory.length}`
 );
 
 let sessions = [];
@@ -938,6 +939,7 @@ function isCanonicalSourceType(sourceType = '') {
 
 function retrieveCanonicalMatches(text, eventMode = 'Dharma Talk') {
   const pools = []
+    .concat(canonicalCorpus || [])
     .concat(phraseMemory || [])
     .concat(ceremonyMemory || [])
     .concat(generatedPhrases || [])
@@ -952,7 +954,7 @@ function retrieveCanonicalMatches(text, eventMode = 'Dharma Talk') {
     const candidateCn = normalizeSpaces(row?.cn || '');
     const candidateEn = normalizeSpaces(row?.en || '');
     if (!candidateCn || !candidateEn) continue;
-    if (!isCanonicalSourceType(row?.source_type)) continue;
+    if (!isCanonicalSourceType(row?.source_type) && !row?.category?.includes('canonical')) continue;
 
     let score = 0;
 
