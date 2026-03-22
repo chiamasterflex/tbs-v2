@@ -976,5 +976,125 @@
   "related": ["觀想", "三密"],
   "source_type": "true_buddha_tantra_pdf",
   "weight": 6
+},
+{
+  "cn": "佛陀",
+  "en": "Buddha",
+  "aliases": [],
+  "mishears": [],
+  "category": "deity",
+  "related": [],
+  "source_type": "moved_from_phrase_memory",
+  "weight": 6
+},
+{
+  "cn": "彌陀佛",
+  "en": "Amitabha Buddha",
+  "aliases": ["阿彌陀佛"],
+  "mishears": [],
+  "category": "buddha",
+  "related": ["極樂世界"],
+  "source_type": "moved_from_phrase_memory",
+  "weight": 8
+},
+{
+  "cn": "藥王菩薩",
+  "en": "Medicine King Bodhisattva",
+  "aliases": [],
+  "mishears": [],
+  "category": "bodhisattva",
+  "related": [],
+  "source_type": "moved_from_phrase_memory",
+  "weight": 7
+},
+{
+  "cn": "藥上菩薩",
+  "en": "Supreme Medicine Bodhisattva",
+  "aliases": [],
+  "mishears": [],
+  "category": "bodhisattva",
+  "related": [],
+  "source_type": "moved_from_phrase_memory",
+  "weight": 7
+},
+{
+  "cn": "虛空藏菩薩",
+  "en": "Akasagarbha Bodhisattva",
+  "aliases": [],
+  "mishears": [],
+  "category": "bodhisattva",
+  "related": [],
+  "source_type": "moved_from_phrase_memory",
+  "weight": 8
+},
+{
+  "cn": "清涼寶山億萬菩薩",
+  "en": "Countless Bodhisattvas of Clear Cool Jewel Mountain",
+  "aliases": [],
+  "mishears": [],
+  "category": "bodhisattva_group",
+  "related": [],
+  "source_type": "moved_from_phrase_memory",
+  "weight": 6
+},
+{
+  "cn": "普光王如來化勝菩薩",
+  "en": "Victorious Manifestation Bodhisattva of Universal Light King Tathagata",
+  "aliases": [],
+  "mishears": [],
+  "category": "bodhisattva",
+  "related": [],
+  "source_type": "moved_from_phrase_memory",
+  "weight": 6
+}
+,{
+  "cn": "六臂大黑天",
+  "en": "Six-Armed Mahakala",
+  "aliases": ["六臂瑪哈嘎拉", "六臂摩訶迦羅"],
+  "mishears": ["六臂大黑田", "六臂摩訶加羅"],
+  "category": "protector",
+  "related": ["瑪哈嘎拉", "大黑天", "護法"],
+  "source_type": "mahakala_sadhana_pdf",
+  "weight": 9
+},
+{
+  "cn": "大黑天護法",
+  "en": "Mahakala Dharma Protector",
+  "aliases": ["大黑天", "瑪哈嘎拉護法", "摩訶迦羅護法"],
+  "mishears": ["大黑天護發", "大黑天互法"],
+  "category": "protector",
+  "related": ["瑪哈嘎拉", "護法", "修法"],
+  "source_type": "mahakala_sadhana_pdf",
+  "weight": 8
+},
+{
+  "cn": "大黑天心咒",
+  "en": "Mahakala Heart Mantra",
+  "aliases": ["瑪哈嘎拉心咒", "摩訶迦羅心咒"],
+  "mishears": ["大黑天新咒", "瑪哈嘎拉新咒"],
+  "category": "mantra",
+  "related": ["瑪哈嘎拉", "護法", "咒語"],
+  "source_type": "mahakala_sadhana_pdf",
+  "weight": 8
+},
+{
+  "cn": "大黑天手印",
+  "en": "Mahakala Mudra",
+  "aliases": ["瑪哈嘎拉手印", "摩訶迦羅手印"],
+  "mishears": ["大黑天手應", "大黑天首印"],
+  "category": "ritual_term",
+  "related": ["瑪哈嘎拉", "手印", "修法"],
+  "source_type": "mahakala_sadhana_pdf",
+  "weight": 7
+},
+{
+  "cn": "大黑天種子字",
+  "en": "Mahakala Seed Syllable",
+  "aliases": ["瑪哈嘎拉種子字", "摩訶迦羅種子字"],
+  "mishears": ["大黑天中子字", "大黑天種字"],
+  "category": "ritual_term",
+  "related": ["瑪哈嘎拉", "種子字", "觀想"],
+  "source_type": "mahakala_sadhana_pdf",
+  "weight": 7
 }
 ]
