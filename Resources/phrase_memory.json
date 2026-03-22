@@ -169,5 +169,271 @@
     "event_mode": "General",
     "source_type": "seed",
     "weight": 7
+  },
+  {
+    "cn": "淨光祕密佛",
+    "en": "Pure Light Secret Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "法藏佛",
+    "en": "Dharma Treasury Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "獅子吼神足幽王佛",
+    "en": "Lion's Roar Tranquil King Buddha with Divine Powers",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "須彌燈王佛",
+    "en": "Sumeru Lamp King Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "法護佛",
+    "en": "Dharma Protector Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "金剛藏獅子遊戲佛",
+    "en": "Vajra Treasury Lion Sport Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "寶勝佛",
+    "en": "Precious Victory Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "神通佛",
+    "en": "Supernatural Power Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "藥師琉璃光王佛",
+    "en": "Medicine Crystal Light King Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "普光功德山王佛",
+    "en": "Universal Light Merit Mountain King Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "善住功德寶王佛",
+    "en": "Well-Abiding Merit Jewel King Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "定光佛",
+    "en": "Fixed Light Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "東方寶光月殿月妙尊音王佛",
+    "en": "Eastern Precious Light Moon Palace Sublime Voice King Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "南方樹根花王佛",
+    "en": "Southern Tree-Root Flower King Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "西方皂王神通燄花王佛",
+    "en": "Western Soot King Supernatural Flame Flower King Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "北方月殿清淨佛",
+    "en": "Northern Moon Palace Pure Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "上方無數精進寶首佛",
+    "en": "Upper Infinite Diligent Jewel-Crown Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "下方善寂月音王佛",
+    "en": "Lower Good Tranquility Moon Sound King Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "多寶佛",
+    "en": "Many Treasures Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "釋迦牟尼佛",
+    "en": "Shakyamuni Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 8
+  },
+  {
+    "cn": "彌勒佛",
+    "en": "Maitreya Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "阿閦佛",
+    "en": "Aksobhya Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "彌陀佛",
+    "en": "Amitabha Buddha",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 8
+  },
+  {
+    "cn": "大明觀世音",
+    "en": "Great Bright Avalokitesvara",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "觀明觀世音",
+    "en": "Observing Brightness Avalokitesvara",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "高明觀世音",
+    "en": "Lofty Brightness Avalokitesvara",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "開明觀世音",
+    "en": "Opening Brightness Avalokitesvara",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "大慈悲救苦觀世音",
+    "en": "Great Compassionate Avalokitesvara Who Relieves Suffering",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 8
+  },
+  {
+    "cn": "藥王菩薩",
+    "en": "Medicine King Bodhisattva",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "藥上菩薩",
+    "en": "Supreme Medicine Bodhisattva",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "文殊師利菩薩",
+    "en": "Manjushri Bodhisattva",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 8
+  },
+  {
+    "cn": "普賢菩薩",
+    "en": "Samantabhadra Bodhisattva",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 8
+  },
+  {
+    "cn": "虛空藏菩薩",
+    "en": "Akasagarbha Bodhisattva",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 8
+  },
+  {
+    "cn": "地藏王菩薩",
+    "en": "Ksitigarbha Bodhisattva",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 8
+  },
+  {
+    "cn": "清涼寶山億萬菩薩",
+    "en": "Countless Bodhisattvas of Clear Cool Jewel Mountain",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "普光王如來化勝菩薩",
+    "en": "Victorious Manifestation Bodhisattva of Universal Light King Tathagata",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 6
+  },
+  {
+    "cn": "十方觀世音",
+    "en": "Avalokitesvara of the Ten Directions",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 7
+  },
+  {
+    "cn": "高王觀世音",
+    "en": "High King Avalokitesvara",
+    "event_mode": "Sutra",
+    "source_type": "high_king_sutra",
+    "weight": 8
   }
 ]
