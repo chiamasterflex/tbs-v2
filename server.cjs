@@ -711,12 +711,163 @@ function literalFallbackTranslate(text, hits) {
   return out;
 }
 
+
 function conservativeInterimTranslate(text, hits) {
   const t = text.trim();
   if (!t) return '';
   if (t.length <= 1) return '';
   if (t.length <= 2) return applyGlossaryToEnglish(t, hits);
   return literalFallbackTranslate(t, hits);
+}
+
+function looksAbsurdOutput(text = '') {
+  const t = (text || '').trim();
+  if (!t) return false;
+
+  const absurdPatterns = [
+    /butt gods?/i,
+    /ass gods?/i,
+    /屁股神/,
+    /臀部神/,
+    /anus/i,
+    /toilet gods?/i,
+    /buttocks/i,
+    /god of butt/i,
+    /we all become butt/i,
+    /everyone becomes butt/i,
+  ];
+
+  if (absurdPatterns.some((re) => re.test(t))) return true;
+
+  const weirdLiteralPairs = [
+    ['butt', 'god'],
+    ['ass', 'god'],
+    ['toilet', 'buddha'],
+    ['toilet', 'bodhisattva'],
+  ];
+
+  for (const [a, b] of weirdLiteralPairs) {
+    if (t.toLowerCase().includes(a) && t.toLowerCase().includes(b)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function buildDeepSeekPrompts({
+  text,
+  hits,
+  mode,
+  retrieval,
+  eventMode,
+  contextWindow,
+  inputMode,
+  forceAntiLiteral = false,
+}) {
+  const glossaryBlock =
+    hits.length > 0
+      ? hits.map((t) => `${t.cn} => ${t.en}`).join('\n')
+      : 'No glossary hits';
+
+  const sacredBlock =
+    (retrieval.sacredEntities || []).length > 0
+      ? retrieval.sacredEntities
+          .map((x) => `${x.cn} => ${x.en}${x.category ? ` [${x.category}]` : ''}`)
+          .join('\n')
+      : 'No sacred entity hits';
+
+  const phraseBlock =
+    (retrieval.phraseMatches || []).length > 0
+      ? retrieval.phraseMatches.map((x) => `${x.cn} => ${x.en}`).join('\n')
+      : 'No phrase memory hits';
+
+  const ceremonyBlock =
+    (retrieval.ceremonyMatches || []).length > 0
+      ? retrieval.ceremonyMatches.map((x) => `${x.cn} => ${x.en}`).join('\n')
+      : 'No ceremony phrase hits';
+
+  const correctionBlock =
+    (retrieval.correctionMatches || []).length > 0
+      ? retrieval.correctionMatches
+          .map((x) => {
+            const intended = x.intendedChinese || x.corrected || '';
+            const correctedEn = x.correctedEnglish || '';
+            return `${x.heard} => ${intended}${correctedEn ? ` => ${correctedEn}` : ''}`;
+          })
+          .join('\n')
+      : 'No correction memory hits';
+
+  const contextBlock =
+    contextWindow.length > 0
+      ? contextWindow.map((x, i) => `${i + 1}. CN: ${x.cn} || EN: ${x.en}`).join('\n')
+      : 'No recent context';
+
+  const antiLiteralRule = forceAntiLiteral
+    ? '\n10. The previous draft looked absurd or over-literal. Prefer the intended religious meaning over literal nonsense.\n11. Never output comic body-part deity phrases or other obviously cursed literal renderings.\n12. If correction memory suggests a likely intended phrase, follow it.'
+    : '';
+
+  const systemPrompt =
+    mode === 'interim'
+      ? `
+You are the official translator for True Buddha School (TBS).
+Translate spoken Chinese into short, conservative live subtitle English.
+
+Rules:
+1. Output English only.
+2. If the source already contains English words or phrases, preserve them in English.
+3. Translate only the Chinese parts.
+4. Preserve TBS terms exactly from the glossary, sacred entity list, and correction memory.
+5. If ASR looks noisy, prefer the correction memory and nearby context over absurd literal output.
+6. Keep it very short and subtitle-safe.
+7. Do not re-translate English into different English.
+8. Avoid absurd literal output.
+9. Prefer clean devotional or teaching language over strange word-for-word renderings.${antiLiteralRule}
+`.trim()
+      : `
+You are the official translator for True Buddha School (TBS).
+Translate spoken Chinese into natural subtitle English.
+
+Rules:
+1. Output English only.
+2. If the source already contains English words or phrases, preserve them in English.
+3. Translate only the Chinese portions.
+4. Preserve TBS terminology exactly when given in the glossary, sacred entity list, phrase memory, ceremony memory, and correction memory.
+5. Use recent context to repair likely ASR errors when the intended meaning is clear.
+6. Avoid absurd literal output.
+7. No explanations, no notes, no brackets unless essential.
+8. Keep it clear, natural, and subtitle-friendly.
+9. Use culturally and doctrinally appropriate TBS English wording.${antiLiteralRule}
+Event mode: ${eventMode}
+Input mode: ${inputMode}
+`.trim();
+
+  const userPrompt = `
+Mode: ${mode}
+
+Input:
+${text}
+
+Recent context:
+${contextBlock}
+
+Glossary:
+${glossaryBlock}
+
+Sacred entity matches:
+${sacredBlock}
+
+Phrase memory matches:
+${phraseBlock}
+
+Ceremony phrase matches:
+${ceremonyBlock}
+
+Correction memory matches:
+${correctionBlock}
+`.trim();
+
+  return { systemPrompt, userPrompt };
 }
 
 function getContextWindow(session, limit = retrievalConfig.context_window_lines || 5) {
@@ -757,134 +908,70 @@ async function translateWithDeepSeek(
       : literalFallbackTranslate(text, hits);
   }
 
-  const glossaryBlock =
-    hits.length > 0
-      ? hits.map((t) => `${t.cn} => ${t.en}`).join('\n')
-      : 'No glossary hits';
-
-  const sacredBlock =
-    (retrieval.sacredEntities || []).length > 0
-      ? retrieval.sacredEntities
-          .map((x) => `${x.cn} => ${x.en}${x.category ? ` [${x.category}]` : ''}`)
-          .join('\n')
-      : 'No sacred entity hits';
-
-  const phraseBlock =
-    (retrieval.phraseMatches || []).length > 0
-      ? retrieval.phraseMatches.map((x) => `${x.cn} => ${x.en}`).join('\n')
-      : 'No phrase memory hits';
-
-  const ceremonyBlock =
-    (retrieval.ceremonyMatches || []).length > 0
-      ? retrieval.ceremonyMatches.map((x) => `${x.cn} => ${x.en}`).join('\n')
-      : 'No ceremony phrase hits';
-
-  const correctionBlock =
-    (retrieval.correctionMatches || []).length > 0
-      ? retrieval.correctionMatches
-          .map((x) => {
-            const intended = x.intendedChinese || x.corrected || '';
-            const correctedEn = x.correctedEnglish || '';
-            return `${x.heard} => ${intended}${correctedEn ? ` => ${correctedEn}` : ''}`;
-          })
-          .join('\n')
-      : 'No correction memory hits';
-
-  const contextBlock =
-    contextWindow.length > 0
-      ? contextWindow.map((x, i) => `${i + 1}. CN: ${x.cn} || EN: ${x.en}`).join('\n')
-      : 'No recent context';
-
-  const systemPrompt =
-    mode === 'interim'
-      ? `
-You are the official translator for True Buddha School (TBS).
-Translate spoken Chinese into short, conservative live subtitle English.
-
-Rules:
-1. Output English only.
-2. If the source already contains English words or phrases, preserve them in English.
-3. Translate only the Chinese parts.
-4. Preserve TBS terms exactly from the glossary, sacred entity list, and correction memory.
-5. If ASR looks noisy, prefer the correction memory and nearby context over absurd literal output.
-6. Keep it very short and subtitle-safe.
-7. Do not re-translate English into different English.
-`.trim()
-      : `
-You are the official translator for True Buddha School (TBS).
-Translate spoken Chinese into natural subtitle English.
-
-Rules:
-1. Output English only.
-2. If the source already contains English words or phrases, preserve them in English.
-3. Translate only the Chinese portions.
-4. Preserve TBS terminology exactly when given in the glossary, sacred entity list, phrase memory, ceremony memory, and correction memory.
-5. Use recent context to repair likely ASR errors when the intended meaning is clear.
-6. Avoid absurd literal output.
-7. No explanations, no notes, no brackets unless essential.
-8. Keep it clear, natural, and subtitle-friendly.
-9. Use culturally and doctrinally appropriate TBS English wording.
-Event mode: ${eventMode}
-Input mode: ${inputMode}
-`.trim();
-
-  const userPrompt = `
-Mode: ${mode}
-
-Input:
-${text}
-
-Recent context:
-${contextBlock}
-
-Glossary:
-${glossaryBlock}
-
-Sacred entity matches:
-${sacredBlock}
-
-Phrase memory matches:
-${phraseBlock}
-
-Ceremony phrase matches:
-${ceremonyBlock}
-
-Correction memory matches:
-${correctionBlock}
-`.trim();
+  let { systemPrompt, userPrompt } = buildDeepSeekPrompts({
+    text,
+    hits,
+    mode,
+    retrieval,
+    eventMode,
+    contextWindow,
+    inputMode,
+    forceAntiLiteral: false,
+  });
 
   try {
-    const res = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        temperature: mode === 'interim' ? 0.0 : 0.1,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
-    });
+    async function requestOnce(currentSystemPrompt, currentUserPrompt) {
+      const res = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          temperature: mode === 'interim' ? 0.0 : 0.1,
+          messages: [
+            { role: 'system', content: currentSystemPrompt },
+            { role: 'user', content: currentUserPrompt },
+          ],
+        }),
+      });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error('[DeepSeek] HTTP error', errText);
-      return mode === 'interim'
-        ? conservativeInterimTranslate(text, hits)
-        : literalFallbackTranslate(text, hits);
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`[DeepSeek] HTTP error ${errText}`);
+      }
+
+      const data = await res.json();
+      return data?.choices?.[0]?.message?.content?.trim() || '';
     }
 
-    const data = await res.json();
-    const out = data?.choices?.[0]?.message?.content?.trim();
+    let out = await requestOnce(systemPrompt, userPrompt);
 
     if (!out) {
       return mode === 'interim'
         ? conservativeInterimTranslate(text, hits)
         : literalFallbackTranslate(text, hits);
+    }
+
+    if (mode !== 'interim' && looksAbsurdOutput(out)) {
+      console.warn('[DeepSeek] absurd output detected, retrying once with stronger anti-literal guard');
+
+      ({ systemPrompt, userPrompt } = buildDeepSeekPrompts({
+        text,
+        hits,
+        mode,
+        retrieval,
+        eventMode,
+        contextWindow,
+        inputMode,
+        forceAntiLiteral: true,
+      }));
+
+      const retryOut = await requestOnce(systemPrompt, userPrompt);
+      if (retryOut && !looksAbsurdOutput(retryOut)) {
+        out = retryOut;
+      }
     }
 
     return out;
