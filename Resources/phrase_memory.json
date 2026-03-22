@@ -318,5 +318,77 @@
     "source_type": "high_king_sutra",
     "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 8
+  },
+  {
+    "cn": "請大家合掌",
+    "en": "Please put your palms together.",
+    "category": "ritual_phrase",
+    "source_type": "tbs_handbook",
+    "event_modes": ["Liturgy", "Sutra", "Dharma Talk"],
+    "weight": 9
+  },
+  {
+    "cn": "一心敬禮",
+    "en": "With single-pointed reverence, we pay homage.",
+    "category": "ritual_phrase",
+    "source_type": "tbs_handbook",
+    "event_modes": ["Liturgy", "Sutra"],
+    "weight": 9
+  },
+  {
+    "cn": "現在開始修法",
+    "en": "We will now begin the practice.",
+    "category": "ritual_phrase",
+    "source_type": "tbs_handbook",
+    "event_modes": ["Liturgy", "Sadhana", "Dharma Talk"],
+    "weight": 10
+  },
+  {
+    "cn": "願以此功德",
+    "en": "Dedicate this merit.",
+    "category": "dedication_phrase",
+    "source_type": "tbs_handbook",
+    "event_modes": ["Liturgy", "Sutra", "Dharma Talk"],
+    "weight": 9
+  },
+  {
+    "cn": "普及於一切",
+    "en": "May it extend to all beings.",
+    "category": "dedication_phrase",
+    "source_type": "tbs_handbook",
+    "event_modes": ["Liturgy", "Sutra", "Dharma Talk"],
+    "weight": 9
+  },
+  {
+    "cn": "持誦滿千遍",
+    "en": "By reciting it one thousand times,",
+    "category": "canonical_phrase",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra"],
+    "weight": 8
+  },
+  {
+    "cn": "重罪皆消滅",
+    "en": "all heavy sins shall be eradicated.",
+    "category": "canonical_phrase",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra"],
+    "weight": 8
+  },
+  {
+    "cn": "火焰不能傷",
+    "en": "Flame cannot harm one.",
+    "category": "canonical_phrase",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra"],
+    "weight": 8
+  },
+  {
+    "cn": "刀兵立摧折",
+    "en": "Weapons will break instantly.",
+    "category": "canonical_phrase",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra"],
+    "weight": 8
   }
 ]
