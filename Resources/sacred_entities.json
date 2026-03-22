@@ -3,899 +3,589 @@
     "cn": "吉祥天母",
     "en": "Drashi Lhamo",
     "pinyin": "jí xiáng tiān mǔ",
-    "aliases": [
-      "扎西拉姆",
-      "札西拉姆",
-      "吉祥天姆"
-    ],
-    "mishears": [
-      "炸雞拉姆",
-      "炸鸡拉姆",
-      "炸西拉姆",
-      "炸鸡",
-      "札西"
-    ],
+    "aliases": ["扎西拉姆", "札西拉姆", "吉祥天姆", "札基拉姆", "扎基拉姆"],
+    "mishears": ["炸雞拉姆", "炸鸡拉姆", "炸西拉姆", "炸鸡", "札西"],
     "category": "deity",
-    "related": [
-      "護法",
-      "天母",
-      "護摩"
-    ]
+    "related": ["護法", "天母", "護摩"],
+    "source_type": "curated",
+    "weight": 10
   },
   {
     "cn": "佛母大孔雀明王",
     "en": "Mahamayuri",
     "pinyin": "fó mǔ dà kǒng què míng wáng",
-    "aliases": [
-      "大孔雀明王",
-      "孔雀明王"
-    ],
-    "mishears": [
-      "孔雀名王",
-      "大孔雀"
-    ],
+    "aliases": ["大孔雀明王", "孔雀明王"],
+    "mishears": ["孔雀名王", "大孔雀"],
     "category": "deity",
-    "related": [
-      "佛母",
-      "明王",
-      "息災"
-    ]
+    "related": ["佛母", "明王", "息災"],
+    "source_type": "curated",
+    "weight": 9
   },
   {
     "cn": "大白蓮花童子",
     "en": "Padmakumara",
     "pinyin": "dà bái lián huā tóng zǐ",
-    "aliases": [
-      "蓮花童子",
-      "白蓮花童子"
-    ],
-    "mishears": [
-      "莲花童子",
-      "白莲花童子"
-    ],
+    "aliases": ["蓮花童子", "白蓮花童子"],
+    "mishears": ["莲花童子", "白莲花童子"],
     "category": "yidam",
-    "related": [
-      "根本上師",
-      "蓮花童子"
-    ]
+    "related": ["根本上師", "蓮花童子"],
+    "source_type": "curated",
+    "weight": 9
   },
   {
     "cn": "咕嚕咕咧佛母",
     "en": "Kurukulla",
     "pinyin": "gū lū gū liě fó mǔ",
-    "aliases": [
-      "咕噜咕咧佛母"
-    ],
-    "mishears": [
-      "咕噜咕列佛母",
-      "咕嚕咕列佛母"
-    ],
+    "aliases": ["咕噜咕咧佛母"],
+    "mishears": ["咕噜咕列佛母", "咕嚕咕列佛母"],
     "category": "deity",
-    "related": [
-      "佛母",
-      "敬愛"
-    ]
+    "related": ["佛母", "敬愛"],
+    "source_type": "curated",
+    "weight": 8
   },
   {
     "cn": "瑪哈嘎拉",
     "en": "Mahakala",
     "pinyin": "mǎ hā gá lā",
-    "aliases": [
-      "摩訶迦羅",
-      "玛哈嘎拉"
-    ],
-    "mishears": [
-      "玛哈伽拉",
-      "瑪哈伽拉"
-    ],
+    "aliases": ["摩訶迦羅", "玛哈嘎拉", "大黑天"],
+    "mishears": ["玛哈伽拉", "瑪哈伽拉"],
     "category": "protector",
-    "related": [
-      "護法",
-      "黑天"
-    ]
+    "related": ["護法", "黑天"],
+    "source_type": "curated",
+    "weight": 8
   },
   {
     "cn": "準提佛母",
     "en": "Cundi",
     "pinyin": "zhǔn tí fó mǔ",
-    "aliases": [
-      "准提佛母"
-    ],
-    "mishears": [
-      "準提",
-      "准提"
-    ],
+    "aliases": ["准提佛母", "準提菩薩"],
+    "mishears": ["準提", "准提", "準提佛目"],
     "category": "deity",
-    "related": [
-      "佛母",
-      "息災",
-      "增益"
-    ]
+    "related": ["佛母", "息災", "增益"],
+    "source_type": "curated",
+    "weight": 8
   },
   {
     "cn": "金母",
     "en": "Golden Mother",
     "pinyin": "jīn mǔ",
-    "aliases": [
-      "瑤池金母",
-      "瑶池金母"
-    ],
-    "mishears": [
-      "今母",
-      "金木"
-    ],
+    "aliases": ["瑤池金母", "瑶池金母"],
+    "mishears": ["今母", "金木", "搖池金母"],
     "category": "deity",
-    "related": [
-      "瑤池",
-      "金母"
-    ]
+    "related": ["瑤池", "金母"],
+    "source_type": "curated",
+    "weight": 9
   },
   {
     "cn": "獨髻佛母",
     "en": "Ekajati",
     "pinyin": "dú jì fó mǔ",
-    "aliases": [
-      "独髻佛母"
-    ],
-    "mishears": [
-      "獨記佛母",
-      "独记佛母"
-    ],
+    "aliases": ["独髻佛母"],
+    "mishears": ["獨記佛母", "独记佛母"],
     "category": "protector",
-    "related": [
-      "佛母",
-      "護法"
-    ]
+    "related": ["佛母", "護法"],
+    "source_type": "curated",
+    "weight": 7
   },
   {
     "cn": "蓮生活佛",
-    "en": "English Indonesian",
+    "en": "Living Buddha Lian Sheng",
     "pinyin": "lián shēng huó fó",
-    "aliases": [
-      "莲生活佛",
-      "師尊",
-      "师尊"
-    ],
-    "mishears": [
-      "連生活佛",
-      "莲生佛"
-    ],
+    "aliases": ["莲生活佛", "師尊", "师尊"],
+    "mishears": ["連生活佛", "莲生佛"],
     "category": "lineage",
-    "related": [
-      "真佛宗",
-      "盧勝彥"
-    ],
-    "source_url": "https://tbsn.org/master/index.html#",
-    "source_type": "tbsn_faxiang",
-    "keywords": [
-      "灌頂",
-      "咒",
-      "護法",
-      "菩薩",
-      "如來",
-      "佛母",
-      "度母",
-      "明王"
-    ],
-    "weight": 4,
-    "id": "English Indonesian"
+    "related": ["真佛宗", "盧勝彥"],
+    "source_type": "curated",
+    "weight": 10
   },
   {
     "cn": "盧勝彥",
     "en": "Grand Master Lu",
     "pinyin": "lú shèng yàn",
-    "aliases": [
-      "卢胜彦",
-      "師尊",
-      "师尊"
-    ],
-    "mishears": [
-      "卢盛彦",
-      "魯勝彥"
-    ],
+    "aliases": ["卢胜彦", "師尊", "师尊"],
+    "mishears": ["卢盛彦", "魯勝彥"],
     "category": "lineage",
-    "related": [
-      "蓮生活佛",
-      "根本傳承上師"
-    ]
+    "related": ["蓮生活佛", "根本傳承上師"],
+    "source_type": "curated",
+    "weight": 9
   },
   {
     "cn": "真佛宗",
-    "en": "English Indonesian",
+    "en": "True Buddha School",
     "pinyin": "zhēn fó zōng",
-    "aliases": [
-      "真佛"
-    ],
-    "mishears": [
-      "真佛中",
-      "真佛忠"
-    ],
+    "aliases": ["真佛"],
+    "mishears": ["真佛中", "真佛忠"],
     "category": "school",
-    "related": [
-      "蓮生活佛",
-      "傳承"
-    ],
-    "source_url": "https://tbsn.org/master/index.html#",
-    "source_type": "tbsn_faxiang",
-    "keywords": [
-      "灌頂",
-      "咒",
-      "護法",
-      "菩薩",
-      "如來",
-      "佛母",
-      "度母",
-      "明王"
-    ],
-    "weight": 4,
-    "id": "English Indonesian"
+    "related": ["蓮生活佛", "傳承"],
+    "source_type": "curated",
+    "weight": 8
   },
   {
     "cn": "根本傳承上師",
-    "en": "Root Guru",
+    "en": "Root Lineage Guru",
     "pinyin": "gēn běn chuán chéng shàng shī",
-    "aliases": [
-      "根本上師",
-      "根本传承上师"
-    ],
-    "mishears": [
-      "根本傳承老師",
-      "根本上司"
-    ],
+    "aliases": ["根本上師", "根本传承上师"],
+    "mishears": ["根本傳承老師", "根本上司"],
     "category": "lineage",
-    "related": [
-      "上師",
-      "傳承"
-    ]
+    "related": ["上師", "傳承"],
+    "source_type": "curated",
+    "weight": 8
   },
   {
     "cn": "護摩",
     "en": "homa",
     "pinyin": "hù mó",
-    "aliases": [
-      "护摩"
-    ],
-    "mishears": [
-      "互摸",
-      "虎魔"
-    ],
+    "aliases": ["护摩", "火供"],
+    "mishears": ["互摸", "虎魔"],
     "category": "ritual",
-    "related": [
-      "火供",
-      "法會"
-    ]
+    "related": ["火供", "法會"],
+    "source_type": "curated",
+    "weight": 8
   },
   {
     "cn": "灌頂",
     "en": "empowerment",
     "pinyin": "guàn dǐng",
-    "aliases": [
-      "灌顶"
-    ],
-    "mishears": [
-      "關頂",
-      "官頂"
-    ],
+    "aliases": ["灌顶"],
+    "mishears": ["關頂", "官頂"],
     "category": "ritual",
-    "related": [
-      "傳法",
-      "上師"
-    ]
+    "related": ["傳法", "上師"],
+    "source_type": "curated",
+    "weight": 7
   },
   {
     "cn": "迴向",
     "en": "dedication of merits",
     "pinyin": "huí xiàng",
-    "aliases": [
-      "回向"
-    ],
-    "mishears": [
-      "回想",
-      "回象"
-    ],
+    "aliases": ["回向"],
+    "mishears": ["回想", "回象"],
     "category": "ritual",
-    "related": [
-      "功德",
-      "祈願"
-    ]
-  },
-  {
-    "cn": "關於蓮生活佛",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/page/index.html?id=2",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "本尊",
-      "菩薩",
-      "如來"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "蓮生活佛傳承",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/aboutm/index",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "護摩",
-      "灌頂",
-      "咒",
-      "菩薩"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "蓮生活佛文集",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/wordm/index.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "菩薩"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "蓮生活佛開示",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/guidem/index.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "本尊",
-      "菩薩",
-      "如來",
-      "佛母",
-      "明王"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "真佛金句",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/verse/index.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "觀想",
-      "菩薩"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "真佛短片",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/bvideo/index.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "菩薩",
-      "度母"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "蓮生活佛畫作",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/paintm/index.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "菩薩"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "關於真佛宗",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/page/index.html?id=4",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "觀想",
-      "本尊",
-      "菩薩",
-      "如來",
-      "佛母"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "真佛密法",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/index.html#",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "護法",
-      "菩薩",
-      "如來",
-      "佛母",
-      "度母",
-      "明王"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "真佛儀軌",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://ch.tbsn.org/ritual",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "本尊",
-      "菩薩",
-      "如來",
-      "佛母",
-      "度母",
-      "明王"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "真佛園地",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/tb_garden/index.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "菩薩"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "佛菩薩聖誕",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/buddhabirthday/index.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "菩薩",
-      "佛母"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "龍尊王佛",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/detail/104/%E9%BE%8D%E5%B0%8A%E7%8E%8B%E4%BD%9B.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "觀想",
-      "護法",
-      "菩薩"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "大日如來",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/detail/17/%E5%A4%A7%E6%97%A5%E5%A6%82%E4%BE%86.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "本尊",
-      "菩薩",
-      "如來",
-      "佛母"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "阿達爾瑪佛",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/detail/16/%E9%98%BF%E9%81%94%E7%88%BE%E7%91%AA%E4%BD%9B.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "護摩",
-      "灌頂",
-      "咒",
-      "印",
-      "觀想",
-      "本尊",
-      "護法",
-      "菩薩",
-      "如來",
-      "佛母"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "阿彌陀佛",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/detail/15/%E9%98%BF%E5%BD%8C%E9%99%80%E4%BD%9B.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "觀想",
-      "本尊",
-      "菩薩",
-      "如來"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "長壽佛",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/detail/8/%E9%95%B7%E5%A3%BD%E4%BD%9B.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "本尊",
-      "護法",
-      "菩薩",
-      "如來",
-      "佛母",
-      "度母"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "金剛總持",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/detail/79/%E9%87%91%E5%89%9B%E7%B8%BD%E6%8C%81.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "菩薩",
-      "如來"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "妙色身如來",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/detail/81/%E5%A6%99%E8%89%B2%E8%BA%AB%E5%A6%82%E4%BE%86.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "菩薩",
-      "如來"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "藥師琉璃光王佛",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/detail/18/%E8%97%A5%E5%B8%AB%E7%90%89%E7%92%83%E5%85%89%E7%8E%8B%E4%BD%9B.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "護摩",
-      "灌頂",
-      "咒",
-      "印",
-      "本尊",
-      "護法",
-      "菩薩",
-      "如來",
-      "明王"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  },
-  {
-    "cn": "釋迦牟尼佛",
-    "en": "English Indonesian",
-    "category": "bodhisattva",
-    "source_url": "https://tbsn.org/master/detail/19/%E9%87%8B%E8%BF%A6%E7%89%9F%E5%B0%BC%E4%BD%9B.html",
-    "source_type": "tbsn_faxiang",
-    "aliases": [],
-    "mishears": [],
-    "keywords": [
-      "灌頂",
-      "咒",
-      "印",
-      "本尊",
-      "菩薩"
-    ],
-    "weight": 4,
-    "variants": [],
-    "id": "English Indonesian"
-  }
-  {
-    "cn": "釋迦牟尼佛",
-    "en": "Shakyamuni Buddha",
-    "category": "buddha",
-    "aliases": ["本師釋迦牟尼佛"],
-    "mishears": ["釋迦摩尼佛", "石家摩尼佛"],
-    "keywords": ["佛", "如來"],
-    "weight": 5
-  },
-  {
-    "cn": "阿彌陀佛",
-    "en": "Amitabha Buddha",
-    "category": "buddha",
-    "aliases": ["無量光佛", "無量壽佛"],
-    "mishears": ["阿密陀佛", "阿彌多佛"],
-    "keywords": ["極樂世界"],
-    "weight": 5
-  },
-  {
-    "cn": "藥師琉璃光王佛",
-    "en": "Medicine Buddha",
-    "category": "buddha",
-    "aliases": ["藥師佛"],
-    "mishears": ["藥師流離光王佛"],
-    "keywords": ["療癒", "藍光"],
-    "weight": 5
-  },
-  {
-    "cn": "大日如來",
-    "en": "Vairocana Buddha",
-    "category": "buddha",
-    "aliases": ["毘盧遮那佛"],
-    "mishears": ["大日如來佛"],
-    "keywords": ["法界體性"],
-    "weight": 5
+    "related": ["功德", "祈願"],
+    "source_type": "curated",
+    "weight": 7
   },
   {
     "cn": "龍尊王佛",
     "en": "Nagaraja Buddha",
+    "aliases": ["龍王佛"],
+    "mishears": [],
     "category": "buddha",
+    "related": ["龍族"],
+    "source_type": "curated",
+    "weight": 7
+  },
+  {
+    "cn": "大日如來",
+    "en": "Vairocana Buddha",
+    "aliases": ["毘盧遮那佛"],
+    "mishears": ["大日如來佛"],
+    "category": "buddha",
+    "related": ["法界體性"],
+    "source_type": "curated",
+    "weight": 8
+  },
+  {
+    "cn": "阿彌陀佛",
+    "en": "Amitabha Buddha",
+    "aliases": ["無量光佛", "無量壽佛"],
+    "mishears": ["阿密陀佛", "阿彌多佛"],
+    "category": "buddha",
+    "related": ["極樂世界"],
+    "source_type": "curated",
+    "weight": 8
+  },
+  {
+    "cn": "長壽佛",
+    "en": "Amitayus",
     "aliases": [],
-    "mishears": ["龍王佛"],
-    "keywords": ["龍族"],
-    "weight": 5
-  },
-  {
-    "cn": "觀世音菩薩",
-    "en": "Avalokitesvara Bodhisattva",
-    "category": "bodhisattva",
-    "aliases": ["觀音菩薩"],
-    "mishears": ["觀世音不撒"],
-    "keywords": ["慈悲"],
-    "weight": 5
-  },
-  {
-    "cn": "文殊師利菩薩",
-    "en": "Manjushri Bodhisattva",
-    "category": "bodhisattva",
-    "aliases": ["文殊菩薩"],
-    "mishears": ["文書師利"],
-    "keywords": ["智慧"],
-    "weight": 5
-  },
-  {
-    "cn": "普賢菩薩",
-    "en": "Samantabhadra Bodhisattva",
-    "category": "bodhisattva",
-    "aliases": [],
-    "mishears": ["普賢不撒"],
-    "keywords": ["行願"],
-    "weight": 5
-  },
-  {
-    "cn": "地藏王菩薩",
-    "en": "Ksitigarbha Bodhisattva",
-    "category": "bodhisattva",
-    "aliases": ["地藏菩薩"],
-    "mishears": ["地藏王不撒"],
-    "keywords": ["地獄救度"],
-    "weight": 5
+    "mishears": [],
+    "category": "buddha",
+    "related": ["長壽"],
+    "source_type": "curated",
+    "weight": 7
   },
   {
     "cn": "金剛總持",
     "en": "Vajradhara",
-    "category": "vidyaraja",
     "aliases": [],
     "mishears": ["金剛總池"],
-    "keywords": ["密教本源"],
-    "weight": 5
+    "category": "lineage",
+    "related": ["密教本源"],
+    "source_type": "curated",
+    "weight": 8
+  },
+  {
+    "cn": "釋迦牟尼佛",
+    "en": "Shakyamuni Buddha",
+    "aliases": ["本師釋迦牟尼佛"],
+    "mishears": ["釋迦摩尼佛", "石家摩尼佛"],
+    "category": "buddha",
+    "related": ["佛", "如來"],
+    "source_type": "curated",
+    "weight": 10
+  },
+  {
+    "cn": "藥師琉璃光王佛",
+    "en": "Medicine Buddha",
+    "aliases": ["藥師佛"],
+    "mishears": ["藥師流離光王佛"],
+    "category": "buddha",
+    "related": ["療癒", "藍光"],
+    "source_type": "curated",
+    "weight": 8
+  },
+  {
+    "cn": "觀世音菩薩",
+    "en": "Avalokitesvara Bodhisattva",
+    "aliases": ["觀音菩薩"],
+    "mishears": ["觀世音不撒"],
+    "category": "bodhisattva",
+    "related": ["慈悲"],
+    "source_type": "curated",
+    "weight": 10
+  },
+  {
+    "cn": "文殊師利菩薩",
+    "en": "Manjushri Bodhisattva",
+    "aliases": ["文殊菩薩"],
+    "mishears": ["文書師利"],
+    "category": "bodhisattva",
+    "related": ["智慧"],
+    "source_type": "curated",
+    "weight": 8
+  },
+  {
+    "cn": "普賢菩薩",
+    "en": "Samantabhadra Bodhisattva",
+    "aliases": [],
+    "mishears": ["普賢不撒"],
+    "category": "bodhisattva",
+    "related": ["行願"],
+    "source_type": "curated",
+    "weight": 8
+  },
+  {
+    "cn": "地藏王菩薩",
+    "en": "Ksitigarbha Bodhisattva",
+    "aliases": ["地藏菩薩"],
+    "mishears": ["地藏王不撒"],
+    "category": "bodhisattva",
+    "related": ["地獄救度"],
+    "source_type": "curated",
+    "weight": 8
   },
   {
     "cn": "不動明王",
     "en": "Acala Vidyaraja",
-    "category": "vidyaraja",
     "aliases": ["不動尊"],
     "mishears": ["不動名王"],
-    "keywords": ["降魔"],
-    "weight": 5
+    "category": "vidyaraja",
+    "related": ["降魔"],
+    "source_type": "curated",
+    "weight": 7
   },
   {
     "cn": "愛染明王",
     "en": "Ragaraja",
-    "category": "vidyaraja",
     "aliases": [],
     "mishears": ["愛染名王"],
-    "keywords": ["愛染"],
-    "weight": 5
-  },
-  {
-    "cn": "孔雀明王",
-    "en": "Mahamayuri",
     "category": "vidyaraja",
-    "aliases": [],
-    "mishears": ["孔雀名王"],
-    "keywords": ["解毒"],
-    "weight": 5
-  },
-  {
-    "cn": "準提佛母",
-    "en": "Cundi Bodhisattva",
-    "category": "buddha-mother",
-    "aliases": ["準提菩薩"],
-    "mishears": ["準提佛目"],
-    "keywords": ["準提咒"],
-    "weight": 5
+    "related": ["愛染"],
+    "source_type": "curated",
+    "weight": 7
   },
   {
     "cn": "大白傘蓋佛母",
     "en": "Sitātapatrā",
-    "category": "buddha-mother",
-    "aliases": [],
-    "mishears": ["白傘蓋佛母"],
-    "keywords": ["防護"],
-    "weight": 5
+    "aliases": ["白傘蓋佛母"],
+    "mishears": [],
+    "category": "deity",
+    "related": ["防護"],
+    "source_type": "curated",
+    "weight": 7
   },
   {
     "cn": "綠度母",
     "en": "Green Tara",
-    "category": "tara",
     "aliases": ["救度母"],
     "mishears": ["綠度木"],
-    "keywords": ["救度"],
-    "weight": 5
+    "category": "deity",
+    "related": ["救度"],
+    "source_type": "curated",
+    "weight": 7
   },
   {
     "cn": "白度母",
     "en": "White Tara",
-    "category": "tara",
     "aliases": [],
     "mishears": ["白度木"],
-    "keywords": ["長壽"],
-    "weight": 5
+    "category": "deity",
+    "related": ["長壽"],
+    "source_type": "curated",
+    "weight": 7
   },
   {
-    "cn": "札基拉姆",
-    "en": "Drashi Lhamo",
-    "category": "protector",
-    "aliases": ["扎基拉姆"],
-    "mishears": ["炸雞拉姆", "炸雞拉莫", "炸雞"],
-    "keywords": ["護法", "財神"],
+    "cn": "淨光祕密佛",
+    "en": "Pure Light Secret Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 6
   },
   {
-    "cn": "瑤池金母",
-    "en": "Golden Mother of the Jade Pool",
-    "category": "protector",
-    "aliases": ["金母"],
-    "mishears": ["搖池金母"],
-    "keywords": ["母"],
+    "cn": "法藏佛",
+    "en": "Dharma Treasury Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
     "weight": 6
   },
   {
-    "cn": "大黑天",
-    "en": "Mahakala",
-    "category": "protector",
-    "aliases": ["瑪哈嘎拉"],
-    "mishears": ["大黑田"],
-    "keywords": ["護法"],
-    "weight": 5
+    "cn": "獅子吼神足幽王佛",
+    "en": "Lion's Roar Tranquil King Buddha with Divine Powers",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "須彌燈王佛",
+    "en": "Sumeru Lamp King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "法護佛",
+    "en": "Dharma Protector Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "金剛藏獅子遊戲佛",
+    "en": "Vajra Treasury Lion Sport Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "寶勝佛",
+    "en": "Precious Victory Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "神通佛",
+    "en": "Supernatural Power Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "普光功德山王佛",
+    "en": "Universal Light Merit Mountain King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "善住功德寶王佛",
+    "en": "Well-Abiding Merit Jewel King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "定光佛",
+    "en": "Fixed Light Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "東方寶光月殿月妙尊音王佛",
+    "en": "Eastern Precious Light Moon Palace Sublime Voice King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "南方樹根花王佛",
+    "en": "Southern Tree-Root Flower King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "西方皂王神通燄花王佛",
+    "en": "Western Soot King Supernatural Flame Flower King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "北方月殿清淨佛",
+    "en": "Northern Moon Palace Pure Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "上方無數精進寶首佛",
+    "en": "Upper Infinite Diligent Jewel-Crown Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "下方善寂月音王佛",
+    "en": "Lower Good Tranquility Moon Sound King Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "多寶佛",
+    "en": "Many Treasures Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "彌勒佛",
+    "en": "Maitreya Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "阿閦佛",
+    "en": "Aksobhya Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "彌陀佛",
+    "en": "Amitabha Buddha",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 8
+  },
+  {
+    "cn": "大明觀世音",
+    "en": "Great Bright Avalokitesvara",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "觀明觀世音",
+    "en": "Observing Brightness Avalokitesvara",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "高明觀世音",
+    "en": "Lofty Brightness Avalokitesvara",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "開明觀世音",
+    "en": "Opening Brightness Avalokitesvara",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "大慈悲救苦觀世音",
+    "en": "Great Compassionate Avalokitesvara Who Relieves Suffering",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 8
+  },
+  {
+    "cn": "藥王菩薩",
+    "en": "Medicine King Bodhisattva",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "藥上菩薩",
+    "en": "Supreme Medicine Bodhisattva",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "虛空藏菩薩",
+    "en": "Akasagarbha Bodhisattva",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 8
+  },
+  {
+    "cn": "清涼寶山億萬菩薩",
+    "en": "Countless Bodhisattvas of Clear Cool Jewel Mountain",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "普光王如來化勝菩薩",
+    "en": "Victorious Manifestation Bodhisattva of Universal Light King Tathagata",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 6
+  },
+  {
+    "cn": "十方觀世音",
+    "en": "Avalokitesvara of the Ten Directions",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 7
+  },
+  {
+    "cn": "高王觀世音",
+    "en": "High King Avalokitesvara",
+    "category": "sutra_deity",
+    "source_type": "high_king_sutra",
+    "event_modes": ["Sutra", "Dharma Talk"],
+    "weight": 8
   }
+]
