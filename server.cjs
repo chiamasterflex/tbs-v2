@@ -893,6 +893,7 @@ function retrievePhraseMemory(text, eventMode = 'Dharma Talk') {
     .slice(0, retrievalConfig.top_phrase_matches || 6);
 }
 
+
 function retrieveCeremonyMemory(text, eventMode = 'Dharma Talk') {
   const pools = [...ceremonyMemory, ...generatedCeremonyPhrases];
   const results = [];
@@ -921,6 +922,147 @@ function retrieveCeremonyMemory(text, eventMode = 'Dharma Talk') {
   return results
     .sort((a, b) => b._score - a._score || (b.cn?.length || 0) - (a.cn?.length || 0))
     .slice(0, retrievalConfig.top_ceremony_matches || 4);
+}
+
+function isCanonicalSourceType(sourceType = '') {
+  const s = String(sourceType || '').toLowerCase();
+  return (
+    s.includes('high_king_sutra') ||
+    s.includes('tbsn') ||
+    s.includes('official') ||
+    s.includes('liturgy') ||
+    s.includes('sutra') ||
+    s.includes('mantra')
+  );
+}
+
+function retrieveCanonicalMatches(text, eventMode = 'Dharma Talk') {
+  const pools = []
+    .concat(phraseMemory || [])
+    .concat(ceremonyMemory || [])
+    .concat(generatedPhrases || [])
+    .concat(generatedCeremonyPhrases || []);
+
+  const normalized = normalizeSpaces(text);
+  if (!normalized) return [];
+
+  const results = [];
+
+  for (const row of pools) {
+    const candidateCn = normalizeSpaces(row?.cn || '');
+    const candidateEn = normalizeSpaces(row?.en || '');
+    if (!candidateCn || !candidateEn) continue;
+    if (!isCanonicalSourceType(row?.source_type)) continue;
+
+    let score = 0;
+
+    if (normalized === candidateCn) score += 120;
+    if (normalized.includes(candidateCn)) score += candidateCn.length * 3;
+    if (candidateCn.includes(normalized) && normalized.length >= 4) score += normalized.length * 2;
+    score += stringOverlapLoose(normalized, candidateCn);
+    score += sourceWeightBonus(row) * 2;
+
+    if (row?.event_mode === eventMode || row?.eventMode === eventMode) score += 3;
+
+    if (score >= 6) {
+      results.push({
+        ...row,
+        _score: score,
+      });
+    }
+  }
+
+  return results
+    .sort((a, b) => b._score - a._score || (b.cn?.length || 0) - (a.cn?.length || 0))
+    .slice(0, 6);
+}
+
+function buildCanonicalRescuePrompt({
+  text,
+  canonicalMatches = [],
+  activeTopic = null,
+  eventMode = 'Dharma Talk',
+}) {
+  const canonicalBlock = canonicalMatches.length
+    ? canonicalMatches
+        .map((x, i) => `${i + 1}. ${x.cn} => ${x.en}${x.source_type ? ` [${x.source_type}]` : ''}`)
+        .join('\n')
+    : 'No canonical matches';
+
+  const activeTopicBlock = activeTopic?.cn
+    ? `${activeTopic.cn}${activeTopic.en ? ` => ${activeTopic.en}` : ''}`
+    : 'No active topic';
+
+  return {
+    systemPrompt: `
+You are the official translator for True Buddha School (TBS).
+The previous translation was low-confidence or ambiguous.
+Your task is to rescue the translation using canonical TBS material.
+
+Rules:
+1. Output English only.
+2. Prefer exact canonical wording when the input clearly matches a canonical line.
+3. If the input is noisy, repair it toward the closest canonical religious phrase.
+4. If an active topic is present, use it to resolve ambiguity.
+5. Do not invent long explanations.
+6. Keep the output subtitle-friendly and doctrinally appropriate.
+`.trim(),
+    userPrompt: `
+Event mode: ${eventMode}
+Active topic: ${activeTopicBlock}
+
+Input:
+${text}
+
+Canonical matches:
+${canonicalBlock}
+`.trim(),
+  };
+}
+
+async function runCanonicalRescue({
+  text,
+  mode = 'final',
+  eventMode = 'Dharma Talk',
+  activeTopic = null,
+}) {
+  if (!DEEPSEEK_API_KEY) return '';
+
+  const canonicalMatches = retrieveCanonicalMatches(text, eventMode);
+  if (!canonicalMatches.length) return '';
+
+  const { systemPrompt, userPrompt } = buildCanonicalRescuePrompt({
+    text,
+    canonicalMatches,
+    activeTopic,
+    eventMode,
+  });
+
+  try {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        temperature: mode === 'interim' ? 0.0 : 0.05,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!res.ok) return '';
+    const data = await res.json();
+    const out = data?.choices?.[0]?.message?.content?.trim() || '';
+    return out;
+  } catch (err) {
+    console.error('[Canonical rescue] failed', err.message);
+    return '';
+  }
 }
 
 function findPhraseMatch(text, mode = 'final') {
@@ -987,6 +1129,7 @@ function buildTranslationMeta({
   retrieval = {},
   inputMode = 'unknown',
   activeTopic = null,
+  canonicalMatchCount = 0,
   mode = 'final',
 }) {
   const phraseMatch = findPhraseMatch(normalizedCn, mode);
@@ -995,6 +1138,7 @@ function buildTranslationMeta({
   const phraseCount = (retrieval.phraseMatches || []).length;
   const ceremonyCount = (retrieval.ceremonyMatches || []).length;
   const glossaryCount = hits.length;
+  const canonicalCount = canonicalMatchCount;
 
   let score = 20;
 
@@ -1008,6 +1152,7 @@ function buildTranslationMeta({
   if (correctionCount > 0) score += Math.min(16, correctionCount * 4);
   if (phraseMatch?.en) score += 18;
   if (activeTopic?.cn) score += Math.min(12, 4 + Math.floor((activeTopic.confidence || 0) / 6));
+  if (canonicalCount > 0) score += Math.min(24, canonicalCount * 6);
   if (looksAbsurdOutput(en)) score -= 45;
   if (!en || !en.trim()) score -= 25;
   if (en && normalizedCn && normalizeSpaces(en) === normalizeSpaces(normalizedCn)) score -= 18;
@@ -1021,6 +1166,7 @@ function buildTranslationMeta({
     phraseMatched: Boolean(phraseMatch?.en),
     activeTopic: activeTopic?.cn || null,
     activeTopicEn: activeTopic?.en || null,
+    canonicalCount,
     glossaryCount,
     entityCount,
     phraseCount,
@@ -1318,6 +1464,25 @@ async function translateWithDeepSeek(
         : literalFallbackTranslate(text, hits);
     }
 
+    const canonicalMatches = retrieveCanonicalMatches(text, eventMode);
+
+    if (
+      mode !== 'interim' &&
+      canonicalMatches.length > 0 &&
+      (looksAbsurdOutput(out) || canonicalMatches[0]?._score >= 40)
+    ) {
+      const canonicalOut = await runCanonicalRescue({
+        text,
+        mode,
+        eventMode,
+        activeTopic,
+      });
+
+      if (canonicalOut && !looksAbsurdOutput(canonicalOut)) {
+        out = canonicalOut;
+      }
+    }
+
     if (mode !== 'interim' && looksAbsurdOutput(out)) {
       console.warn('[DeepSeek] absurd output detected, retrying once with stronger anti-literal guard');
 
@@ -1452,6 +1617,7 @@ app.post('/api/session/:id/line', async (req, res) => {
     retrieval,
     inputMode: prepared.inputMode,
     activeTopic,
+    canonicalMatchCount: retrieveCanonicalMatches(normalizedCn, session.eventMode).length,
     mode: 'final',
   });
 
@@ -1516,6 +1682,7 @@ app.post('/api/translate-interim', async (req, res) => {
     retrieval,
     inputMode: prepared.inputMode,
     activeTopic,
+    canonicalMatchCount: retrieveCanonicalMatches(normalizedCn, eventMode).length,
     mode: 'interim',
   });
 
@@ -1712,6 +1879,7 @@ wss.on('connection', async (browserWs) => {
             retrieval,
             inputMode: prepared.inputMode,
             activeTopic,
+            canonicalMatchCount: retrieveCanonicalMatches(normalizedCn, activeSession.eventMode).length,
             mode: 'final',
           });
 
