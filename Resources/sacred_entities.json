@@ -787,4 +787,194 @@
   "source_type": "tbs_handbook",
   "weight": 6
 }
+,{
+  "cn": "四皈依",
+  "en": "Fourfold Refuge",
+  "aliases": ["四重皈依", "四皈依法"],
+  "mishears": ["四歸依", "四皈一"],
+  "category": "practice",
+  "related": ["根本傳承上師", "佛", "法", "僧"],
+  "source_type": "root_guru_pdf",
+  "weight": 9
+},
+{
+  "cn": "三皈依",
+  "en": "Threefold Refuge",
+  "aliases": ["三重皈依", "三皈依法"],
+  "mishears": ["三歸依"],
+  "category": "practice",
+  "related": ["佛", "法", "僧"],
+  "source_type": "root_guru_pdf",
+  "weight": 8
+},
+{
+  "cn": "金剛薩埵",
+  "en": "Vajrasattva",
+  "aliases": ["金剛薩埵尊者", "Vajrasattva"],
+  "mishears": ["金剛薩垛", "金剛薩多"],
+  "category": "lineage",
+  "related": ["密教", "金剛界", "大日如來"],
+  "source_type": "root_guru_pdf",
+  "weight": 10
+},
+{
+  "cn": "大日經",
+  "en": "Mahavairocana Sutra",
+  "aliases": ["毘盧遮那成佛經", "Mahavairocana Sutra"],
+  "mishears": ["大日精", "大日金"],
+  "category": "scripture",
+  "related": ["大日遍照佛", "金剛薩埵", "密教"],
+  "source_type": "root_guru_pdf",
+  "weight": 9
+},
+{
+  "cn": "金剛頂經",
+  "en": "Vajrasekhara Sutra",
+  "aliases": ["金剛頂一切如來真實攝大乘現證大教王經", "Vajrasekhara Sutra"],
+  "mishears": ["金剛頂精", "金剛頂金"],
+  "category": "scripture",
+  "related": ["金剛薩埵", "密教"],
+  "source_type": "root_guru_pdf",
+  "weight": 8
+},
+{
+  "cn": "龍樹菩薩",
+  "en": "Nagarjuna Bodhisattva",
+  "aliases": ["龍樹", "Nagarjuna"],
+  "mishears": ["龍樹不撒", "龍術菩薩"],
+  "category": "bodhisattva",
+  "related": ["鐵塔", "金剛薩埵", "密教"],
+  "source_type": "root_guru_pdf",
+  "weight": 8
+},
+{
+  "cn": "胎藏界",
+  "en": "Womb Realm",
+  "aliases": ["胎藏界曼荼羅", "胎藏曼荼羅"],
+  "mishears": ["台藏界", "胎藏介"],
+  "category": "ritual_term",
+  "related": ["金剛界", "密教"],
+  "source_type": "root_guru_pdf",
+  "weight": 7
+},
+{
+  "cn": "金剛界",
+  "en": "Diamond Realm",
+  "aliases": ["金剛界曼荼羅", "金剛曼荼羅"],
+  "mishears": ["金鋼界", "金剛介"],
+  "category": "ritual_term",
+  "related": ["胎藏界", "密教"],
+  "source_type": "root_guru_pdf",
+  "weight": 7
+},
+{
+  "cn": "上師相應法",
+  "en": "Guru Yoga",
+  "aliases": ["根本上師相應法", "上師瑜伽"],
+  "mishears": ["上師相應發", "上師相應佛"],
+  "category": "practice",
+  "related": ["根本傳承上師", "四皈依"],
+  "source_type": "root_guru_pdf",
+  "weight": 10
+},
+{
+  "cn": "本尊法",
+  "en": "Personal Deity Practice",
+  "aliases": ["本尊相應法", "本尊修持"],
+  "mishears": ["本尊發", "本尊佛"],
+  "category": "practice",
+  "related": ["本尊", "修法", "上師相應法"],
+  "source_type": "true_buddha_tantra_pdf",
+  "weight": 9
+},
+{
+  "cn": "五輪開啟",
+  "en": "Opening of the Five Chakras",
+  "aliases": ["開五輪", "五輪開啟法"],
+  "mishears": ["五輪開起", "五輪開氣"],
+  "category": "practice",
+  "related": ["密教", "內法"],
+  "source_type": "true_buddha_tantra_pdf",
+  "weight": 7
+},
+{
+  "cn": "中脈開啟",
+  "en": "Opening the Central Channel",
+  "aliases": ["開中脈", "中脈打開"],
+  "mishears": ["中脈開起", "中脈開氣"],
+  "category": "practice",
+  "related": ["寶瓶氣", "拙火"],
+  "source_type": "true_buddha_tantra_pdf",
+  "weight": 7
+},
+{
+  "cn": "喜金剛法",
+  "en": "Heruka Practice",
+  "aliases": ["喜金剛修法", "Heruka Practices"],
+  "mishears": ["喜金剛發", "喜金鋼法"],
+  "category": "practice",
+  "related": ["最高瑜伽部", "密教"],
+  "source_type": "true_buddha_tantra_pdf",
+  "weight": 8
+},
+{
+  "cn": "無上瑜伽部",
+  "en": "Highest Yoga Tantra",
+  "aliases": ["無上瑜伽", "Highest Yoga Tantra"],
+  "mishears": ["無上瑜加部", "無上瑜珈部"],
+  "category": "practice",
+  "related": ["喜金剛法", "大圓滿"],
+  "source_type": "true_buddha_tantra_pdf",
+  "weight": 9
+},
+{
+  "cn": "金剛乘",
+  "en": "Vajrayana",
+  "aliases": ["密乘", "密教", "Vajrayana"],
+  "mishears": ["金剛成", "金剛城"],
+  "category": "school",
+  "related": ["真佛宗", "大日如來", "金剛薩埵"],
+  "source_type": "root_guru_pdf",
+  "weight": 9
+},
+{
+  "cn": "顯教",
+  "en": "Sutrayana",
+  "aliases": ["顯乘", "Sutrayana"],
+  "mishears": ["顯較", "顯叫"],
+  "category": "school",
+  "related": ["金剛乘", "佛教"],
+  "source_type": "root_guru_pdf",
+  "weight": 7
+},
+{
+  "cn": "四無量心",
+  "en": "Four Immeasurable Vows",
+  "aliases": ["四無量", "四無量法"],
+  "mishears": ["四無量新", "四無量行"],
+  "category": "practice",
+  "related": ["修法", "菩提心"],
+  "source_type": "true_buddha_tantra_pdf",
+  "weight": 7
+},
+{
+  "cn": "護身甲",
+  "en": "Armor Protection of the Body",
+  "aliases": ["身甲護身", "護身法"],
+  "mishears": ["護身假", "護身甲法"],
+  "category": "practice",
+  "related": ["修法", "護法"],
+  "source_type": "true_buddha_tantra_pdf",
+  "weight": 6
+},
+{
+  "cn": "空性觀想",
+  "en": "Visualization of Emptiness",
+  "aliases": ["觀空", "空性觀"],
+  "mishears": ["空性觀相", "空性觀像"],
+  "category": "practice",
+  "related": ["觀想", "三密"],
+  "source_type": "true_buddha_tantra_pdf",
+  "weight": 6
+}
 ]
