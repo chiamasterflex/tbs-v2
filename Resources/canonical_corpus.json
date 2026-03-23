@@ -36,8 +36,6 @@
   {"cn":"念念誦此經","en":"By constantly invoking this sutra,","category":"canonical_sutra","event_mode":"Sutra","source_type":"high_king_sutra","weight":10,"tags":["sutra","canonical","high_king_sutra"]},
   {"cn":"能滅生死苦，消除諸毒害","en":"one is liberated from birth and death and freed from all suffering.","category":"canonical_sutra","event_mode":"Sutra","source_type":"high_king_sutra","weight":10,"tags":["sutra","canonical","high_king_sutra"]},
 
-  {"cn":"念念誦此經","en":"Chanting this sutra continually,","category":"canonical_sutra","event_mode":"Sutra","source_type":"high_king_sutra","weight":10,"tags":["sutra","canonical","high_king_sutra"]},
-
   {"cn":"若有智慧者","en":"To those with wisdom,","category":"canonical_sutra","event_mode":"Sutra","source_type":"high_king_sutra","weight":10,"tags":["sutra","canonical","high_king_sutra"]},
   {"cn":"但誦口不輟","en":"recite it at all times.","category":"canonical_sutra","event_mode":"Sutra","source_type":"high_king_sutra","weight":10,"tags":["sutra","canonical","high_king_sutra"]},
 
@@ -54,5 +52,9 @@
   {"cn":"願以此功德","en":"Dedicate the merit.","category":"canonical_sutra","event_mode":"Sutra","source_type":"high_king_sutra","weight":10,"tags":["sutra","canonical","high_king_sutra"]},
   {"cn":"普及於一切","en":"to all beings universally.","category":"canonical_sutra","event_mode":"Sutra","source_type":"high_king_sutra","weight":10,"tags":["sutra","canonical","high_king_sutra"]},
 
-  {"cn":"高王觀世音真經終","en":"The end of the High King Avalokitesvara Sutra.","category":"canonical_sutra","event_mode":"Sutra","source_type":"high_king_sutra","weight":10,"tags":["sutra","canonical","high_king_sutra"]}
+  {"cn":"高王觀世音真經終","en":"The end of the High King Avalokitesvara Sutra.","category":"canonical_sutra","event_mode":"Sutra","source_type":"high_king_sutra","weight":10,"tags":["sutra","canonical","high_king_sutra"]},
+  {"cn":"嗡。阿彌爹哇。些。","en":"Om Amitabha Hrih.","category":"canonical_mantra","event_mode":"Sadhana","source_type":"amitabha_tbsn","weight":10,"tags":["mantra","canonical","amitabha"]},
+  {"cn":"南摩三十六萬億一十一萬九千五百同名同號阿彌陀佛","en":"Namo Amitabha Buddha of countless identical names and titles.","category":"canonical_recitation","event_mode":"Sadhana","source_type":"amitabha_tbsn","weight":10,"tags":["recitation","canonical","amitabha"]},
+  {"cn":"嗡嘛呢唄咪吽","en":"Om Mani Padme Hum.","category":"canonical_mantra","event_mode":"Sadhana","source_type":"amitabha_tbsn","weight":9,"tags":["mantra","canonical","avalokitesvara"]},
+  {"cn":"嗡。虛虛。索。梭哈。","en":"Om Xu Xu Suo Soha.","category":"canonical_mantra","event_mode":"Sadhana","source_type":"amitabha_tbsn","weight":9,"tags":["mantra","canonical","mahasthamaprapta"]}
 ]
