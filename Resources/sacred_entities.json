@@ -1146,5 +1146,24 @@
   "related": ["紅度母", "四法", "修法"],
   "source_type": "red_tara_sadhana_pdf",
   "weight": 8
-}
-]
+},
+  {
+    "cn": "紅度母種子字",
+    "en": "Red Tara Seed Syllable",
+    "aliases": ["紅度母種子", "救度母種子字"],
+    "mishears": ["紅度母中子字", "紅度母種字"],
+    "category": "ritual_term",
+    "related": ["紅度母", "種子字", "觀想"],
+    "source_type": "red_tara_sadhana_pdf",
+    "weight": 7
+  },
+  {
+    "cn": "敬愛法",
+    "en": "Magnetising Practice",
+    "aliases": ["敬愛修法", "愛敬法"],
+    "mishears": ["敬愛發", "敬愛佛"],
+    "category": "practice",
+    "related": ["紅度母", "四法", "修法"],
+    "source_type": "red_tara_sadhana_pdf",
+    "weight": 8
+  }
