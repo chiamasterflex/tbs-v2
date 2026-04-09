@@ -52,6 +52,11 @@ export default function App() {
   const [sourceLanguage, setSourceLanguage] = useState('Mandarin');
   const [targetLanguage, setTargetLanguage] = useState('English');
 
+  const translationRoute = useMemo(() => {
+    if (targetLanguage === 'English' && sourceLanguage === 'Bahasa Indonesia') return 'id_en';
+    return 'zh_en';
+  }, [sourceLanguage, targetLanguage]);
+
   const wsRef = useRef(null);
   const audioContextRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -71,10 +76,12 @@ export default function App() {
           const data = await existing.json();
           setSession(data);
           setHistoryLines(data.lines || []);
+          setSourceLanguage(data.sourceLanguage || 'Mandarin');
+          setTargetLanguage(data.targetLanguage || 'English');
           return;
         }
 
-        const create = await fetch(`${API}/api/session/fixed`, {
+        const create = await fetch(`${API}/api/session`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -83,12 +90,15 @@ export default function App() {
             eventMode: 'Dharma Talk',
             sourceLanguage: 'Mandarin',
             targetLanguage: 'English',
+            translationRoute: 'zh_en',
           }),
         });
 
         const created = await create.json();
         setSession(created);
         setHistoryLines(created.lines || []);
+        setSourceLanguage(created.sourceLanguage || 'Mandarin');
+        setTargetLanguage(created.targetLanguage || 'English');
       } catch (err) {
         console.error('session init failed', err);
       }
@@ -96,6 +106,34 @@ export default function App() {
 
     init();
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+
+    const syncSessionSettings = async () => {
+      try {
+        const res = await fetch(`${API}/api/session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: FIXED_SESSION_ID,
+            title: session.title || 'TBS Live Session',
+            eventMode: session.eventMode || 'Dharma Talk',
+            sourceLanguage,
+            targetLanguage,
+            translationRoute,
+          }),
+        });
+
+        const updated = await res.json();
+        setSession(updated);
+      } catch (err) {
+        console.error('session sync failed', err);
+      }
+    };
+
+    syncSessionSettings();
+  }, [session?.id, sourceLanguage, targetLanguage, translationRoute]);
 
   const downsampleBuffer = (buffer, inputRate, outputRate) => {
     if (inputRate === outputRate) return buffer;
@@ -153,7 +191,7 @@ export default function App() {
         const res = await fetch(`${API}/api/translate-interim`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rawCn: text }),
+          body: JSON.stringify({ rawCn: text, translationRoute, eventMode: session?.eventMode || 'Dharma Talk' }),
         });
 
         const data = await res.json();
@@ -168,7 +206,7 @@ export default function App() {
     try {
       setStatus('requesting_mic');
 
-      const ws = new WebSocket(WS_URL);
+      const ws = new WebSocket(`${WS_URL}?route=${encodeURIComponent(translationRoute)}`);
       ws.binaryType = 'arraybuffer';
 
       ws.onopen = async () => {
@@ -481,10 +519,7 @@ export default function App() {
                 style={styles.select}
               >
                 <option>Mandarin</option>
-                <option>Cantonese</option>
-                <option>Bahasa</option>
-                <option>English</option>
-                <option>Auto Detect</option>
+                <option>Bahasa Indonesia</option>
               </select>
             </div>
 
@@ -500,8 +535,6 @@ export default function App() {
                 style={styles.select}
               >
                 <option>English</option>
-                <option>Chinese</option>
-                <option>Bahasa</option>
               </select>
             </div>
           </div>

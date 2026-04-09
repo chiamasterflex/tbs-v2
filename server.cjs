@@ -24,6 +24,35 @@ if (!DEEPGRAM_API_KEY) {
 
 const deepgram = new DeepgramClient({ apiKey: DEEPGRAM_API_KEY });
 
+const ROUTES = {
+  zh_en: {
+    key: 'zh_en',
+    sourceLanguage: 'Mandarin',
+    targetLanguage: 'English',
+    asrLanguage: 'zh-CN',
+    label: 'Mandarin → English',
+  },
+  id_en: {
+    key: 'id_en',
+    sourceLanguage: 'Bahasa Indonesia',
+    targetLanguage: 'English',
+    asrLanguage: 'id',
+    label: 'Bahasa Indonesia → English',
+  },
+};
+
+function getTranslationRoute(routeKey = 'zh_en') {
+  return ROUTES[routeKey] || ROUTES.zh_en;
+}
+
+function deriveRouteFromLanguages(sourceLanguage = 'Mandarin', targetLanguage = 'English') {
+  if (targetLanguage === 'English') {
+    if (sourceLanguage === 'Bahasa Indonesia' || sourceLanguage === 'Bahasa') return 'id_en';
+    return 'zh_en';
+  }
+  return 'zh_en';
+}
+
 function readJson(filePath, fallback) {
   try {
     if (!fs.existsSync(filePath)) return fallback;
@@ -100,6 +129,7 @@ function getOrCreateSession(id = 'live-session') {
       eventMode: 'Dharma Talk',
       sourceLanguage: 'Mandarin',
       targetLanguage: 'English',
+      translationRoute: 'zh_en',
       lines: [],
       brainState: {
         activeTopic: null,
@@ -347,6 +377,7 @@ async function translateMixedSegments({
   eventMode,
   contextWindow,
   activeTopic = null,
+  translationRoute = 'zh_en',
 }) {
   const rawSegments = normalizeSegmentSpacing(segmentMixedText(text));
   if (!rawSegments.length) return text;
@@ -482,6 +513,41 @@ function normalizeChineseText(text) {
 
   return out;
 }
+
+function normalizeIndonesianText(text) {
+  if (!text) return '';
+  let out = normalizeSpaces(text);
+
+  const replacements = [
+    [/\bnggak\b/gi, 'tidak'],
+    [/\bgak\b/gi, 'tidak'],
+    [/\btak\b/gi, 'tidak'],
+    [/\baja\b/gi, 'saja'],
+    [/\bguru akar\b/gi, 'Guru Akar'],
+    [/\blian sheng\b/gi, 'Lian Sheng'],
+    [/\bpadmasambhava\b/gi, 'Padmasambhava'],
+  ];
+
+  for (const [pattern, replacement] of replacements) {
+    out = out.replace(pattern, replacement);
+  }
+
+  return normalizeSpaces(out);
+}
+
+const bahasaGlossary = [
+  { cn: 'Guru Akar', en: 'Root Guru' },
+  { cn: 'guru akar', en: 'Root Guru' },
+  { cn: 'Buddha Hidup Lian Sheng', en: 'Living Buddha Lian Sheng' },
+  { cn: 'Lian Sheng', en: 'Lian Sheng' },
+  { cn: 'upacara', en: 'ceremony' },
+  { cn: 'sadhana', en: 'sadhana' },
+  { cn: 'mantra', en: 'mantra' },
+  { cn: 'berkah', en: 'blessings' },
+  { cn: 'pemberkatan', en: 'blessing' },
+  { cn: 'dharma', en: 'Dharma' },
+  { cn: 'pelindung dharma', en: 'Dharma protector' },
+];
 
 function applyPhoneticBrain(text) {
   if (!text) return '';
@@ -728,9 +794,26 @@ function applyCorrectionMemory(text, eventMode = 'Dharma Talk') {
   return { text: out, hits };
 }
 
-function runBrainNormalization(text, eventMode = 'Dharma Talk') {
+function runBrainNormalization(
+  text,
+  eventMode = 'Dharma Talk',
+  translationRoute = 'zh_en'
+) {
   const protectedEnglish = protectKnownEnglishTerms(text);
   let out = protectedEnglish.text;
+
+  if (translationRoute === 'id_en') {
+    out = normalizeIndonesianText(out);
+    out = restoreKnownEnglishTerms(out, protectedEnglish.replacements);
+    out = normalizeSpaces(out);
+
+    return {
+      normalizedText: out,
+      correctionHits: [],
+      inputMode: /[A-Za-z]/.test(out) ? 'indonesian' : classifyInputMode(out),
+      protectedEnglish: protectedEnglish.replacements || [],
+    };
+  }
 
   out = normalizeChineseText(out);
   out = applyPhoneticBrain(out);
@@ -1106,6 +1189,7 @@ function buildDeepSeekPrompts({
   inputMode,
   forceAntiLiteral = false,
   activeTopic = null,
+  translationRoute = 'zh_en',
 }) {
   const glossaryBlock =
     hits.length > 0
@@ -1157,7 +1241,7 @@ function buildDeepSeekPrompts({
     mode === 'interim'
       ? `
 You are the official translator for True Buddha School (TBS).
-Translate spoken Chinese into short, conservative live subtitle English.
+${translationRoute === 'id_en' ? 'Translate spoken Bahasa Indonesia into short, conservative live subtitle English.' : 'Translate spoken Chinese into short, conservative live subtitle English.'}
 
 Rules:
 1. Output English only.
@@ -1173,7 +1257,7 @@ Rules:
 `.trim()
       : `
 You are the official translator for True Buddha School (TBS).
-Translate spoken Chinese into natural subtitle English.
+${translationRoute === 'id_en' ? 'Translate spoken Bahasa Indonesia into natural subtitle English.' : 'Translate spoken Chinese into natural subtitle English.'}
 
 Rules:
 1. Output English only.
@@ -1188,6 +1272,7 @@ Rules:
 10. If an active topic is present, prefer that interpretation when the input is ambiguous.${antiLiteralRule}
 Event mode: ${eventMode}
 Input mode: ${inputMode}
+Route: ${translationRoute}
 `.trim();
 
   const userPrompt = `
@@ -1237,7 +1322,8 @@ async function translateWithDeepSeek(
   eventMode = 'Dharma Talk',
   contextWindow = [],
   inputMode = 'chinese',
-  activeTopic = null
+  activeTopic = null,
+  translationRoute = 'zh_en'
 ) {
   if (!text || !text.trim()) return '';
 
@@ -1246,6 +1332,9 @@ async function translateWithDeepSeek(
 
   if (inputMode === 'english') {
     return text.trim();
+  }
+  if (translationRoute === 'id_en' && inputMode === 'indonesian') {
+    // continue through DeepSeek with Bahasa-aware prompt
   }
   if (inputMode === 'mixed') {
     return translateMixedSegments({
@@ -1256,6 +1345,7 @@ async function translateWithDeepSeek(
       eventMode,
       contextWindow,
       activeTopic,
+      translationRoute,
     });
   }
 
@@ -1281,6 +1371,7 @@ async function translateWithDeepSeek(
     inputMode,
     forceAntiLiteral: false,
     activeTopic,
+    translationRoute,
   });
 
   try {
@@ -1331,6 +1422,7 @@ async function translateWithDeepSeek(
         inputMode,
         forceAntiLiteral: true,
         activeTopic,
+        translationRoute,
       }));
 
       const retryOut = await requestOnce(systemPrompt, userPrompt);
@@ -1388,6 +1480,26 @@ function appendMishearLog(entry) {
   return row;
 }
 
+
+function buildRetrievalForRoute(normalizedText, eventMode, prepared, translationRoute = 'zh_en') {
+  if (translationRoute === 'id_en') {
+    return {
+      sacredEntities: [],
+      phraseMatches: [],
+      ceremonyMatches: [],
+      correctionMatches: [],
+    };
+  }
+
+  return {
+    sacredEntities: retrieveSacredEntities(normalizedText, eventMode),
+    phraseMatches: retrievePhraseMemory(normalizedText, eventMode),
+    ceremonyMatches: retrieveCeremonyMemory(normalizedText, eventMode),
+    correctionMatches:
+      prepared.correctionHits || retrieveCorrectionMemory(normalizedText, eventMode),
+  };
+}
+
 app.get('/api/session/:id', (req, res) => {
   const session = getOrCreateSession(req.params.id);
   res.json(session);
@@ -1402,12 +1514,17 @@ app.post('/api/session', (req, res) => {
     eventMode = session.eventMode,
     sourceLanguage = session.sourceLanguage,
     targetLanguage = session.targetLanguage,
+    translationRoute = deriveRouteFromLanguages(
+      sourceLanguage || session.sourceLanguage,
+      targetLanguage || session.targetLanguage
+    ),
   } = req.body || {};
 
   session.title = title;
   session.eventMode = eventMode;
   session.sourceLanguage = sourceLanguage;
   session.targetLanguage = targetLanguage;
+  session.translationRoute = getTranslationRoute(translationRoute).key;
 
   res.json(session);
 });
@@ -1418,21 +1535,28 @@ app.post('/api/session/:id/line', async (req, res) => {
   const rawCn = (req.body?.rawCn || '').trim();
   if (!rawCn) return res.status(400).json({ error: 'rawCn required' });
 
-  const prepared = runBrainNormalization(rawCn, session.eventMode);
+  const translationRoute =
+    req.body?.translationRoute ||
+    session.translationRoute ||
+    deriveRouteFromLanguages(session.sourceLanguage, session.targetLanguage);
+
+  const prepared = runBrainNormalization(rawCn, session.eventMode, translationRoute);
   const normalizedCn = prepared.normalizedText;
-  const hits = applyGlossary(normalizedCn);
+  const hits = applyGlossary(normalizedCn, translationRoute);
 
-  const retrieval = {
-    sacredEntities: retrieveSacredEntities(normalizedCn, session.eventMode),
-    phraseMatches: retrievePhraseMemory(normalizedCn, session.eventMode),
-    ceremonyMatches: retrieveCeremonyMemory(normalizedCn, session.eventMode),
-    correctionMatches:
-      prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, session.eventMode),
-  };
-
-  const activeTopic = getActiveTopicContext(
-    updateSessionTopic(session, normalizedCn, retrieval, session.eventMode)
+  const retrieval = buildRetrievalForRoute(
+    normalizedCn,
+    session.eventMode,
+    prepared,
+    translationRoute
   );
+
+  const activeTopic =
+    translationRoute === 'id_en'
+      ? null
+      : getActiveTopicContext(
+          updateSessionTopic(session, normalizedCn, retrieval, session.eventMode)
+        );
 
   const en = await translateWithDeepSeek(
     normalizedCn,
@@ -1442,7 +1566,8 @@ app.post('/api/session/:id/line', async (req, res) => {
     session.eventMode,
     getContextWindow(session),
     prepared.inputMode,
-    activeTopic
+    activeTopic,
+    translationRoute
   );
 
   const translationMeta = buildTranslationMeta({
@@ -1470,12 +1595,16 @@ app.post('/api/translate-interim', async (req, res) => {
   const rawCn = (req.body?.rawCn || '').trim();
   const eventMode = req.body?.eventMode || 'Dharma Talk';
   const session = getOrCreateSession('live-session');
+  const translationRoute =
+    req.body?.translationRoute ||
+    session.translationRoute ||
+    deriveRouteFromLanguages(session.sourceLanguage, session.targetLanguage);
 
   if (!rawCn) return res.json({ en: '', normalizedCn: '', hits: [] });
 
-  const prepared = runBrainNormalization(rawCn, eventMode);
+  const prepared = runBrainNormalization(rawCn, eventMode, translationRoute);
   const normalizedCn = prepared.normalizedText;
-  const hits = applyGlossary(normalizedCn);
+  const hits = applyGlossary(normalizedCn, translationRoute);
 
   if (!isStableEnoughForInterim(normalizedCn)) {
     return res.json({
@@ -1486,17 +1615,17 @@ app.post('/api/translate-interim', async (req, res) => {
     });
   }
 
-  const retrieval = {
-    sacredEntities: retrieveSacredEntities(normalizedCn, eventMode),
-    phraseMatches: retrievePhraseMemory(normalizedCn, eventMode),
-    ceremonyMatches: retrieveCeremonyMemory(normalizedCn, eventMode),
-    correctionMatches:
-      prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, eventMode),
-  };
-
-  const activeTopic = getActiveTopicContext(
-    updateSessionTopic(session, normalizedCn, retrieval, eventMode)
+  const retrieval = buildRetrievalForRoute(
+    normalizedCn,
+    eventMode,
+    prepared,
+    translationRoute
   );
+
+  const activeTopic =
+    translationRoute === 'id_en'
+      ? null
+      : getActiveTopicContext(updateSessionTopic(session, normalizedCn, retrieval, eventMode));
 
   const en = await translateWithDeepSeek(
     normalizedCn,
@@ -1506,7 +1635,8 @@ app.post('/api/translate-interim', async (req, res) => {
     eventMode,
     getContextWindow(session),
     prepared.inputMode,
-    activeTopic
+    activeTopic,
+    translationRoute
   );
 
   const translationMeta = buildTranslationMeta({
@@ -1597,8 +1727,11 @@ app.post('/api/session/:id/clear', (req, res) => {
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-wss.on('connection', async (browserWs) => {
-  console.log('[Browser] connected');
+wss.on('connection', async (browserWs, req) => {
+  const url = new URL(req.url, 'http://localhost');
+  const requestedRoute = url.searchParams.get('route') || 'zh_en';
+  const routeConfig = getTranslationRoute(requestedRoute);
+  console.log('[Browser] connected', routeConfig.key);
 
   let frameCount = 0;
   let totalBytes = 0;
@@ -1611,6 +1744,9 @@ wss.on('connection', async (browserWs) => {
   let lastInterimSentAt = 0;
 
   const activeSession = getOrCreateSession('live-session');
+  activeSession.translationRoute = routeConfig.key;
+  activeSession.sourceLanguage = routeConfig.sourceLanguage;
+  activeSession.targetLanguage = routeConfig.targetLanguage;
 
   function sendToBrowser(obj) {
     if (browserWs.readyState === 1) {
@@ -1642,7 +1778,7 @@ wss.on('connection', async (browserWs) => {
   try {
     dg = await deepgram.listen.v1.connect({
       model: 'nova-2',
-      language: 'zh-CN',
+      language: routeConfig.asrLanguage,
       interim_results: true,
       punctuate: true,
       smart_format: true,
@@ -1676,23 +1812,33 @@ wss.on('connection', async (browserWs) => {
         const rawText = data?.channel?.alternatives?.[0]?.transcript || '';
         if (!rawText.trim()) return;
 
-        const prepared = runBrainNormalization(rawText, activeSession.eventMode);
+        const prepared = runBrainNormalization(
+          rawText,
+          activeSession.eventMode,
+          routeConfig.key
+        );
         const normalizedCn = prepared.normalizedText;
-        const hits = applyGlossary(normalizedCn);
+        const hits = applyGlossary(normalizedCn, routeConfig.key);
 
         if (data.is_final) {
-          const retrieval = {
-            sacredEntities: retrieveSacredEntities(normalizedCn, activeSession.eventMode),
-            phraseMatches: retrievePhraseMemory(normalizedCn, activeSession.eventMode),
-            ceremonyMatches: retrieveCeremonyMemory(normalizedCn, activeSession.eventMode),
-            correctionMatches:
-              prepared.correctionHits ||
-              retrieveCorrectionMemory(normalizedCn, activeSession.eventMode),
-          };
-
-          const activeTopic = getActiveTopicContext(
-            updateSessionTopic(activeSession, normalizedCn, retrieval, activeSession.eventMode)
+          const retrieval = buildRetrievalForRoute(
+            normalizedCn,
+            activeSession.eventMode,
+            prepared,
+            routeConfig.key
           );
+
+          const activeTopic =
+            routeConfig.key === 'id_en'
+              ? null
+              : getActiveTopicContext(
+                  updateSessionTopic(
+                    activeSession,
+                    normalizedCn,
+                    retrieval,
+                    activeSession.eventMode
+                  )
+                );
 
           const en = await translateWithDeepSeek(
             normalizedCn,
@@ -1702,7 +1848,8 @@ wss.on('connection', async (browserWs) => {
             activeSession.eventMode,
             getContextWindow(activeSession),
             prepared.inputMode,
-            activeTopic
+            activeTopic,
+            routeConfig.key
           );
 
           const translationMeta = buildTranslationMeta({
@@ -1745,6 +1892,7 @@ wss.on('connection', async (browserWs) => {
               text: rawText,
               normalizedCn,
               inputMode: prepared.inputMode,
+              translationRoute: routeConfig.key,
             });
           }
         }
