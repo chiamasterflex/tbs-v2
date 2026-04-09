@@ -9,6 +9,17 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
 const FIXED_SESSION_ID = 'live-session';
 
+function deriveTranslationRoute(sourceLanguage, targetLanguage) {
+  const source = String(sourceLanguage || '').toLowerCase();
+  const target = String(targetLanguage || '').toLowerCase();
+
+  if ((source.includes('bahasa') || source.includes('indones')) && target.includes('english')) {
+    return 'id_en';
+  }
+
+  return 'zh_en';
+}
+
 function formatTime(value) {
   if (!value) return '—';
   const d = new Date(value);
@@ -52,10 +63,10 @@ export default function App() {
   const [sourceLanguage, setSourceLanguage] = useState('Mandarin');
   const [targetLanguage, setTargetLanguage] = useState('English');
 
-  const translationRoute = useMemo(() => {
-    if (targetLanguage === 'English' && sourceLanguage === 'Bahasa Indonesia') return 'id_en';
-    return 'zh_en';
-  }, [sourceLanguage, targetLanguage]);
+  const translationRoute = useMemo(
+    () => deriveTranslationRoute(sourceLanguage, targetLanguage),
+    [sourceLanguage, targetLanguage]
+  );
 
   const wsRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -76,8 +87,8 @@ export default function App() {
           const data = await existing.json();
           setSession(data);
           setHistoryLines(data.lines || []);
-          setSourceLanguage(data.sourceLanguage || 'Mandarin');
-          setTargetLanguage(data.targetLanguage || 'English');
+          if (data.sourceLanguage) setSourceLanguage(data.sourceLanguage);
+          if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
           return;
         }
 
@@ -97,8 +108,8 @@ export default function App() {
         const created = await create.json();
         setSession(created);
         setHistoryLines(created.lines || []);
-        setSourceLanguage(created.sourceLanguage || 'Mandarin');
-        setTargetLanguage(created.targetLanguage || 'English');
+        if (created.sourceLanguage) setSourceLanguage(created.sourceLanguage);
+        if (created.targetLanguage) setTargetLanguage(created.targetLanguage);
       } catch (err) {
         console.error('session init failed', err);
       }
@@ -108,11 +119,23 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session?.id) return;
 
-    const syncSessionSettings = async () => {
+    const sync = async () => {
       try {
-        const res = await fetch(`${API}/api/session`, {
+        const res = await fetch(`${API}/api/session/${FIXED_SESSION_ID}`);
+        if (!res.ok) return;
+        const latest = await res.json();
+
+        if (
+          latest.sourceLanguage === sourceLanguage &&
+          latest.targetLanguage === targetLanguage &&
+          latest.translationRoute === translationRoute
+        ) {
+          return;
+        }
+
+        const update = await fetch(`${API}/api/session`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -125,15 +148,17 @@ export default function App() {
           }),
         });
 
-        const updated = await res.json();
-        setSession(updated);
+        if (update.ok) {
+          const updated = await update.json();
+          setSession(updated);
+        }
       } catch (err) {
         console.error('session sync failed', err);
       }
     };
 
-    syncSessionSettings();
-  }, [session?.id, sourceLanguage, targetLanguage, translationRoute]);
+    sync();
+  }, [session?.id, session?.title, session?.eventMode, sourceLanguage, targetLanguage, translationRoute]);
 
   const downsampleBuffer = (buffer, inputRate, outputRate) => {
     if (inputRate === outputRate) return buffer;
@@ -191,7 +216,12 @@ export default function App() {
         const res = await fetch(`${API}/api/translate-interim`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rawCn: text, translationRoute, eventMode: session?.eventMode || 'Dharma Talk' }),
+          body: JSON.stringify({
+            rawCn: text,
+            sourceLanguage,
+            targetLanguage,
+            translationRoute,
+          }),
         });
 
         const data = await res.json();
