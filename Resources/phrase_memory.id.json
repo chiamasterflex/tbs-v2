@@ -1,0 +1,88 @@
+[
+  {
+    "idn": "marilah kita memohon pemberkatan",
+    "en": "Let us pray for blessings.",
+    "category": "ceremony",
+    "event_modes": ["Ceremony"],
+    "weight": 10
+  },
+  {
+    "idn": "semoga semua makhluk berbahagia",
+    "en": "May all beings be happy.",
+    "category": "blessing",
+    "event_modes": ["Dharma Talk", "Ceremony"],
+    "weight": 10
+  },
+  {
+    "idn": "semoga semua makhluk terbebas dari penderitaan",
+    "en": "May all beings be free from suffering.",
+    "category": "blessing",
+    "weight": 10
+  },
+  {
+    "idn": "kita melakukan pelimpahan jasa",
+    "en": "We dedicate the merits.",
+    "category": "ritual",
+    "weight": 10
+  },
+  {
+    "idn": "kita berlindung kepada guru akar",
+    "en": "We take refuge in the Root Guru.",
+    "category": "refuge",
+    "weight": 10
+  },
+  {
+    "idn": "kita berlindung kepada buddha",
+    "en": "We take refuge in the Buddha.",
+    "category": "refuge",
+    "weight": 9
+  },
+  {
+    "idn": "kita berlindung kepada dharma",
+    "en": "We take refuge in the Dharma.",
+    "category": "refuge",
+    "weight": 9
+  },
+  {
+    "idn": "kita berlindung kepada sangha",
+    "en": "We take refuge in the Sangha.",
+    "category": "refuge",
+    "weight": 9
+  },
+  {
+    "idn": "hari ini kita membahas",
+    "en": "Today we will discuss",
+    "category": "dharma_talk",
+    "weight": 8
+  },
+  {
+    "idn": "dalam praktik ini",
+    "en": "In this practice",
+    "category": "instruction",
+    "weight": 8
+  },
+  {
+    "idn": "kita harus memahami",
+    "en": "We must understand",
+    "category": "teaching",
+    "weight": 7
+  },
+  {
+    "idn": "ini sangat penting",
+    "en": "This is very important.",
+    "category": "emphasis",
+    "weight": 7
+  },
+  {
+    "idn": "kita memohon perlindungan",
+    "en": "We pray for protection.",
+    "category": "ceremony",
+    "weight": 9
+  },
+  {
+    "idn": "semoga semua berjalan lancar",
+    "en": "May everything proceed smoothly.",
+    "category": "blessing",
+    "weight": 8
+  }
+]

@@ -1,0 +1,51 @@
+[
+  {
+    "heard": "guru akal",
+    "intendedIndonesian": "guru akar",
+    "correctedEnglish": "Root Guru",
+    "category": "title",
+    "weight": 10
+  },
+  {
+    "heard": "lian seng",
+    "intendedIndonesian": "lian sheng",
+    "correctedEnglish": "Living Buddha Lian Sheng",
+    "category": "deity",
+    "weight": 10
+  },
+  {
+    "heard": "padma kumara",
+    "intendedIndonesian": "padmakumara",
+    "correctedEnglish": "Padmakumara",
+    "category": "deity",
+    "weight": 9
+  },
+  {
+    "heard": "tanah sucih",
+    "intendedIndonesian": "tanah suci",
+    "correctedEnglish": "Pure Land",
+    "category": "term",
+    "weight": 9
+  },
+  {
+    "heard": "pelimpahan jasah",
+    "intendedIndonesian": "pelimpahan jasa",
+    "correctedEnglish": "Dedication of Merits",
+    "category": "ritual",
+    "weight": 10
+  },
+  {
+    "heard": "darma",
+    "intendedIndonesian": "dharma",
+    "correctedEnglish": "Dharma",
+    "category": "term",
+    "weight": 9
+  },
+  {
+    "heard": "sangka",
+    "intendedIndonesian": "sangha",
+    "correctedEnglish": "Sangha",
+    "category": "term",
+    "weight": 9
+  }
+]

@@ -65,6 +65,10 @@ const generatedCeremonyPhrases = readJson(
 const sacredEntities = readJson(path.join(resourcesDir, 'sacred_entities.json'), []);
 const phraseMemory = readJson(path.join(resourcesDir, 'phrase_memory.json'), []);
 const ceremonyMemory = readJson(path.join(resourcesDir, 'ceremony_memory.json'), []);
+const glossaryIdEn = readJson(path.join(resourcesDir, 'glossary.id_en.json'), {});
+const phraseMemoryId = readJson(path.join(resourcesDir, 'phrase_memory.id.json'), []);
+const correctionMemoryId = readJson(path.join(resourcesDir, 'correction_memory.id.json'), []);
+const hotwordsId = readJson(path.join(resourcesDir, 'hotwords.id.generated.json'), []);
 
 const asrMishearLogPath = path.join(resourcesDir, 'asr_mishear_log.json');
 let asrMishearLog = readJson(asrMishearLogPath, []);
@@ -85,7 +89,7 @@ const retrievalConfig = readJson(path.join(resourcesDir, 'retrieval_config.json'
 });
 
 console.log(
-  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} sacredEntities=${sacredEntities.length} phraseMemory=${phraseMemory.length} ceremonyMemory=${ceremonyMemory.length} correctionMemory=${correctionMemory.length}`
+  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} sacredEntities=${sacredEntities.length} phraseMemory=${phraseMemory.length} ceremonyMemory=${ceremonyMemory.length} correctionMemory=${correctionMemory.length} idGlossary=${Object.keys(glossaryIdEn).length} idPhraseMemory=${phraseMemoryId.length} idCorrectionMemory=${correctionMemoryId.length} idHotwords=${hotwordsId.length}`
 );
 
 
@@ -103,21 +107,11 @@ const ROUTES = {
     sourceLanguage: 'Bahasa Indonesia',
     targetLanguage: 'English',
     asrLanguage: 'id',
+    hotwords: hotwordsId,
   },
 };
 
-const bahasaGlossary = [
-  { cn: 'guru akar', en: 'Root Guru' },
-  { cn: 'upacara', en: 'ceremony' },
-  { cn: 'pemberkatan', en: 'blessing' },
-  { cn: 'Buddha Hidup Lian Sheng', en: 'Living Buddha Lian Sheng' },
-  { cn: 'Lian Sheng', en: 'Lian Sheng' },
-  { cn: 'mantra', en: 'mantra' },
-  { cn: 'sadhana', en: 'sadhana' },
-  { cn: 'pelindung dharma', en: 'Dharma protector' },
-  { cn: 'dharma', en: 'Dharma' },
-  { cn: 'tantra', en: 'Tantra' },
-];
+const bahasaGlossary = Object.entries(glossaryIdEn).map(([cn, en]) => ({ cn, en }));
 
 function deriveTranslationRoute(sourceLanguage = 'Mandarin', targetLanguage = 'English') {
   const source = String(sourceLanguage || '').toLowerCase();
@@ -833,10 +827,14 @@ function runBrainNormalization(text, eventMode = 'Dharma Talk') {
 
 function runRouteNormalization(text, eventMode = 'Dharma Talk', routeKey = 'zh_en') {
   if (routeKey === 'id_en') {
-    const normalizedText = normalizeIndonesianText(text);
+    let normalizedText = normalizeIndonesianText(text);
+    const correctionApplied = applyIndonesianCorrections(normalizedText);
+    normalizedText = correctionApplied.text;
+
     return {
       normalizedText,
-      correctionHits: [],
+      correctionHits: correctionApplied.hits || [],
+      phraseHints: retrieveIndonesianPhraseMemory(normalizedText),
       inputMode: classifyInputModeForRoute(normalizedText, routeKey),
       protectedEnglish: [],
     };
@@ -901,20 +899,7 @@ function applyGlossary(text) {
 }
 
 function applyRouteGlossary(text, routeKey = 'zh_en') {
-  if (routeKey === 'id_en') {
-    const normalized = String(text || '').toLowerCase();
-    const hits = [];
-    const sorted = [...bahasaGlossary].sort((a, b) => (b.cn?.length || 0) - (a.cn?.length || 0));
-
-    for (const term of sorted) {
-      if (term?.cn && normalized.includes(term.cn.toLowerCase())) {
-        hits.push(term);
-      }
-    }
-
-    return hits;
-  }
-
+  if (routeKey === 'id_en') return applyIndonesianGlossary(text);
   return applyGlossary(text);
 }
 
@@ -1267,6 +1252,18 @@ function buildDeepSeekPrompts({
     : '';
 
   if (routeKey === 'id_en') {
+    const phraseBlock =
+      (retrieval.phraseMatches || []).length > 0
+        ? retrieval.phraseMatches.map((x) => `${x.idn || x.cn} => ${x.en}`).join('\n')
+        : 'No phrase memory hits';
+
+    const correctionBlock =
+      (retrieval.correctionMatches || []).length > 0
+        ? retrieval.correctionMatches
+            .map((x) => `${x.heard} => ${x.intendedIndonesian || ''}${x.correctedEnglish ? ` => ${x.correctedEnglish}` : ''}`)
+            .join('\n')
+        : 'No correction memory hits';
+
     const systemPrompt =
       mode === 'interim'
         ? `
@@ -1275,11 +1272,13 @@ Translate spoken Bahasa Indonesia into short, conservative live subtitle English
 
 Rules:
 1. Output English only.
-2. Preserve TBS religious terms exactly when given in the glossary.
-3. Keep key names such as Living Buddha Lian Sheng, Root Guru, mantra, and sadhana in proper TBS English.
-4. Keep it short and subtitle-safe.
-5. No explanations, no notes, no brackets unless essential.
-6. Prefer natural devotional or teaching English, not robotic literal wording.
+2. Use standard True Buddha School English terminology.
+3. Preserve sacred names, titles, and ritual terms in their established TBS English forms.
+4. Prefer canonical renderings such as Root Guru, Lineage Guru, Living Buddha Lian Sheng, Dharma Protector, Pure Land, and Dedication of Merits.
+5. Do not paraphrase into generic religious language.
+6. Keep it short and subtitle-safe.
+7. No explanations, no notes, no brackets unless essential.
+8. Prefer natural devotional or teaching English, not robotic literal wording.
 `.trim()
         : `
 You are the official translator for True Buddha School (TBS).
@@ -1287,11 +1286,13 @@ Translate spoken Bahasa Indonesia into natural subtitle English.
 
 Rules:
 1. Output English only.
-2. Preserve TBS religious terms exactly when given in the glossary.
-3. Keep key names such as Living Buddha Lian Sheng, Root Guru, mantra, and sadhana in proper TBS English.
-4. No explanations, no notes, no brackets unless essential.
-5. Keep it clear, natural, and subtitle-friendly.
-6. Prefer natural devotional or teaching English, not robotic literal wording.
+2. Use standard True Buddha School English terminology.
+3. Preserve sacred names, titles, and ritual terms in their established TBS English forms.
+4. Prefer canonical renderings such as Root Guru, Lineage Guru, Living Buddha Lian Sheng, Dharma Protector, Pure Land, and Dedication of Merits.
+5. Do not paraphrase into generic religious language.
+6. No explanations, no notes, no brackets unless essential.
+7. Keep it clear, natural, and subtitle-friendly.
+8. Prefer natural devotional or teaching English, not robotic literal wording.
 Event mode: ${eventMode}
 Input mode: ${inputMode}
 `.trim();
@@ -1307,6 +1308,12 @@ ${contextBlock}
 
 Glossary:
 ${glossaryBlock}
+
+Phrase memory matches:
+${phraseBlock}
+
+Correction memory matches:
+${correctionBlock}
 `.trim();
 
     return { systemPrompt, userPrompt };
@@ -1588,7 +1595,12 @@ app.post('/api/session/:id/line', async (req, res) => {
   const hits = applyRouteGlossary(normalizedCn, routeKey);
 
   const retrieval = routeKey === 'id_en'
-    ? { sacredEntities: [], phraseMatches: [], ceremonyMatches: [], correctionMatches: [] }
+    ? {
+        sacredEntities: [],
+        phraseMatches: prepared.phraseHints || retrieveIndonesianPhraseMemory(normalizedCn),
+        ceremonyMatches: [],
+        correctionMatches: prepared.correctionHits || [],
+      }
     : {
         sacredEntities: retrieveSacredEntities(normalizedCn, session.eventMode),
         phraseMatches: retrievePhraseMemory(normalizedCn, session.eventMode),
@@ -1658,7 +1670,12 @@ app.post('/api/translate-interim', async (req, res) => {
   }
 
   const retrieval = routeKey === 'id_en'
-    ? { sacredEntities: [], phraseMatches: [], ceremonyMatches: [], correctionMatches: [] }
+    ? {
+        sacredEntities: [],
+        phraseMatches: prepared.phraseHints || retrieveIndonesianPhraseMemory(normalizedCn),
+        ceremonyMatches: [],
+        correctionMatches: prepared.correctionHits || [],
+      }
     : {
         sacredEntities: retrieveSacredEntities(normalizedCn, eventMode),
         phraseMatches: retrievePhraseMemory(normalizedCn, eventMode),
@@ -1830,6 +1847,9 @@ wss.on('connection', async (browserWs, req) => {
       encoding: 'linear16',
       sample_rate: 16000,
       channels: 1,
+      ...(routeKey === 'id_en' && Array.isArray(routeConfig.hotwords) && routeConfig.hotwords.length
+        ? { keywords: routeConfig.hotwords }
+        : {}),
     });
 
     dg.on('open', () => {
@@ -1863,7 +1883,12 @@ wss.on('connection', async (browserWs, req) => {
 
         if (data.is_final) {
           const retrieval = routeKey === 'id_en'
-            ? { sacredEntities: [], phraseMatches: [], ceremonyMatches: [], correctionMatches: [] }
+            ? {
+                sacredEntities: [],
+                phraseMatches: prepared.phraseHints || retrieveIndonesianPhraseMemory(normalizedCn),
+                ceremonyMatches: [],
+                correctionMatches: prepared.correctionHits || [],
+              }
             : {
                 sacredEntities: retrieveSacredEntities(normalizedCn, activeSession.eventMode),
                 phraseMatches: retrievePhraseMemory(normalizedCn, activeSession.eventMode),
@@ -2022,3 +2047,61 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`TBS V2 API running on http://0.0.0.0:${PORT}`);
   console.log(`TBS V2 WS bridge running on ws://0.0.0.0:${PORT}/ws`);
 });
+function applyIndonesianCorrections(text) {
+  if (!text) return { text: '', hits: [] };
+
+  let out = text;
+  const hits = [];
+
+  for (const row of correctionMemoryId) {
+    const heard = normalizeSpaces(row?.heard || '');
+    const intendedIndonesian = normalizeSpaces(row?.intendedIndonesian || '');
+    const correctedEnglish = normalizeSpaces(row?.correctedEnglish || '');
+    if (!heard || !intendedIndonesian) continue;
+
+    const escaped = heard.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`\\b${escaped}\\b`, 'gi');
+
+    if (re.test(out)) {
+      out = out.replace(re, intendedIndonesian);
+      hits.push({
+        ...row,
+        correctedEnglish,
+        _score: Number(row?.weight || 0) || 0,
+      });
+    }
+  }
+
+  return { text: normalizeSpaces(out), hits };
+}
+
+function retrieveIndonesianPhraseMemory(text) {
+  const normalized = normalizeSpaces(text).toLowerCase();
+  if (!normalized) return [];
+
+  return phraseMemoryId
+    .filter((row) => row?.idn && normalized.includes(String(row.idn).toLowerCase()))
+    .map((row) => ({
+      ...row,
+      cn: row.idn,
+      _score: Number(row?.weight || 0) || String(row.idn || '').length,
+    }))
+    .sort((a, b) => b._score - a._score)
+    .slice(0, retrievalConfig.top_phrase_matches || 6);
+}
+
+function applyIndonesianGlossary(text) {
+  if (!text) return [];
+
+  const normalized = String(text || '').toLowerCase();
+  const hits = [];
+  const sorted = [...bahasaGlossary].sort((a, b) => (b.cn?.length || 0) - (a.cn?.length || 0));
+
+  for (const term of sorted) {
+    if (term?.cn && normalized.includes(String(term.cn).toLowerCase())) {
+      hits.push(term);
+    }
+  }
+
+  return hits;
+}
