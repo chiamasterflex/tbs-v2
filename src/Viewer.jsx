@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+const WS_URL =
+  import.meta.env.VITE_WS_URL ||
+  API.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
 const FIXED_SESSION_ID = 'live-session';
-const POLL_MS = 1500;
+const POLL_MS = 3000;
 const INITIAL_VISIBLE_COUNT = 24;
 const LOAD_MORE_STEP = 24;
 const MAX_VISIBLE_COUNT = 500;
@@ -34,12 +37,17 @@ function formatDate(value) {
 
 export default function Viewer() {
   const scrollRef = useRef(null);
+  const wsRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
+
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('Loading…');
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [socketState, setSocketState] = useState('Connecting…');
+  const [liveInterim, setLiveInterim] = useState(null);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -48,19 +56,19 @@ export default function Viewer() {
       });
 
       if (!res.ok) {
-        setStatus('Waiting for live session…');
+        setStatus((prev) => (prev === 'Live via WebSocket' ? prev : 'Waiting for live session…'));
         setError('');
         return;
       }
 
       const data = await res.json();
       setSession(data);
-      setStatus('Live');
+      setStatus((prev) => (prev === 'Live via WebSocket' ? prev : 'Live'));
       setError('');
       setLastUpdated(new Date().toISOString());
     } catch (err) {
       console.error(err);
-      setStatus('Connection problem');
+      setStatus((prev) => (prev === 'Live via WebSocket' ? prev : 'Connection problem'));
       setError('Could not reach the live session API.');
     }
   }, []);
@@ -76,13 +84,131 @@ export default function Viewer() {
     };
   }, [fetchSession]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const scheduleReconnect = () => {
+      if (cancelled) return;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = setTimeout(() => {
+        connectViewerSocket();
+      }, 1200);
+    };
+
+    const handleSocketMessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+
+        if (payload?.type === 'live_cn') {
+          setLiveInterim({
+            id: '__live_interim__',
+            at: new Date().toISOString(),
+            normalizedCn: payload.cn || '',
+            rawCn: payload.rawCn || payload.cn || '',
+            en: payload.en || '',
+            translationMeta: payload.translationMeta || { band: 'medium' },
+            isInterim: true,
+          });
+          setStatus('Live via WebSocket');
+          setSocketState('Live');
+          setLastUpdated(new Date().toISOString());
+          setError('');
+          return;
+        }
+
+        if (payload?.type === 'final') {
+          setLiveInterim(null);
+          setSession((prev) => {
+            const prevLines = Array.isArray(prev?.lines) ? prev.lines : [];
+            const incoming = payload.line || payload;
+            const incomingId = incoming?.id;
+            const deduped = incomingId
+              ? prevLines.filter((line) => line?.id !== incomingId)
+              : prevLines;
+
+            return {
+              ...(prev || {}),
+              id: prev?.id || FIXED_SESSION_ID,
+              eventMode: prev?.eventMode || 'Dharma Talk',
+              lines: [incoming, ...deduped],
+            };
+          });
+          setStatus('Live via WebSocket');
+          setSocketState('Live');
+          setLastUpdated(new Date().toISOString());
+          setError('');
+          return;
+        }
+
+        if (payload?.type === 'session' && payload?.session) {
+          setSession(payload.session);
+          setStatus('Live via WebSocket');
+          setSocketState('Live');
+          setLastUpdated(new Date().toISOString());
+          setError('');
+        }
+      } catch (err) {
+        console.error('Viewer socket parse error', err);
+      }
+    };
+
+    const connectViewerSocket = () => {
+      if (cancelled) return;
+
+      try {
+        setSocketState('Connecting…');
+        const ws = new WebSocket(
+          `${WS_URL}?viewer=1&sessionId=${encodeURIComponent(FIXED_SESSION_ID)}`
+        );
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          if (cancelled) return;
+          setSocketState('Connected');
+          setError('');
+        };
+
+        ws.onmessage = handleSocketMessage;
+
+        ws.onerror = (err) => {
+          console.error('Viewer socket error', err);
+          setSocketState('Socket error');
+        };
+
+        ws.onclose = () => {
+          if (cancelled) return;
+          setSocketState('Reconnecting…');
+          scheduleReconnect();
+        };
+      } catch (err) {
+        console.error('Viewer socket setup failed', err);
+        setSocketState('Socket unavailable');
+        scheduleReconnect();
+      }
+    };
+
+    connectViewerSocket();
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (wsRef.current) wsRef.current.close();
+    };
+  }, [fetchSession]);
+
   const lines = useMemo(() => {
     const raw = Array.isArray(session?.lines) ? session.lines : [];
 
     // Backend stores newest first via unshift().
     // Viewer should read naturally: older at top, newest at bottom.
-    return [...raw].reverse();
-  }, [session]);
+    const ordered = [...raw].reverse();
+
+    if (liveInterim?.normalizedCn || liveInterim?.en) {
+      return [...ordered, liveInterim];
+    }
+
+    return ordered;
+  }, [session, liveInterim]);
 
   const visibleLines = useMemo(() => {
     if (!lines.length) return [];
@@ -161,7 +287,7 @@ export default function Viewer() {
 
             <div style={styles.badge}>
               <span style={{ ...styles.badgeDot, background: '#60a5fa' }} />
-              Polling: {POLL_MS}ms
+              Socket: {socketState}
             </div>
 
             <div style={styles.badge}>
@@ -234,7 +360,7 @@ export default function Viewer() {
               const timestamp = line.at || line.createdAt || line.timestamp;
               const cn = line.normalizedCn || line.rawCn || '';
               const rawCn = line.rawCn || '';
-              const en = line.en || '—';
+              const en = line.en || (line.isInterim ? 'Translating…' : '—');
               const meta = line.translationMeta || {};
               const confidence = meta.band || 'high';
               const isLow = confidence === 'low';
@@ -250,7 +376,9 @@ export default function Viewer() {
                     </div>
 
                     <div style={styles.lineMetaRight}>
-                      {rawCn && rawCn !== cn ? (
+                      {line.isInterim ? (
+                        <span style={styles.metaHintLive}>live now</span>
+                      ) : rawCn && rawCn !== cn ? (
                         <span style={styles.metaHint}>normalized</span>
                       ) : (
                         <span style={styles.metaHint}>live</span>
@@ -596,6 +724,13 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     color: '#9a6b4d',
+  },
+  metaHintLive: {
+    fontSize: '11px',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: '#ff6b35',
   },
   blockLabel: {
     fontSize: '11px',

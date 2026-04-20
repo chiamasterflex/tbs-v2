@@ -1786,16 +1786,69 @@ app.post('/api/session/:id/clear', (req, res) => {
 
   res.json({ ok: true });
 });
+const viewerClientsBySession = new Map();
+
+function addViewerClient(sessionId, ws) {
+  if (!viewerClientsBySession.has(sessionId)) {
+    viewerClientsBySession.set(sessionId, new Set());
+  }
+  viewerClientsBySession.get(sessionId).add(ws);
+}
+
+function removeViewerClient(sessionId, ws) {
+  const set = viewerClientsBySession.get(sessionId);
+  if (!set) return;
+  set.delete(ws);
+  if (set.size === 0) {
+    viewerClientsBySession.delete(sessionId);
+  }
+}
+
+function broadcastToViewers(sessionId, payload) {
+  const set = viewerClientsBySession.get(sessionId);
+  if (!set) return;
+
+  const message = JSON.stringify(payload);
+
+  for (const ws of set) {
+    if (ws.readyState === 1) {
+      ws.send(message);
+    }
+  }
+}
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 wss.on('connection', async (browserWs, req) => {
   const requestUrl = new URL(req.url, 'http://localhost');
+  const isViewer = requestUrl.searchParams.get('viewer') === '1';
+  const sessionId = requestUrl.searchParams.get('sessionId') || 'live-session';
   const routeKey = requestUrl.searchParams.get('route') || 'zh_en';
   const routeConfig = getRouteConfig(routeKey);
 
-  console.log('[Browser] connected', routeKey);
+  if (isViewer) {
+    console.log('[Viewer] connected', sessionId);
+    addViewerClient(sessionId, browserWs);
+
+    const session = getOrCreateSession(sessionId);
+    if (browserWs.readyState === 1) {
+      browserWs.send(JSON.stringify({ type: 'session', session }));
+    }
+
+    browserWs.on('close', () => {
+      console.log('[Viewer] disconnected', sessionId);
+      removeViewerClient(sessionId, browserWs);
+    });
+
+    browserWs.on('error', () => {
+      removeViewerClient(sessionId, browserWs);
+    });
+
+    return;
+  }
+
+  console.log('[Browser] connected', routeKey, sessionId);
 
   let frameCount = 0;
   let totalBytes = 0;
@@ -1807,7 +1860,7 @@ wss.on('connection', async (browserWs, req) => {
   let lastInterimSourceSent = '';
   let lastInterimSentAt = 0;
 
-  const activeSession = getOrCreateSession('live-session');
+  const activeSession = getOrCreateSession(sessionId);
   activeSession.translationRoute = routeKey;
 
   function sendToBrowser(obj) {
@@ -1939,6 +1992,7 @@ wss.on('connection', async (browserWs, req) => {
           lastInterimSentAt = 0;
 
           sendToBrowser({ type: 'final', line });
+broadcastToViewers(sessionId, { type: 'final', line });
         } else {
           const now = Date.now();
 
