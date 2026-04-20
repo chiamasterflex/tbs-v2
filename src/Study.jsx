@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import ToolTabs from './ToolTabs';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
@@ -9,34 +9,55 @@ export default function Study() {
   const [normalizedCn, setNormalizedCn] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const requestRef = useRef(null);
+
   const translate = async () => {
-    if (!input.trim()) return;
+    const text = input.trim();
+    if (!text) return;
+
+    if (requestRef.current) {
+      requestRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    requestRef.current = controller;
 
     setLoading(true);
     setOutput('');
     setNormalizedCn('');
 
     try {
-      const res = await fetch(`${API}/api/session/demo-session/line`, {
+      const res = await fetch(`${API}/api/translate-interim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawCn: input }),
+        signal: controller.signal,
+        body: JSON.stringify({
+          rawCn: text,
+          text,
+          routeKey: 'zh_en',
+          translationRoute: 'zh_en',
+          eventMode: 'Dharma Talk',
+        }),
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Translation failed');
+        const errorText = await res.text();
+        throw new Error(errorText || 'Translation failed');
       }
 
       const data = await res.json();
-      setOutput(data.en || 'No translation returned');
-      setNormalizedCn(data.normalizedCn || '');
+      setOutput(data.en || data.translation || 'No translation returned');
+      setNormalizedCn(data.normalizedCn || data.cn || text);
     } catch (err) {
+      if (err.name === 'AbortError') return;
       console.error(err);
       setOutput('Error translating');
+    } finally {
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+      }
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -90,9 +111,14 @@ export default function Study() {
             <button
               style={styles.secondaryButton}
               onClick={() => {
+                if (requestRef.current) {
+                  requestRef.current.abort();
+                  requestRef.current = null;
+                }
                 setInput('');
                 setOutput('');
                 setNormalizedCn('');
+                setLoading(false);
               }}
             >
               Clear

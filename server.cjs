@@ -1992,7 +1992,8 @@ wss.on('connection', async (browserWs, req) => {
           lastInterimSentAt = 0;
 
           sendToBrowser({ type: 'final', line });
-broadcastToViewers(sessionId, { type: 'final', line });
+          broadcastToViewers(sessionId, { type: 'final', line });
+          broadcastToViewers(sessionId, { type: 'session', session: activeSession });
         } else {
           const now = Date.now();
 
@@ -2005,12 +2006,18 @@ broadcastToViewers(sessionId, { type: 'final', line });
           if (hasMeaningfulChange && respectsThrottle) {
             lastInterimSourceSent = normalizedCn;
             lastInterimSentAt = now;
-            sendToBrowser({
+
+            const livePayload = {
               type: 'live_cn',
               text: rawText,
+              rawCn: rawText,
+              cn: normalizedCn,
               normalizedCn,
               inputMode: prepared.inputMode,
-            });
+            };
+
+            sendToBrowser(livePayload);
+            broadcastToViewers(sessionId, livePayload);
           }
         }
       } catch (err) {

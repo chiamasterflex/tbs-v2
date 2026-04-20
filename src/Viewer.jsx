@@ -791,12 +791,12 @@ const styles = {
     color: '#2450d8',
   },
   feedEnglishMediumConfidence: {
-    opacity: 0.86,
-    color: '#3b5fd6',
+    opacity: 1,
+    color: '#2450d8',
   },
   feedEnglishLowConfidence: {
-    opacity: 0.62,
-    color: '#6678b5',
+    opacity: 1,
+    color: '#2450d8',
   },
   emptyState: {
     color: '#ddd',
