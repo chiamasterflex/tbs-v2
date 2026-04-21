@@ -61,6 +61,7 @@ const [liveChinese, setLiveChinese] = useState('');
 const [liveEnglish, setLiveEnglish] = useState('');
 const [historyLines, setHistoryLines] = useState([]);
 const [rollingBrainState, setRollingBrainState] = useState(null);
+const [brainStateHistory, setBrainStateHistory] = useState([]);
 const [sourceLanguage, setSourceLanguage] = useState('Mandarin');
 const [targetLanguage, setTargetLanguage] = useState('English');
 
@@ -367,9 +368,29 @@ const lastLiveSnapshotRef = useRef('');
           }
         }
 
-        if (msg.type === 'brain_state') {
-          setRollingBrainState(msg.brainState || null);
-        }
+     if (msg.type === 'brain_state') {
+  const nextBrainState = msg.brainState || null;
+  setRollingBrainState(nextBrainState);
+
+  if (nextBrainState?.rollingSummary || nextBrainState?.rollingIntent || nextBrainState?.rollingTopic) {
+    setBrainStateHistory((prev) => {
+      const entryId = `${nextBrainState.rollingUpdatedAt || Date.now()}-${nextBrainState.rollingTopic || ''}-${nextBrainState.rollingIntent || ''}`;
+      if (prev[0]?.id === entryId) return prev;
+
+      return [
+        {
+          id: entryId,
+          rollingSummary: nextBrainState.rollingSummary || '',
+          rollingIntent: nextBrainState.rollingIntent || '',
+          rollingTopic: nextBrainState.rollingTopic || '',
+          rollingUpdatedAt: nextBrainState.rollingUpdatedAt || new Date().toISOString(),
+          confidence: nextBrainState.confidence,
+        },
+        ...prev,
+      ].slice(0, 24);
+    });
+  }
+}
 
         if (msg.type === 'error') {
           console.error('[Server error]', msg.message);
@@ -477,11 +498,12 @@ const lastLiveSnapshotRef = useRef('');
       });
 
       setHistoryLines([]);
-      setLiveChinese('');
-      setLiveEnglish('');
-      setRollingBrainState(null);
-      lastTranslatedChineseRef.current = '';
-      lastLiveSnapshotRef.current = '';
+setLiveChinese('');
+setLiveEnglish('');
+setRollingBrainState(null);
+setBrainStateHistory([]);
+lastTranslatedChineseRef.current = '';
+lastLiveSnapshotRef.current = '';
     } catch (err) {
       console.error('clear history failed', err);
     }
@@ -642,22 +664,37 @@ const lastLiveSnapshotRef = useRef('');
           </div>
         </div>
 
-        {(rollingBrainState?.rollingIntent || rollingBrainState?.rollingTopic || rollingBrainState?.rollingUpdatedAt) ? (
-          <div style={styles.intentTickerWrap}>
-            <div style={styles.intentTickerLabel}>Live intent</div>
-            <div style={styles.intentTickerTrack}>
-              {rollingBrainState?.rollingIntent ? (
-                <div style={styles.intentTickerChipPrimary}>{rollingBrainState.rollingIntent}</div>
-              ) : null}
-              {rollingBrainState?.rollingTopic ? (
-                <div style={styles.intentTickerChip}>{rollingBrainState.rollingTopic}</div>
-              ) : null}
-              {rollingBrainState?.rollingUpdatedAt ? (
-                <div style={styles.intentTickerMeta}>Updated {formatTime(rollingBrainState.rollingUpdatedAt)}</div>
-              ) : null}
-            </div>
+        {brainStateHistory.length > 0 ? (
+  <div style={styles.contextTimelineWrap}>
+    <div style={styles.contextTimelineHeader}>
+      <div style={styles.contextTimelineLabel}>Live context</div>
+      <div style={styles.contextTimelineHint}>Latest context first. Scroll back to review earlier frames.</div>
+    </div>
+
+    <div style={styles.contextTimelineFeed}>
+      {brainStateHistory.map((entry) => (
+        <div key={entry.id} style={styles.contextTimelineCard}>
+          <div style={styles.contextTimelineMetaRow}>
+            {entry.rollingIntent ? (
+              <div style={styles.contextTimelineIntent}>{entry.rollingIntent}</div>
+            ) : null}
+            {entry.rollingUpdatedAt ? (
+              <div style={styles.contextTimelineTime}>{formatTime(entry.rollingUpdatedAt)}</div>
+            ) : null}
           </div>
-        ) : null}
+
+          {entry.rollingTopic ? (
+            <div style={styles.contextTimelineTopic}>{entry.rollingTopic}</div>
+          ) : null}
+
+          {entry.rollingSummary ? (
+            <div style={styles.contextTimelineSummary}>{entry.rollingSummary}</div>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  </div>
+) : null}
 
         <div style={styles.transcriptCard}>
           {rollingBrainState?.rollingSummary || rollingBrainState?.rollingIntent || rollingBrainState?.rollingTopic ? (
@@ -971,54 +1008,85 @@ const styles = {
     color: '#111',
     boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
   },
-  intentTickerWrap: {
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    borderRadius: '22px',
-    padding: '12px 14px',
-    backdropFilter: 'blur(14px)',
-    boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
-    textAlign: 'left',
-  },
-  intentTickerLabel: {
-    fontSize: '11px',
-    fontWeight: 800,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: 'rgba(255,255,255,0.72)',
-    marginBottom: '8px',
-    textAlign: 'left',
-  },
-  intentTickerTrack: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    flexWrap: 'wrap',
-  },
-  intentTickerChipPrimary: {
-    background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
-    color: '#111',
-    borderRadius: '999px',
-    padding: '10px 14px',
-    fontSize: '13px',
-    fontWeight: 900,
-    lineHeight: 1,
-  },
-  intentTickerChip: {
-    background: 'rgba(255,255,255,0.14)',
-    color: '#fff',
-    borderRadius: '999px',
-    padding: '10px 14px',
-    fontSize: '13px',
-    fontWeight: 800,
-    lineHeight: 1,
-  },
-  intentTickerMeta: {
-    color: 'rgba(255,255,255,0.72)',
-    fontSize: '12px',
-    fontWeight: 700,
-    paddingLeft: '2px',
-  },
+  contextTimelineWrap: {
+  background: 'rgba(255,255,255,0.08)',
+  border: '1px solid rgba(255,255,255,0.10)',
+  borderRadius: '22px',
+  padding: '12px 14px',
+  backdropFilter: 'blur(14px)',
+  boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
+  textAlign: 'left',
+},
+contextTimelineHeader: {
+  marginBottom: '10px',
+  textAlign: 'left',
+},
+contextTimelineLabel: {
+  fontSize: '11px',
+  fontWeight: 800,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  color: 'rgba(255,255,255,0.72)',
+  marginBottom: '6px',
+  textAlign: 'left',
+},
+contextTimelineHint: {
+  fontSize: '13px',
+  lineHeight: 1.35,
+  color: 'rgba(255,255,255,0.78)',
+  textAlign: 'left',
+},
+contextTimelineFeed: {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  maxHeight: '220px',
+  overflowY: 'auto',
+  paddingRight: '4px',
+},
+contextTimelineCard: {
+  background: 'rgba(255,255,255,0.10)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: '18px',
+  padding: '12px 14px',
+  textAlign: 'left',
+},
+contextTimelineMetaRow: {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '10px',
+  marginBottom: '8px',
+  flexWrap: 'wrap',
+},
+contextTimelineIntent: {
+  background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
+  color: '#111',
+  borderRadius: '999px',
+  padding: '8px 12px',
+  fontSize: '12px',
+  fontWeight: 900,
+  lineHeight: 1,
+},
+contextTimelineTime: {
+  color: 'rgba(255,255,255,0.72)',
+  fontSize: '12px',
+  fontWeight: 700,
+},
+contextTimelineTopic: {
+  fontSize: '15px',
+  fontWeight: 800,
+  color: '#fff',
+  marginBottom: '6px',
+  textAlign: 'left',
+},
+contextTimelineSummary: {
+  fontSize: '14px',
+  lineHeight: 1.45,
+  color: 'rgba(255,255,255,0.92)',
+  fontWeight: 700,
+  textAlign: 'left',
+},
   transcriptCard: {
     background: '#ff764a',
     borderRadius: '28px',
