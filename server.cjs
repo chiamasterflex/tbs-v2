@@ -1825,14 +1825,14 @@ wss.on('connection', async (browserWs, req) => {
   const requestUrl = new URL(req.url, 'http://localhost');
   const isViewer = requestUrl.searchParams.get('viewer') === '1';
   const sessionId = requestUrl.searchParams.get('sessionId') || 'live-session';
-  const routeKey = requestUrl.searchParams.get('route') || 'zh_en';
-  const routeConfig = getRouteConfig(routeKey);
+  const requestedRouteKey = requestUrl.searchParams.get('route') || '';
 
   if (isViewer) {
     console.log('[Viewer] connected', sessionId);
     addViewerClient(sessionId, browserWs);
 
     const session = getOrCreateSession(sessionId);
+    session.translationRoute = session.translationRoute || deriveTranslationRoute(session.sourceLanguage, session.targetLanguage);
     if (browserWs.readyState === 1) {
       browserWs.send(JSON.stringify({ type: 'session', session }));
     }
@@ -1849,8 +1849,6 @@ wss.on('connection', async (browserWs, req) => {
     return;
   }
 
-  console.log('[Browser] connected', routeKey, sessionId);
-
   let frameCount = 0;
   let totalBytes = 0;
   let keepAliveTimer = null;
@@ -1862,7 +1860,15 @@ wss.on('connection', async (browserWs, req) => {
   let lastInterimSentAt = 0;
 
   const activeSession = getOrCreateSession(sessionId);
+  const routeKey = requestedRouteKey || activeSession.translationRoute || deriveTranslationRoute(activeSession.sourceLanguage, activeSession.targetLanguage);
+  const routeConfig = getRouteConfig(routeKey);
   activeSession.translationRoute = routeKey;
+
+  console.log('[Browser] connected', routeKey, sessionId, {
+    sourceLanguage: activeSession.sourceLanguage,
+    targetLanguage: activeSession.targetLanguage,
+    eventMode: activeSession.eventMode,
+  });
 
   function sendToBrowser(obj) {
     if (browserWs.readyState === 1) {
@@ -1992,8 +1998,8 @@ wss.on('connection', async (browserWs, req) => {
           lastInterimSourceSent = '';
           lastInterimSentAt = 0;
 
-          sendToBrowser({ type: 'final', line });
-          broadcastToViewers(sessionId, { type: 'final', line });
+          sendToBrowser({ type: 'final', line, routeKey, translationRoute: routeKey });
+          broadcastToViewers(sessionId, { type: 'final', line, routeKey, translationRoute: routeKey });
           broadcastToViewers(sessionId, { type: 'session', session: activeSession });
         } else {
           const now = Date.now();
@@ -2015,6 +2021,8 @@ wss.on('connection', async (browserWs, req) => {
               cn: normalizedCn,
               normalizedCn,
               inputMode: prepared.inputMode,
+              routeKey,
+              translationRoute: routeKey,
             };
 
             sendToBrowser(livePayload);
