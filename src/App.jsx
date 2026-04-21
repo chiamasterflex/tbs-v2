@@ -57,11 +57,12 @@ export default function App() {
   });
   const [copied, setCopied] = useState(false);
 
-  const [liveChinese, setLiveChinese] = useState('');
-  const [liveEnglish, setLiveEnglish] = useState('');
-  const [historyLines, setHistoryLines] = useState([]);
-  const [sourceLanguage, setSourceLanguage] = useState('Mandarin');
-  const [targetLanguage, setTargetLanguage] = useState('English');
+const [liveChinese, setLiveChinese] = useState('');
+const [liveEnglish, setLiveEnglish] = useState('');
+const [historyLines, setHistoryLines] = useState([]);
+const [rollingBrainState, setRollingBrainState] = useState(null);
+const [sourceLanguage, setSourceLanguage] = useState('Mandarin');
+const [targetLanguage, setTargetLanguage] = useState('English');
 
   const translationRoute = useMemo(
     () => deriveTranslationRoute(sourceLanguage, targetLanguage),
@@ -69,15 +70,23 @@ export default function App() {
   );
 
   const wsRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const mediaStreamRef = useRef(null);
-  const sourceRef = useRef(null);
-  const processorRef = useRef(null);
-  const pcmQueueRef = useRef([]);
-  const interimTimerRef = useRef(null);
-  const lastTranslatedChineseRef = useRef('');
-  const transcriptFeedRef = useRef(null);
-  const lastLiveSnapshotRef = useRef('');
+const audioContextRef = useRef(null);
+const mediaStreamRef = useRef(null);
+const sourceRef = useRef(null);
+const processorRef = useRef(null);
+const pcmQueueRef = useRef([]);
+const interimTimerRef = useRef(null);
+const reconnectTimerRef = useRef(null);
+const shouldReconnectRef = useRef(false);
+const manualStopRef = useRef(false);
+const liveConfigRef = useRef({
+  sourceLanguage: 'Mandarin',
+  targetLanguage: 'English',
+  translationRoute: 'zh_en',
+});
+const lastTranslatedChineseRef = useRef('');
+const transcriptFeedRef = useRef(null);
+const lastLiveSnapshotRef = useRef('');
 
   useEffect(() => {
     const init = async () => {
@@ -233,61 +242,86 @@ export default function App() {
   };
 
   const startAudio = async () => {
-    try {
-      setStatus('requesting_mic');
+  if (
+    status === 'requesting_mic' ||
+    status === 'ws_open' ||
+    status === 'listening' ||
+    status === 'reconnecting'
+  ) {
+    return;
+  }
 
-      const ws = new WebSocket(`${WS_URL}?route=${encodeURIComponent(translationRoute)}`);
+  manualStopRef.current = false;
+  shouldReconnectRef.current = true;
+
+  const openSocket = async () => {
+    try {
+      setStatus(mediaStreamRef.current ? 'reconnecting' : 'requesting_mic');
+
+      const currentRoute = liveConfigRef.current.translationRoute;
+      const ws = new WebSocket(`${WS_URL}?route=${encodeURIComponent(currentRoute)}`);
       ws.binaryType = 'arraybuffer';
+      wsRef.current = ws;
 
       ws.onopen = async () => {
-        setStatus('ws_open');
+        try {
+          setStatus('ws_open');
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: false,
-          },
-        });
+          if (!mediaStreamRef.current) {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                channelCount: 1,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: false,
+              },
+            });
 
-        mediaStreamRef.current = stream;
+            mediaStreamRef.current = stream;
 
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        audioContextRef.current = audioContext;
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            audioContextRef.current = audioContext;
 
-        const source = audioContext.createMediaStreamSource(stream);
-        sourceRef.current = source;
+            const source = audioContext.createMediaStreamSource(stream);
+            sourceRef.current = source;
 
-        pcmQueueRef.current = [];
+            pcmQueueRef.current = [];
 
-        const processor = audioContext.createScriptProcessor(4096, 1, 1);
-        processorRef.current = processor;
+            const processor = audioContext.createScriptProcessor(4096, 1, 1);
+            processorRef.current = processor;
 
-        processor.onaudioprocess = (event) => {
-          const inputData = event.inputBuffer.getChannelData(0);
-          const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
+            processor.onaudioprocess = (event) => {
+              const activeWs = wsRef.current;
+              if (!activeWs) return;
 
-          for (let i = 0; i < downsampled.length; i++) {
-            pcmQueueRef.current.push(downsampled[i]);
+              const inputData = event.inputBuffer.getChannelData(0);
+              const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
+
+              for (let i = 0; i < downsampled.length; i++) {
+                pcmQueueRef.current.push(downsampled[i]);
+              }
+
+              const FRAME_SIZE = 800;
+
+              while (pcmQueueRef.current.length >= FRAME_SIZE) {
+                const frame = pcmQueueRef.current.splice(0, FRAME_SIZE);
+                const pcmBuffer = floatTo16BitPCM(new Float32Array(frame));
+
+                if (activeWs.readyState === WebSocket.OPEN) {
+                  activeWs.send(pcmBuffer);
+                }
+              }
+            };
+
+            source.connect(processor);
+            processor.connect(audioContext.destination);
           }
 
-          const FRAME_SIZE = 800;
-
-          while (pcmQueueRef.current.length >= FRAME_SIZE) {
-            const frame = pcmQueueRef.current.splice(0, FRAME_SIZE);
-            const pcmBuffer = floatTo16BitPCM(new Float32Array(frame));
-
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(pcmBuffer);
-            }
-          }
-        };
-
-        source.connect(processor);
-        processor.connect(audioContext.destination);
-
-        setStatus('listening');
+          setStatus('listening');
+        } catch (err) {
+          console.error('socket open bootstrap failed', err);
+          setStatus('error');
+        }
       };
 
       ws.onmessage = (event) => {
@@ -296,7 +330,9 @@ export default function App() {
         if (msg.type === 'status') {
           if (msg.status === 'deepgram_ready') {
             setStatus('listening');
-          } else if (msg.status === 'deepgram_closed' || msg.status === 'ws_closed') {
+          } else if (msg.status === 'deepgram_closed') {
+            setStatus('reconnecting');
+          } else if (msg.status === 'ws_closed') {
             setStatus('stopped');
           } else {
             setStatus(msg.status);
@@ -331,6 +367,10 @@ export default function App() {
           }
         }
 
+        if (msg.type === 'brain_state') {
+          setRollingBrainState(msg.brainState || null);
+        }
+
         if (msg.type === 'error') {
           console.error('[Server error]', msg.message);
           setStatus('error');
@@ -338,63 +378,86 @@ export default function App() {
       };
 
       ws.onclose = () => {
-        setStatus('stopped');
+        wsRef.current = null;
+
+        if (manualStopRef.current || !shouldReconnectRef.current) {
+          setStatus('stopped');
+          return;
+        }
+
+        setStatus('reconnecting');
+
+        if (reconnectTimerRef.current) {
+          clearTimeout(reconnectTimerRef.current);
+        }
+
+        reconnectTimerRef.current = setTimeout(() => {
+          openSocket();
+        }, 900);
       };
 
       ws.onerror = () => {
         setStatus('error');
       };
-
-      wsRef.current = ws;
     } catch (err) {
       console.error('startAudio failed', err);
       setStatus('error');
     }
   };
 
+  openSocket();
+};
+
   const stopAudio = async () => {
-    setStatus('stopping');
+  manualStopRef.current = true;
+  shouldReconnectRef.current = false;
+  setStatus('stopping');
 
-    try {
-      if (interimTimerRef.current) clearTimeout(interimTimerRef.current);
-    } catch {}
+  try {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+  } catch {}
 
-    try {
-      if (processorRef.current) processorRef.current.disconnect();
-    } catch {}
+  try {
+    if (interimTimerRef.current) clearTimeout(interimTimerRef.current);
+  } catch {}
 
-    try {
-      if (sourceRef.current) sourceRef.current.disconnect();
-    } catch {}
+  try {
+    if (processorRef.current) processorRef.current.disconnect();
+  } catch {}
 
-    try {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-      }
-    } catch {}
+  try {
+    if (sourceRef.current) sourceRef.current.disconnect();
+  } catch {}
 
-    try {
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        await audioContextRef.current.close();
-      }
-    } catch {}
+  try {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+    }
+  } catch {}
 
-    try {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.close();
-      }
-    } catch {}
+  try {
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      await audioContextRef.current.close();
+    }
+  } catch {}
 
-    processorRef.current = null;
-    sourceRef.current = null;
-    mediaStreamRef.current = null;
-    audioContextRef.current = null;
-    wsRef.current = null;
-    pcmQueueRef.current = [];
-    interimTimerRef.current = null;
+  try {
+    if (wsRef.current && wsRef.current.readyState <= 1) {
+      wsRef.current.close();
+    }
+  } catch {}
 
-    setStatus('stopped');
-  };
+  processorRef.current = null;
+  sourceRef.current = null;
+  mediaStreamRef.current = null;
+  audioContextRef.current = null;
+  wsRef.current = null;
+  pcmQueueRef.current = [];
+  interimTimerRef.current = null;
+  reconnectTimerRef.current = null;
+
+  setStatus('stopped');
+};
 
   const copyViewerLink = async () => {
     const url = `${window.location.origin}/viewer`;
@@ -416,6 +479,7 @@ export default function App() {
       setHistoryLines([]);
       setLiveChinese('');
       setLiveEnglish('');
+      setRollingBrainState(null);
       lastTranslatedChineseRef.current = '';
       lastLiveSnapshotRef.current = '';
     } catch (err) {
@@ -475,6 +539,14 @@ export default function App() {
     if (!el) return;
     el.scrollTop = 0;
   }, [feedItems]);
+
+  useEffect(() => {
+  liveConfigRef.current = {
+    sourceLanguage,
+    targetLanguage,
+    translationRoute,
+  };
+}, [sourceLanguage, targetLanguage, translationRoute]);
 
   if (!session) {
     return (
@@ -571,6 +643,20 @@ export default function App() {
         </div>
 
         <div style={styles.transcriptCard}>
+          {rollingBrainState?.rollingSummary || rollingBrainState?.rollingIntent || rollingBrainState?.rollingTopic ? (
+            <div style={styles.brainStateCard}>
+              <div style={styles.brainStateLabel}>Live context</div>
+              {rollingBrainState?.rollingTopic ? (
+                <div style={styles.brainStateTopic}>{rollingBrainState.rollingTopic}</div>
+              ) : null}
+              {rollingBrainState?.rollingSummary ? (
+                <div style={styles.brainStateSummary}>{rollingBrainState.rollingSummary}</div>
+              ) : null}
+              {rollingBrainState?.rollingIntent ? (
+                <div style={styles.brainStateIntent}>Intent: {rollingBrainState.rollingIntent}</div>
+              ) : null}
+            </div>
+          ) : null}
           <div style={styles.transcriptHeader}>
             <div>
               <div style={styles.cardLabel}>Transcript</div>
@@ -875,6 +961,45 @@ const styles = {
     color: '#111',
     textAlign: 'left',
     boxShadow: '0 24px 60px rgba(0,0,0,0.22)',
+  },
+  brainStateCard: {
+    background: 'rgba(255,255,255,0.72)',
+    border: '1px solid rgba(17,17,17,0.08)',
+    borderRadius: '18px',
+    padding: '14px 16px',
+    marginBottom: '14px',
+    textAlign: 'left',
+  },
+  brainStateLabel: {
+    fontSize: '11px',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: '#6a4130',
+    marginBottom: '8px',
+    textAlign: 'left',
+  },
+  brainStateTopic: {
+    fontSize: '16px',
+    fontWeight: 800,
+    color: '#111',
+    marginBottom: '6px',
+    textAlign: 'left',
+  },
+  brainStateSummary: {
+    fontSize: '15px',
+    lineHeight: 1.45,
+    fontWeight: 700,
+    color: '#222',
+    textAlign: 'left',
+  },
+  brainStateIntent: {
+    marginTop: '8px',
+    fontSize: '13px',
+    lineHeight: 1.4,
+    fontWeight: 700,
+    color: '#5b4b40',
+    textAlign: 'left',
   },
   transcriptHeader: {
     display: 'flex',
