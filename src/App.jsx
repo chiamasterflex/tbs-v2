@@ -642,6 +642,23 @@ const lastLiveSnapshotRef = useRef('');
           </div>
         </div>
 
+        {(rollingBrainState?.rollingIntent || rollingBrainState?.rollingTopic || rollingBrainState?.rollingUpdatedAt) ? (
+          <div style={styles.intentTickerWrap}>
+            <div style={styles.intentTickerLabel}>Live intent</div>
+            <div style={styles.intentTickerTrack}>
+              {rollingBrainState?.rollingIntent ? (
+                <div style={styles.intentTickerChipPrimary}>{rollingBrainState.rollingIntent}</div>
+              ) : null}
+              {rollingBrainState?.rollingTopic ? (
+                <div style={styles.intentTickerChip}>{rollingBrainState.rollingTopic}</div>
+              ) : null}
+              {rollingBrainState?.rollingUpdatedAt ? (
+                <div style={styles.intentTickerMeta}>Updated {formatTime(rollingBrainState.rollingUpdatedAt)}</div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div style={styles.transcriptCard}>
           {rollingBrainState?.rollingSummary || rollingBrainState?.rollingIntent || rollingBrainState?.rollingTopic ? (
             <div style={styles.brainStateCard}>
@@ -953,6 +970,54 @@ const styles = {
     fontWeight: 700,
     color: '#111',
     boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
+  },
+  intentTickerWrap: {
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.10)',
+    borderRadius: '22px',
+    padding: '12px 14px',
+    backdropFilter: 'blur(14px)',
+    boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
+    textAlign: 'left',
+  },
+  intentTickerLabel: {
+    fontSize: '11px',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: 'rgba(255,255,255,0.72)',
+    marginBottom: '8px',
+    textAlign: 'left',
+  },
+  intentTickerTrack: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  intentTickerChipPrimary: {
+    background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
+    color: '#111',
+    borderRadius: '999px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    fontWeight: 900,
+    lineHeight: 1,
+  },
+  intentTickerChip: {
+    background: 'rgba(255,255,255,0.14)',
+    color: '#fff',
+    borderRadius: '999px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    fontWeight: 800,
+    lineHeight: 1,
+  },
+  intentTickerMeta: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: '12px',
+    fontWeight: 700,
+    paddingLeft: '2px',
   },
   transcriptCard: {
     background: '#ff764a',
