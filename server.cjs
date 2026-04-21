@@ -16,6 +16,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 8787;
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const DEEPGRAM_MODEL = process.env.DEEPGRAM_MODEL || 'nova-3';
 
 if (!DEEPGRAM_API_KEY) {
   console.error('Missing DEEPGRAM_API_KEY in environment variables');
@@ -1892,7 +1893,7 @@ wss.on('connection', async (browserWs, req) => {
 
   try {
     dg = await deepgram.listen.v1.connect({
-      model: 'nova-2',
+      model: DEEPGRAM_MODEL,
       language: routeConfig.asrLanguage,
       interim_results: true,
       punctuate: true,
