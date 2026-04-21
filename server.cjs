@@ -166,6 +166,11 @@ function getOrCreateSession(id = 'live-session') {
         activeTopicConfidence: 0,
         lockedUntilLineCount: 0,
         lastTopics: [],
+        rollingSummary: '',
+        rollingIntent: '',
+        rollingTopic: '',
+        rollingUpdatedAt: null,
+        lastSummaryLineCount: 0,
       },
     };
     sessions.unshift(session);
@@ -185,6 +190,11 @@ function ensureSessionBrainState(session) {
       activeTopicConfidence: 0,
       lockedUntilLineCount: 0,
       lastTopics: [],
+      rollingSummary: '',
+      rollingIntent: '',
+      rollingTopic: '',
+      rollingUpdatedAt: null,
+      lastSummaryLineCount: 0,
     };
   }
 
@@ -1413,6 +1423,140 @@ function getContextWindow(session, limit = retrievalConfig.context_window_lines 
   }));
 }
 
+function getRecentFinalWindow(session, { maxLines = 8, maxAgeMs = 30000 } = {}) {
+  if (!session || !Array.isArray(session.lines) || !session.lines.length) return [];
+
+  const now = Date.now();
+  const selected = [];
+
+  for (const line of session.lines) {
+    if (!line) continue;
+    const atMs = line.at ? Date.parse(line.at) : NaN;
+    if (Number.isFinite(atMs) && now - atMs > maxAgeMs) continue;
+
+    selected.push(line);
+    if (selected.length >= maxLines) break;
+  }
+
+  return selected.reverse();
+}
+
+function buildRollingContextPrompts({ lines = [], eventMode = 'Dharma Talk', routeKey = 'zh_en' }) {
+  const transcriptBlock = lines
+    .map((line, idx) => {
+      const src = line.normalizedCn || line.rawCn || '';
+      const en = line.en || '';
+      return `${idx + 1}. SRC: ${src}\n   EN: ${en}`;
+    })
+    .join('\n');
+
+  const sourceLabel = routeKey === 'id_en' ? 'Bahasa Indonesia' : 'Chinese';
+
+  const systemPrompt = `
+You are a live sermon context analyst for True Buddha School.
+Read the recent finalized transcript window and produce a very short live context frame.
+Return JSON only.
+Use strict JSON with double-quoted keys and string values.
+Do not use markdown fences.
+`.trim();
+
+  const userPrompt = `
+Event mode: ${eventMode}
+Source language: ${sourceLabel}
+
+Analyze this recent finalized live transcript window and return one JSON object with this exact shape:
+{
+  "summary": "1-2 sentence live summary of what the speaker is currently talking about",
+  "intent": "short phrase describing speaker intent, such as doctrinal explanation / ritual guidance / exhortation / storytelling / prayer / instruction",
+  "topic": "short current topic label",
+  "confidence": 0.0
+}
+
+Rules:
+- summary should be concise and live-friendly
+- intent should be short and clear
+- topic should be compact, like a dashboard label
+- confidence must be between 0 and 1
+- base the output on the whole recent window, not one line only
+
+Transcript window:
+${transcriptBlock}
+`.trim();
+
+  return { systemPrompt, userPrompt };
+}
+
+async function summarizeRollingContext(lines, eventMode = 'Dharma Talk', routeKey = 'zh_en') {
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return {
+      summary: '',
+      intent: '',
+      topic: '',
+      confidence: 0,
+    };
+  }
+
+  if (!DEEPSEEK_API_KEY) {
+    return {
+      summary: '',
+      intent: '',
+      topic: '',
+      confidence: 0,
+    };
+  }
+
+  const { systemPrompt, userPrompt } = buildRollingContextPrompts({
+    lines,
+    eventMode,
+    routeKey,
+  });
+
+  try {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `${userPrompt}\n\nReturn one strict JSON object only.` },
+        ],
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`[DeepSeek rolling context] HTTP error ${errText}`);
+    }
+
+    const data = await res.json();
+    const outputText = data?.choices?.[0]?.message?.content?.trim() || '{}';
+    const parsed = JSON.parse(outputText);
+
+    return {
+      summary: String(parsed.summary || '').trim(),
+      intent: String(parsed.intent || '').trim(),
+      topic: String(parsed.topic || '').trim(),
+      confidence:
+        typeof parsed.confidence === 'number'
+          ? Math.max(0, Math.min(1, parsed.confidence))
+          : 0.5,
+    };
+  } catch (err) {
+    console.error('[RollingContext] summarize failed', err.message);
+    return {
+      summary: '',
+      intent: '',
+      topic: '',
+      confidence: 0,
+    };
+  }
+}
+
 async function translateWithDeepSeek(
   text,
   hits,
@@ -1898,6 +2042,63 @@ wss.on('connection', async (browserWs, req) => {
     }
   }
 
+  async function maybeBroadcastRollingContext() {
+    const brainState = ensureSessionBrainState(activeSession);
+    const now = Date.now();
+    const lineCount = getSessionLineCount(activeSession);
+    const lastUpdatedMs = brainState.rollingUpdatedAt
+      ? Date.parse(brainState.rollingUpdatedAt)
+      : 0;
+
+    const enoughTimePassed = !lastUpdatedMs || now - lastUpdatedMs >= 25000;
+    const enoughNewLines = lineCount - (brainState.lastSummaryLineCount || 0) >= 3;
+
+    if (!enoughTimePassed || !enoughNewLines) return;
+
+    const recentLines = getRecentFinalWindow(activeSession, {
+      maxLines: 8,
+      maxAgeMs: 40000,
+    });
+
+    if (recentLines.length < 2) return;
+
+    const rolling = await summarizeRollingContext(
+      recentLines,
+      activeSession.eventMode,
+      routeKey
+    );
+
+    if (!rolling.summary && !rolling.intent && !rolling.topic) return;
+
+    brainState.rollingSummary = rolling.summary || '';
+    brainState.rollingIntent = rolling.intent || '';
+    brainState.rollingTopic = rolling.topic || '';
+    brainState.rollingUpdatedAt = new Date().toISOString();
+    brainState.lastSummaryLineCount = lineCount;
+
+    const payload = {
+      type: 'brain_state',
+      routeKey,
+      translationRoute: routeKey,
+      brainState: {
+        rollingSummary: brainState.rollingSummary,
+        rollingIntent: brainState.rollingIntent,
+        rollingTopic: brainState.rollingTopic,
+        rollingUpdatedAt: brainState.rollingUpdatedAt,
+        confidence: rolling.confidence,
+      },
+    };
+
+    sendToBrowser(payload);
+    broadcastToViewers(sessionId, payload);
+  }
+
+  function queueRollingContextUpdate() {
+    maybeBroadcastRollingContext().catch((err) => {
+      console.error('[RollingContext] broadcast failed', err.message);
+    });
+  }
+
   function stopKeepAlive() {
     if (keepAliveTimer) {
       clearInterval(keepAliveTimer);
@@ -2021,6 +2222,7 @@ wss.on('connection', async (browserWs, req) => {
           sendToBrowser({ type: 'final', line, routeKey, translationRoute: routeKey });
           broadcastToViewers(sessionId, { type: 'final', line, routeKey, translationRoute: routeKey });
           broadcastToViewers(sessionId, { type: 'session', session: activeSession });
+          queueRollingContextUpdate();
         } else {
           const now = Date.now();
 
