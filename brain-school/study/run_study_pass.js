@@ -9,7 +9,7 @@ const OUTPUT_FILE = path.join(OUT_DIR, 'book045_study_results.json');
 const CHECKPOINT_FILE = path.join(OUT_DIR, 'book045_study_checkpoint.json');
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const MODEL = process.env.BRAIN_STUDY_MODEL || 'deepseek-chat';
+const MODEL = process.env.BRAIN_STUDY_MODEL || 'deepseek-reasoner';
 const MAX_RETRIES = Number(process.env.BRAIN_STUDY_MAX_RETRIES || 3);
 const RETRY_DELAY_MS = Number(process.env.BRAIN_STUDY_RETRY_DELAY_MS || 1200);
 
@@ -129,9 +129,9 @@ async function callModelOnce(systemPrompt, userPrompt) {
       model: MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+        { role: 'user', content: `${userPrompt}\n\nReturn one strict JSON object only.` },
       ],
-      temperature: 0.2,
+      response_format: { type: 'json_object' },
     }),
   });
 

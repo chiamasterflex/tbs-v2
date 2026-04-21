@@ -664,51 +664,26 @@ lastLiveSnapshotRef.current = '';
           </div>
         </div>
 
-        {brainStateHistory.length > 0 ? (
-  <div style={styles.contextTimelineWrap}>
-    <div style={styles.contextTimelineHeader}>
-      <div style={styles.contextTimelineLabel}>Live context</div>
-      <div style={styles.contextTimelineHint}>Latest context first. Scroll back to review earlier frames.</div>
-    </div>
 
-    <div style={styles.contextTimelineFeed}>
-      {brainStateHistory.map((entry) => (
-        <div key={entry.id} style={styles.contextTimelineCard}>
-          <div style={styles.contextTimelineMetaRow}>
-            {entry.rollingIntent ? (
-              <div style={styles.contextTimelineIntent}>{entry.rollingIntent}</div>
-            ) : null}
-            {entry.rollingUpdatedAt ? (
-              <div style={styles.contextTimelineTime}>{formatTime(entry.rollingUpdatedAt)}</div>
-            ) : null}
-          </div>
-
-          {entry.rollingTopic ? (
-            <div style={styles.contextTimelineTopic}>{entry.rollingTopic}</div>
-          ) : null}
-
-          {entry.rollingSummary ? (
-            <div style={styles.contextTimelineSummary}>{entry.rollingSummary}</div>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  </div>
-) : null}
 
         <div style={styles.transcriptCard}>
-          {rollingBrainState?.rollingSummary || rollingBrainState?.rollingIntent || rollingBrainState?.rollingTopic ? (
-            <div style={styles.brainStateCard}>
+          {brainStateHistory.length > 0 ? (
+            <div style={styles.brainStateScrollCard}>
               <div style={styles.brainStateLabel}>Live context</div>
-              {rollingBrainState?.rollingTopic ? (
-                <div style={styles.brainStateTopic}>{rollingBrainState.rollingTopic}</div>
-              ) : null}
-              {rollingBrainState?.rollingSummary ? (
-                <div style={styles.brainStateSummary}>{rollingBrainState.rollingSummary}</div>
-              ) : null}
-              {rollingBrainState?.rollingIntent ? (
-                <div style={styles.brainStateIntent}>Intent: {rollingBrainState.rollingIntent}</div>
-              ) : null}
+              <div style={styles.brainStateScrollFeed}>
+                {brainStateHistory.map((entry) => (
+                  <div key={entry.id} style={styles.brainStateScrollRow}>
+                    <div style={styles.brainStateScrollMeta}>
+                      {entry.rollingUpdatedAt ? formatTime(entry.rollingUpdatedAt) : '—'}
+                    </div>
+                    <div style={styles.brainStateScrollText}>
+                      {entry.rollingTopic ? `${entry.rollingTopic}: ` : ''}
+                      {entry.rollingSummary || ''}
+                      {entry.rollingIntent ? ` (${entry.rollingIntent})` : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
           <div style={styles.transcriptHeader}>
@@ -1008,85 +983,6 @@ const styles = {
     color: '#111',
     boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
   },
-  contextTimelineWrap: {
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.10)',
-  borderRadius: '22px',
-  padding: '12px 14px',
-  backdropFilter: 'blur(14px)',
-  boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
-  textAlign: 'left',
-},
-contextTimelineHeader: {
-  marginBottom: '10px',
-  textAlign: 'left',
-},
-contextTimelineLabel: {
-  fontSize: '11px',
-  fontWeight: 800,
-  textTransform: 'uppercase',
-  letterSpacing: '0.08em',
-  color: 'rgba(255,255,255,0.72)',
-  marginBottom: '6px',
-  textAlign: 'left',
-},
-contextTimelineHint: {
-  fontSize: '13px',
-  lineHeight: 1.35,
-  color: 'rgba(255,255,255,0.78)',
-  textAlign: 'left',
-},
-contextTimelineFeed: {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
-  maxHeight: '220px',
-  overflowY: 'auto',
-  paddingRight: '4px',
-},
-contextTimelineCard: {
-  background: 'rgba(255,255,255,0.10)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  borderRadius: '18px',
-  padding: '12px 14px',
-  textAlign: 'left',
-},
-contextTimelineMetaRow: {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '10px',
-  marginBottom: '8px',
-  flexWrap: 'wrap',
-},
-contextTimelineIntent: {
-  background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
-  color: '#111',
-  borderRadius: '999px',
-  padding: '8px 12px',
-  fontSize: '12px',
-  fontWeight: 900,
-  lineHeight: 1,
-},
-contextTimelineTime: {
-  color: 'rgba(255,255,255,0.72)',
-  fontSize: '12px',
-  fontWeight: 700,
-},
-contextTimelineTopic: {
-  fontSize: '15px',
-  fontWeight: 800,
-  color: '#fff',
-  marginBottom: '6px',
-  textAlign: 'left',
-},
-contextTimelineSummary: {
-  fontSize: '14px',
-  lineHeight: 1.45,
-  color: 'rgba(255,255,255,0.92)',
-  fontWeight: 700,
-  textAlign: 'left',
-},
   transcriptCard: {
     background: '#ff764a',
     borderRadius: '28px',
@@ -1095,7 +991,7 @@ contextTimelineSummary: {
     textAlign: 'left',
     boxShadow: '0 24px 60px rgba(0,0,0,0.22)',
   },
-  brainStateCard: {
+  brainStateScrollCard: {
     background: 'rgba(255,255,255,0.72)',
     border: '1px solid rgba(17,17,17,0.08)',
     borderRadius: '18px',
@@ -1112,26 +1008,34 @@ contextTimelineSummary: {
     marginBottom: '8px',
     textAlign: 'left',
   },
-  brainStateTopic: {
-    fontSize: '16px',
-    fontWeight: 800,
-    color: '#111',
-    marginBottom: '6px',
+  brainStateScrollFeed: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    maxHeight: '180px',
+    overflowY: 'auto',
+    paddingRight: '4px',
+  },
+  brainStateScrollRow: {
+    display: 'grid',
+    gridTemplateColumns: '84px 1fr',
+    gap: '10px',
+    alignItems: 'start',
+    paddingBottom: '10px',
+    borderBottom: '1px solid rgba(17,17,17,0.08)',
     textAlign: 'left',
   },
-  brainStateSummary: {
-    fontSize: '15px',
+  brainStateScrollMeta: {
+    fontSize: '12px',
+    fontWeight: 800,
+    color: '#7a5a4a',
+    textAlign: 'left',
+  },
+  brainStateScrollText: {
+    fontSize: '14px',
     lineHeight: 1.45,
     fontWeight: 700,
     color: '#222',
-    textAlign: 'left',
-  },
-  brainStateIntent: {
-    marginTop: '8px',
-    fontSize: '13px',
-    lineHeight: 1.4,
-    fontWeight: 700,
-    color: '#5b4b40',
     textAlign: 'left',
   },
   transcriptHeader: {
