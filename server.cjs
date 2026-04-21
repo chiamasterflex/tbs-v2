@@ -125,8 +125,25 @@ function deriveTranslationRoute(sourceLanguage = 'Mandarin', targetLanguage = 'E
   return 'zh_en';
 }
 
+
 function getRouteConfig(routeKey = 'zh_en') {
   return ROUTES[routeKey] || ROUTES.zh_en;
+}
+
+function getDeepgramVocabularyOptions(routeConfig) {
+  const hotwords = Array.isArray(routeConfig?.hotwords)
+    ? routeConfig.hotwords.filter(Boolean)
+    : [];
+  if (!hotwords.length) return {};
+
+  const model = String(DEEPGRAM_MODEL || '').toLowerCase();
+
+  // Nova-3 uses keyterm prompting instead of keywords.
+  if (model.startsWith('nova-3')) {
+    return { keyterm: hotwords };
+  }
+
+  return { keywords: hotwords };
 }
 
 
@@ -1868,6 +1885,11 @@ wss.on('connection', async (browserWs, req) => {
     sourceLanguage: activeSession.sourceLanguage,
     targetLanguage: activeSession.targetLanguage,
     eventMode: activeSession.eventMode,
+    deepgramModel: DEEPGRAM_MODEL,
+    deepgramVocabMode:
+      routeKey === 'id_en'
+        ? (String(DEEPGRAM_MODEL || '').toLowerCase().startsWith('nova-3') ? 'keyterm' : 'keywords')
+        : 'none',
   });
 
   function sendToBrowser(obj) {
@@ -1907,9 +1929,7 @@ wss.on('connection', async (browserWs, req) => {
       encoding: 'linear16',
       sample_rate: 16000,
       channels: 1,
-      ...(routeKey === 'id_en' && Array.isArray(routeConfig.hotwords) && routeConfig.hotwords.length
-        ? { keywords: routeConfig.hotwords }
-        : {}),
+      ...(routeKey === 'id_en' ? getDeepgramVocabularyOptions(routeConfig) : {}),
     });
 
     dg.on('open', () => {
