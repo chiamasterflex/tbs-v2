@@ -2051,13 +2051,30 @@ wss.on('connection', async (browserWs, req) => {
       : 0;
 
     const enoughTimePassed = !lastUpdatedMs || now - lastUpdatedMs >= 25000;
-    const enoughNewLines = lineCount - (brainState.lastSummaryLineCount || 0) >= 3;
+    const enoughNewLines = lineCount - (brainState.lastSummaryLineCount || 0) >= 2;
+
+    console.log('[RollingContext] trigger check', {
+      routeKey,
+      lineCount,
+      lastSummaryLineCount: brainState.lastSummaryLineCount || 0,
+      enoughTimePassed,
+      enoughNewLines,
+    });
 
     if (!enoughTimePassed || !enoughNewLines) return;
 
     const recentLines = getRecentFinalWindow(activeSession, {
       maxLines: 8,
       maxAgeMs: 40000,
+    });
+
+    console.log('[RollingContext] recent window', {
+      routeKey,
+      recentLineCount: recentLines.length,
+      latestSource:
+        recentLines[recentLines.length - 1]?.normalizedCn ||
+        recentLines[recentLines.length - 1]?.rawCn ||
+        '',
     });
 
     if (recentLines.length < 2) return;
@@ -2067,6 +2084,14 @@ wss.on('connection', async (browserWs, req) => {
       activeSession.eventMode,
       routeKey
     );
+
+    console.log('[RollingContext] result', {
+      routeKey,
+      summary: rolling.summary,
+      intent: rolling.intent,
+      topic: rolling.topic,
+      confidence: rolling.confidence,
+    });
 
     if (!rolling.summary && !rolling.intent && !rolling.topic) return;
 
@@ -2088,6 +2113,13 @@ wss.on('connection', async (browserWs, req) => {
         confidence: rolling.confidence,
       },
     };
+
+    console.log('[RollingContext] broadcast', {
+      routeKey,
+      rollingTopic: brainState.rollingTopic,
+      rollingIntent: brainState.rollingIntent,
+      rollingSummary: brainState.rollingSummary,
+    });
 
     sendToBrowser(payload);
     broadcastToViewers(sessionId, payload);
