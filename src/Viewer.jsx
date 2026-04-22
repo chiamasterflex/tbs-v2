@@ -48,6 +48,8 @@ export default function Viewer() {
   const [autoScroll, setAutoScroll] = useState(true);
   const [socketState, setSocketState] = useState('Connecting…');
   const [liveInterim, setLiveInterim] = useState(null);
+  const [rollingBrainState, setRollingBrainState] = useState(null);
+  const [brainStateHistory, setBrainStateHistory] = useState([]);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -137,6 +139,37 @@ export default function Viewer() {
           setSocketState('Live');
           setLastUpdated(new Date().toISOString());
           setError('');
+          return;
+        }
+
+        if (payload?.type === 'brain_state') {
+          const nextBrainState = payload.brainState || null;
+          setRollingBrainState(nextBrainState);
+
+          if (
+            nextBrainState?.rollingSummary ||
+            nextBrainState?.rollingIntent ||
+            nextBrainState?.rollingTopic
+          ) {
+            setBrainStateHistory((prev) => {
+              const entryId = `${nextBrainState.rollingUpdatedAt || Date.now()}-${nextBrainState.rollingTopic || ''}-${nextBrainState.rollingIntent || ''}`;
+              if (prev[0]?.id === entryId) return prev;
+
+              return [
+                {
+                  id: entryId,
+                  rollingSummary: nextBrainState.rollingSummary || '',
+                  rollingIntent: nextBrainState.rollingIntent || '',
+                  rollingTopic: nextBrainState.rollingTopic || '',
+                  rollingUpdatedAt:
+                    nextBrainState.rollingUpdatedAt || new Date().toISOString(),
+                  confidence: nextBrainState.confidence,
+                },
+                ...prev,
+              ].slice(0, 24);
+            });
+          }
+
           return;
         }
 
@@ -343,6 +376,43 @@ export default function Viewer() {
           </div>
         </div>
 
+        {brainStateHistory.length > 0 ? (
+          <section style={styles.contextCard}>
+            <div style={styles.contextHeader}>
+              <div>
+                <div style={styles.contextEyebrow}>Live context</div>
+                <div style={styles.contextTitle}>Rolling summary, topic and intent</div>
+              </div>
+              {rollingBrainState?.rollingUpdatedAt ? (
+                <div style={styles.contextUpdated}>Updated {formatTime(rollingBrainState.rollingUpdatedAt)}</div>
+              ) : null}
+            </div>
+
+            <div style={styles.contextFeed}>
+              {brainStateHistory.map((entry) => (
+                <div key={entry.id} style={styles.contextRow}>
+                  <div style={styles.contextTime}>
+                    {entry.rollingUpdatedAt ? formatTime(entry.rollingUpdatedAt) : '—'}
+                  </div>
+                  <div style={styles.contextBody}>
+                    <div style={styles.contextChips}>
+                      {entry.rollingIntent ? (
+                        <span style={styles.contextIntentChip}>{entry.rollingIntent}</span>
+                      ) : null}
+                      {entry.rollingTopic ? (
+                        <span style={styles.contextTopicChip}>{entry.rollingTopic}</span>
+                      ) : null}
+                    </div>
+                    {entry.rollingSummary ? (
+                      <div style={styles.contextSummary}>{entry.rollingSummary}</div>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <main
           ref={scrollRef}
           onScroll={handleScroll}
@@ -454,6 +524,104 @@ export default function Viewer() {
 }
 
 const styles = {
+  contextCard: {
+    background: 'rgba(20,20,22,0.92)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '24px',
+    padding: '16px',
+    marginBottom: '14px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+    backdropFilter: 'blur(16px)',
+  },
+  contextHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: '12px',
+    flexWrap: 'wrap',
+    marginBottom: '12px',
+    textAlign: 'left',
+  },
+  contextEyebrow: {
+    fontSize: '11px',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: '#8d8d95',
+    marginBottom: '6px',
+  },
+  contextTitle: {
+    fontSize: '16px',
+    fontWeight: 800,
+    color: '#fff',
+    textAlign: 'left',
+  },
+  contextUpdated: {
+    fontSize: '12px',
+    fontWeight: 700,
+    color: '#b8b8c2',
+  },
+  contextFeed: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    maxHeight: '210px',
+    overflowY: 'auto',
+    paddingRight: '4px',
+  },
+  contextRow: {
+    display: 'grid',
+    gridTemplateColumns: '80px 1fr',
+    gap: '12px',
+    alignItems: 'start',
+    paddingBottom: '10px',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+  },
+  contextTime: {
+    fontSize: '12px',
+    fontWeight: 800,
+    color: '#9ca3af',
+    paddingTop: '2px',
+    textAlign: 'left',
+  },
+  contextBody: {
+    textAlign: 'left',
+  },
+  contextChips: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    marginBottom: '8px',
+  },
+  contextIntentChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '7px 10px',
+    borderRadius: '999px',
+    background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
+    color: '#111',
+    fontSize: '11px',
+    fontWeight: 900,
+    letterSpacing: '0.02em',
+  },
+  contextTopicChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '7px 10px',
+    borderRadius: '999px',
+    background: 'rgba(255,255,255,0.10)',
+    color: '#fff',
+    fontSize: '11px',
+    fontWeight: 800,
+    letterSpacing: '0.02em',
+  },
+  contextSummary: {
+    fontSize: '14px',
+    lineHeight: 1.45,
+    fontWeight: 700,
+    color: '#f3f4f6',
+    textAlign: 'left',
+  },
   page: {
     minHeight: '100vh',
     position: 'relative',
@@ -757,30 +925,30 @@ const styles = {
     marginBottom: '12px',
   },
   cn: {
-    fontSize: '34px',
-    lineHeight: 1.3,
+    fontSize: '28px',
+    lineHeight: 1.34,
     fontWeight: 800,
     color: '#111',
     textAlign: 'left',
     wordBreak: 'break-word',
   },
   feedChineseHighConfidence: {
-    fontSize: '34px',
-    opacity: 0.68,
+    fontSize: '28px',
+    opacity: 0.72,
   },
   feedChineseMediumConfidence: {
-    fontSize: '24px',
+    fontSize: '22px',
     opacity: 0.88,
   },
   feedChineseLowConfidence: {
-    fontSize: '38px',
+    fontSize: '30px',
     opacity: 1,
     color: '#111',
   },
   enBlock: {},
   en: {
-    fontSize: '28px',
-    lineHeight: 1.38,
+    fontSize: '24px',
+    lineHeight: 1.4,
     fontWeight: 700,
     color: '#2450d8',
     textAlign: 'left',
