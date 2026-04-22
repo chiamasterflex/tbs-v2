@@ -1441,6 +1441,38 @@ function getRecentFinalWindow(session, { maxLines = 8, maxAgeMs = 30000 } = {}) 
   return selected.reverse();
 }
 
+function chooseRollingContextMode(session) {
+  const lines = Array.isArray(session?.lines) ? session.lines : [];
+  const recent = lines.slice(0, 8);
+
+  const shortLineCount = recent.filter((line) => {
+    const src = normalizeSpaces(line?.normalizedCn || line?.rawCn || '');
+    return src && src.length <= 12;
+  }).length;
+
+  const shortRatio = recent.length > 0 ? shortLineCount / recent.length : 0;
+
+  if (recent.length >= 4 && shortRatio >= 0.5) {
+    return {
+      mode: 'short_burst',
+      cooldownMs: 6000,
+      minNewLines: 1,
+      maxLines: 5,
+      maxAgeMs: 15000,
+      minRecentLines: 1,
+    };
+  }
+
+  return {
+    mode: 'standard',
+    cooldownMs: 25000,
+    minNewLines: 2,
+    maxLines: 8,
+    maxAgeMs: 40000,
+    minRecentLines: 2,
+  };
+}
+
 function buildRollingContextPrompts({ lines = [], eventMode = 'Dharma Talk', routeKey = 'zh_en' }) {
   const transcriptBlock = lines
     .map((line, idx) => {
@@ -2050,26 +2082,33 @@ wss.on('connection', async (browserWs, req) => {
       ? Date.parse(brainState.rollingUpdatedAt)
       : 0;
 
-    const enoughTimePassed = !lastUpdatedMs || now - lastUpdatedMs >= 25000;
-    const enoughNewLines = lineCount - (brainState.lastSummaryLineCount || 0) >= 2;
+    const rollingMode = chooseRollingContextMode(activeSession);
+    const enoughTimePassed =
+      !lastUpdatedMs || now - lastUpdatedMs >= rollingMode.cooldownMs;
+    const enoughNewLines =
+      lineCount - (brainState.lastSummaryLineCount || 0) >= rollingMode.minNewLines;
 
     console.log('[RollingContext] trigger check', {
       routeKey,
+      mode: rollingMode.mode,
       lineCount,
       lastSummaryLineCount: brainState.lastSummaryLineCount || 0,
       enoughTimePassed,
       enoughNewLines,
+      cooldownMs: rollingMode.cooldownMs,
+      minNewLines: rollingMode.minNewLines,
     });
 
     if (!enoughTimePassed || !enoughNewLines) return;
 
     const recentLines = getRecentFinalWindow(activeSession, {
-      maxLines: 8,
-      maxAgeMs: 40000,
+      maxLines: rollingMode.maxLines,
+      maxAgeMs: rollingMode.maxAgeMs,
     });
 
     console.log('[RollingContext] recent window', {
       routeKey,
+      mode: rollingMode.mode,
       recentLineCount: recentLines.length,
       latestSource:
         recentLines[recentLines.length - 1]?.normalizedCn ||
@@ -2077,7 +2116,7 @@ wss.on('connection', async (browserWs, req) => {
         '',
     });
 
-    if (recentLines.length < 2) return;
+    if (recentLines.length < rollingMode.minRecentLines) return;
 
     const rolling = await summarizeRollingContext(
       recentLines,
@@ -2094,6 +2133,29 @@ wss.on('connection', async (browserWs, req) => {
     });
 
     if (!rolling.summary && !rolling.intent && !rolling.topic) return;
+
+    if (rollingMode.mode === 'short_burst' && brainState.rollingSummary) {
+      const previousSummary = String(brainState.rollingSummary || '').trim();
+      const nextSummary = String(rolling.summary || '').trim();
+      const nextTopic = String(rolling.topic || '').trim();
+      const previousTopic = String(brainState.rollingTopic || '').trim();
+      const nextConfidence = Number(rolling.confidence || 0);
+
+      const isTooThin = nextSummary.length > 0 && nextSummary.length < 24;
+      const hasWeakerConfidence = nextConfidence < 0.55;
+      const hasNoNewTopic = !nextTopic || nextTopic === previousTopic;
+
+      if (isTooThin && hasWeakerConfidence && hasNoNewTopic) {
+        console.log('[RollingContext] short-burst kept previous summary', {
+          routeKey,
+          previousTopic,
+          nextTopic,
+          nextConfidence,
+          nextSummary,
+        });
+        return;
+      }
+    }
 
     brainState.rollingSummary = rolling.summary || '';
     brainState.rollingIntent = rolling.intent || '';
