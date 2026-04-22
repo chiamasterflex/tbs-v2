@@ -368,29 +368,36 @@ const lastLiveSnapshotRef = useRef('');
           }
         }
 
-     if (msg.type === 'brain_state') {
-  const nextBrainState = msg.brainState || null;
-  setRollingBrainState(nextBrainState);
+        if (msg.type === 'brain_state') {
+          const nextBrainState = msg.brainState || null;
+          setRollingBrainState(nextBrainState);
 
-  if (nextBrainState?.rollingSummary || nextBrainState?.rollingIntent || nextBrainState?.rollingTopic) {
-    setBrainStateHistory((prev) => {
-      const entryId = `${nextBrainState.rollingUpdatedAt || Date.now()}-${nextBrainState.rollingTopic || ''}-${nextBrainState.rollingIntent || ''}`;
-      if (prev[0]?.id === entryId) return prev;
+          if (
+            nextBrainState?.rollingSummary ||
+            nextBrainState?.rollingIntent ||
+            nextBrainState?.rollingTopic
+          ) {
+            setBrainStateHistory((prev) => {
+              const entryId = `${nextBrainState.rollingUpdatedAt || Date.now()}-${nextBrainState.rollingTopic || ''}-${nextBrainState.rollingIntent || ''}`;
+              if (prev[0]?.id === entryId) return prev;
 
-      return [
-        {
-          id: entryId,
-          rollingSummary: nextBrainState.rollingSummary || '',
-          rollingIntent: nextBrainState.rollingIntent || '',
-          rollingTopic: nextBrainState.rollingTopic || '',
-          rollingUpdatedAt: nextBrainState.rollingUpdatedAt || new Date().toISOString(),
-          confidence: nextBrainState.confidence,
-        },
-        ...prev,
-      ].slice(0, 24);
-    });
-  }
-}
+              return [
+                {
+                  id: entryId,
+                  rollingSummary: nextBrainState.rollingSummary || '',
+                  rollingIntent: nextBrainState.rollingIntent || '',
+                  rollingTopic: nextBrainState.rollingTopic || '',
+                  rollingUpdatedAt:
+                    nextBrainState.rollingUpdatedAt || new Date().toISOString(),
+                  confidence: nextBrainState.confidence,
+                },
+                ...prev,
+              ].slice(0, 24);
+            });
+          }
+
+          return;
+        }
 
         if (msg.type === 'error') {
           console.error('[Server error]', msg.message);
@@ -556,6 +563,29 @@ lastLiveSnapshotRef.current = '';
     return items;
   }, [liveChinese, liveEnglish, historyLines]);
 
+  const liveContextItems = useMemo(() => {
+    if (brainStateHistory.length > 0) return brainStateHistory;
+
+    if (
+      rollingBrainState?.rollingSummary ||
+      rollingBrainState?.rollingIntent ||
+      rollingBrainState?.rollingTopic
+    ) {
+      return [
+        {
+          id: `fallback-${rollingBrainState.rollingUpdatedAt || 'now'}`,
+          rollingSummary: rollingBrainState.rollingSummary || '',
+          rollingIntent: rollingBrainState.rollingIntent || '',
+          rollingTopic: rollingBrainState.rollingTopic || '',
+          rollingUpdatedAt: rollingBrainState.rollingUpdatedAt || new Date().toISOString(),
+          confidence: rollingBrainState.confidence,
+        },
+      ];
+    }
+
+    return [];
+  }, [brainStateHistory, rollingBrainState]);
+
   useEffect(() => {
     const el = transcriptFeedRef.current;
     if (!el) return;
@@ -667,11 +697,11 @@ lastLiveSnapshotRef.current = '';
 
 
         <div style={styles.transcriptCard}>
-          {brainStateHistory.length > 0 ? (
+                    {liveContextItems.length > 0 ? (
             <div style={styles.brainStateScrollCard}>
               <div style={styles.brainStateLabel}>Live context</div>
               <div style={styles.brainStateScrollFeed}>
-                {brainStateHistory.map((entry) => (
+                {liveContextItems.map((entry) => (
                   <div key={entry.id} style={styles.brainStateScrollRow}>
                     <div style={styles.brainStateScrollMeta}>
                       {entry.rollingUpdatedAt ? formatTime(entry.rollingUpdatedAt) : '—'}
