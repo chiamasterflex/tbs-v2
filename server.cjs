@@ -497,6 +497,7 @@ async function translateMixedSegments({
   eventMode,
   contextWindow,
   activeTopic = null,
+  rollingContext = null,
   routeKey = 'zh_en',
 }) {
   const rawSegments = normalizeSegmentSpacing(segmentMixedText(text));
@@ -552,7 +553,9 @@ async function translateMixedSegments({
       eventMode,
       contextWindow,
       'chinese',
-      activeTopic
+      activeTopic,
+      routeKey,
+      rollingContext
     );
 
     translatedSegments.push(translated || trimmed);
@@ -1303,8 +1306,42 @@ function buildDeepSeekPrompts({
   inputMode,
   forceAntiLiteral = false,
   activeTopic = null,
+  rollingContext = null,
   routeKey = 'zh_en',
 }) {
+  function formatRollingContextBlock(ctx) {
+    if (!ctx) return '';
+
+    const guidance = String(ctx.rollingGuidance || ctx.guidance || '')
+      .trim()
+      .slice(0, 160);
+    const doctrinalTheme = String(ctx.rollingDoctrinalTheme || ctx.doctrinal_theme || '').trim();
+    const ritualContext = String(ctx.rollingRitualContext || ctx.ritual_context || '').trim();
+    const topic = String(ctx.rollingTopic || ctx.topic || '').trim();
+    const entities = Array.isArray(ctx.rollingEntities || ctx.entities)
+      ? (ctx.rollingEntities || ctx.entities)
+          .map((x) => String(x || '').trim())
+          .filter(Boolean)
+          .slice(0, 6)
+      : [];
+
+    if (!guidance && !doctrinalTheme && !entities.length && !ritualContext && !topic) {
+      return '';
+    }
+
+    const entitiesLine = entities.length ? entities.join(', ') : '';
+
+    return `
+Rolling context (next 30–60s; subtle guidance, don’t overfit):
+- Guidance: ${guidance}
+- Doctrinal theme: ${doctrinalTheme}
+- Key entities: ${entitiesLine}
+- Ritual context: ${ritualContext}
+- Topic: ${topic}`.trim();
+  }
+
+  const rollingBlock = formatRollingContextBlock(rollingContext);
+
   const glossaryBlock =
     hits.length > 0
       ? hits.map((t) => `${t.cn} => ${t.en}`).join('\n')
@@ -1364,9 +1401,8 @@ function buildDeepSeekPrompts({
             .join('\n')
         : 'No correction memory hits';
 
-    const systemPrompt =
-      mode === 'interim'
-        ? `
+    const systemPrompt = mode === 'interim'
+      ? `
 You are the official translator for True Buddha School (TBS).
 Translate spoken Bahasa Indonesia into short, conservative live subtitle English.
 
@@ -1380,7 +1416,8 @@ Rules:
 7. No explanations, no notes, no brackets unless essential.
 8. Prefer natural devotional or teaching English, not robotic literal wording.
 `.trim()
-        : `
+      : (
+`
 You are the official translator for True Buddha School (TBS).
 Translate spoken Bahasa Indonesia into natural subtitle English.
 
@@ -1393,9 +1430,14 @@ Rules:
 6. No explanations, no notes, no brackets unless essential.
 7. Keep it clear, natural, and subtitle-friendly.
 8. Prefer natural devotional or teaching English, not robotic literal wording.
-Event mode: ${eventMode}
-Input mode: ${inputMode}
-`.trim();
+`.trim() +
+(rollingBlock ? `\n\n${rollingBlock}\n` : '\n') +
+`Event mode: ${eventMode}
+Input mode: ${inputMode}`
+      ).trim();
+
+    const systemPromptWithRolling =
+      mode === 'interim' && rollingBlock ? `${systemPrompt}\n\n${rollingBlock}` : systemPrompt;
 
     const userPrompt = `
 Mode: ${mode}
@@ -1416,12 +1458,11 @@ Correction memory matches:
 ${correctionBlock}
 `.trim();
 
-    return { systemPrompt, userPrompt };
+    return { systemPrompt: systemPromptWithRolling, userPrompt };
   }
 
-  const systemPrompt =
-    mode === 'interim'
-      ? `
+  const systemPrompt = mode === 'interim'
+    ? `
 You are the official translator for True Buddha School (TBS).
 Translate spoken Chinese into short, conservative live subtitle English.
 
@@ -1437,7 +1478,8 @@ Rules:
 9. Prefer clean devotional or teaching language over strange word-for-word renderings.
 10. If an active topic is present, prefer that interpretation when the input is ambiguous.${antiLiteralRule}
 `.trim()
-      : `
+    : (
+`
 You are the official translator for True Buddha School (TBS).
 Translate spoken Chinese into natural subtitle English.
 
@@ -1452,9 +1494,14 @@ Rules:
 8. Keep it clear, natural, and subtitle-friendly.
 9. Use culturally and doctrinally appropriate TBS English wording.
 10. If an active topic is present, prefer that interpretation when the input is ambiguous.${antiLiteralRule}
-Event mode: ${eventMode}
-Input mode: ${inputMode}
-`.trim();
+`.trim() +
+(rollingBlock ? `\n\n${rollingBlock}\n` : '\n') +
+`Event mode: ${eventMode}
+Input mode: ${inputMode}`
+    ).trim();
+
+  const systemPromptWithRolling =
+    mode === 'interim' && rollingBlock ? `${systemPrompt}\n\n${rollingBlock}` : systemPrompt;
 
   const userPrompt = `
 Mode: ${mode}
@@ -1484,7 +1531,7 @@ Correction memory matches:
 ${correctionBlock}
 `.trim();
 
-  return { systemPrompt, userPrompt };
+  return { systemPrompt: systemPromptWithRolling, userPrompt };
 }
 
 function getContextWindow(session, limit = retrievalConfig.context_window_lines || 5) {
@@ -1673,7 +1720,8 @@ async function translateWithDeepSeek(
   contextWindow = [],
   inputMode = 'chinese',
   activeTopic = null,
-  routeKey = 'zh_en'
+  routeKey = 'zh_en',
+  rollingContext = null
 ) {
   if (!text || !text.trim()) return '';
 
@@ -1692,6 +1740,7 @@ async function translateWithDeepSeek(
       eventMode,
       contextWindow,
       activeTopic,
+      rollingContext,
       routeKey,
     });
   }
@@ -1718,6 +1767,7 @@ async function translateWithDeepSeek(
     inputMode,
     forceAntiLiteral: false,
     activeTopic,
+    rollingContext,
     routeKey,
   });
 
@@ -1759,6 +1809,7 @@ async function translateWithDeepSeek(
         inputMode,
         forceAntiLiteral: true,
         activeTopic,
+        rollingContext,
         routeKey,
       }));
 
@@ -1875,6 +1926,8 @@ app.post('/api/session/:id/line', async (req, res) => {
         updateSessionTopic(session, normalizedCn, retrieval, session.eventMode)
       );
 
+  const rollingContext = ensureSessionBrainState(session);
+
   const en = await translateWithDeepSeek(
     normalizedCn,
     hits,
@@ -1884,7 +1937,8 @@ app.post('/api/session/:id/line', async (req, res) => {
     getContextWindow(session),
     prepared.inputMode,
     activeTopic,
-    routeKey
+    routeKey,
+    rollingContext
   );
 
   const translationMeta = buildTranslationMeta({
@@ -1950,6 +2004,8 @@ app.post('/api/translate-interim', async (req, res) => {
         updateSessionTopic(session, normalizedCn, retrieval, eventMode)
       );
 
+  const rollingContext = ensureSessionBrainState(session);
+
   const en = await translateWithDeepSeek(
     normalizedCn,
     hits,
@@ -1959,7 +2015,8 @@ app.post('/api/translate-interim', async (req, res) => {
     getContextWindow(session),
     prepared.inputMode,
     activeTopic,
-    routeKey
+    routeKey,
+    rollingContext
   );
 
   const translationMeta = buildTranslationMeta({
@@ -2353,6 +2410,8 @@ wss.on('connection', async (browserWs, req) => {
                 updateSessionTopic(activeSession, normalizedCn, retrieval, activeSession.eventMode)
               );
 
+          const rollingContext = ensureSessionBrainState(activeSession);
+
           const en = await translateWithDeepSeek(
             normalizedCn,
             hits,
@@ -2362,7 +2421,8 @@ wss.on('connection', async (browserWs, req) => {
             getContextWindow(activeSession),
             prepared.inputMode,
             activeTopic,
-            routeKey
+            routeKey,
+            rollingContext
           );
 
           const translationMeta = buildTranslationMeta({
