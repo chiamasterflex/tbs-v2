@@ -17,6 +17,7 @@ const PORT = process.env.PORT || 8787;
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPGRAM_MODEL = process.env.DEEPGRAM_MODEL || 'nova-3';
+const DEEPSEEK_CHAT_COMPLETIONS_URL = 'https://api.deepseek.com/chat/completions';
 
 if (!DEEPGRAM_API_KEY) {
   console.error('Missing DEEPGRAM_API_KEY in environment variables');
@@ -24,6 +25,75 @@ if (!DEEPGRAM_API_KEY) {
 }
 
 const deepgram = new DeepgramClient({ apiKey: DEEPGRAM_API_KEY });
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithTimeout(url, init = {}, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function deepSeekChatCompletions(body, { timeoutMs = 20000, maxAttempts = 2 } = {}) {
+  let lastErr = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const res = await fetchWithTimeout(
+        DEEPSEEK_CHAT_COMPLETIONS_URL,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+          },
+          body: JSON.stringify(body),
+        },
+        timeoutMs
+      );
+
+      if (res.ok) {
+        return await res.json();
+      }
+
+      const status = res.status;
+      const errText = await res.text().catch(() => '');
+      const transient = status === 429 || (status >= 500 && status <= 599);
+
+      if (!transient || attempt === maxAttempts) {
+        throw new Error(`[DeepSeek] HTTP ${status} ${errText}`);
+      }
+
+      const backoffMs = 200 * attempt + Math.floor(Math.random() * 150);
+      await sleep(backoffMs);
+    } catch (err) {
+      lastErr = err;
+
+      if (attempt === maxAttempts) {
+        throw err;
+      }
+
+      const isAbort = String(err?.name || '').toLowerCase().includes('abort');
+      if (isAbort) {
+        const backoffMs = 200 * attempt + Math.floor(Math.random() * 150);
+        await sleep(backoffMs);
+        continue;
+      }
+
+      const backoffMs = 200 * attempt + Math.floor(Math.random() * 150);
+      await sleep(backoffMs);
+    }
+  }
+
+  throw lastErr || new Error('[DeepSeek] unknown error');
+}
 
 function readJson(filePath, fallback) {
   try {
@@ -1544,28 +1614,17 @@ async function summarizeRollingContext(lines, eventMode = 'Dharma Talk', routeKe
   });
 
   try {
-    const res = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
+    const data = await deepSeekChatCompletions(
+      {
         model: 'deepseek-chat',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `${userPrompt}\n\nReturn one strict JSON object only.` },
         ],
         response_format: { type: 'json_object' },
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`[DeepSeek rolling context] HTTP error ${errText}`);
-    }
-
-    const data = await res.json();
+      },
+      { timeoutMs: 15000, maxAttempts: 2 }
+    );
     const outputText = data?.choices?.[0]?.message?.content?.trim() || '{}';
     const parsed = JSON.parse(outputText);
 
@@ -1648,28 +1707,18 @@ async function translateWithDeepSeek(
 
   try {
     async function requestOnce(currentSystemPrompt, currentUserPrompt) {
-      const res = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-        },
-        body: JSON.stringify({
+      const data = await deepSeekChatCompletions(
+        {
           model: 'deepseek-chat',
           temperature: mode === 'interim' ? 0.0 : 0.1,
           messages: [
             { role: 'system', content: currentSystemPrompt },
             { role: 'user', content: currentUserPrompt },
           ],
-        }),
-      });
+        },
+        { timeoutMs: mode === 'interim' ? 12000 : 20000, maxAttempts: 2 }
+      );
 
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`[DeepSeek] HTTP error ${errText}`);
-      }
-
-      const data = await res.json();
       return data?.choices?.[0]?.message?.content?.trim() || '';
     }
 
@@ -1694,6 +1743,7 @@ async function translateWithDeepSeek(
         inputMode,
         forceAntiLiteral: true,
         activeTopic,
+        routeKey,
       }));
 
       const retryOut = await requestOnce(systemPrompt, userPrompt);
