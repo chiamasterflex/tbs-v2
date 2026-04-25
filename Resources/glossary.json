@@ -1,10 +1,21 @@
 [
-  { "cn": "蓮生活佛", "en": "Living Buddha Lian-sheng" },
+  { "cn": "蓮生活佛", "en": "Living Buddha Lian Sheng" },
   { "cn": "師尊", "en": "Grand Master" },
   { "cn": "真佛宗", "en": "True Buddha School" },
   { "cn": "根本傳承上師", "en": "Root Lineage Guru" },
   { "cn": "四皈依", "en": "Fourfold Refuge" },
   { "cn": "護摩", "en": "homa" },
+  { "cn": "護摩法會", "en": "Homa Ceremony" },
+  { "cn": "法會", "en": "Dharma ceremony" },
+  { "cn": "護法", "en": "Dharma Protector" },
+  { "cn": "加持", "en": "blessing" },
+  { "cn": "皈依", "en": "refuge" },
   { "cn": "灌頂", "en": "empowerment" },
-  { "cn": "迴向", "en": "dedication of merits" }
+  { "cn": "迴向", "en": "merit dedication" },
+  { "cn": "功德迴向", "en": "merit dedication" },
+  { "cn": "業障", "en": "karmic obstacles" },
+  { "cn": "超度", "en": "bardo deliverance" },
+  { "cn": "蓮花童子", "en": "Padmakumara" },
+  { "cn": "瑤池金母", "en": "Golden Mother of the Jade Pond" },
+  { "cn": "孔雀明王", "en": "Mahamayuri" }
 ]

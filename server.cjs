@@ -117,6 +117,7 @@ function writeJson(filePath, value) {
 
 const resourcesDir = path.join(__dirname, 'Resources');
 
+const baseGlossary = readJson(path.join(resourcesDir, 'glossary.json'), []);
 const generatedGlossary = readJson(path.join(resourcesDir, 'glossary.generated.json'), []);
 const generatedCorrections = readJson(path.join(resourcesDir, 'corrections.generated.json'), []);
 const generatedPhrases = readJson(path.join(resourcesDir, 'phrases.generated.json'), []);
@@ -959,6 +960,7 @@ function buildCanonicalGlossary() {
     .map((s) => ({ cn: s.cn, en: s.en }));
 
   const merged = [
+    ...(Array.isArray(baseGlossary) ? baseGlossary : []),
     ...generatedGlossary,
     ...deityEntries,
     ...tbsEntries,
@@ -970,7 +972,7 @@ function buildCanonicalGlossary() {
   const deduped = [];
 
   for (const entry of merged) {
-    const key = `${entry.cn}|||${entry.en}`;
+    const key = String(entry?.cn || '');
     if (!entry?.cn || !entry?.en || seen.has(key)) continue;
     seen.add(key);
     deduped.push(entry);
@@ -1558,7 +1560,7 @@ function buildRollingContextPrompts({ lines = [], eventMode = 'Dharma Talk', rou
 You are a live sermon context analyst for True Buddha School.
 Read the recent finalized transcript window and produce a very short live context frame.
 Return JSON only.
-Use strict JSON with double-quoted keys and string values.
+Use strict JSON with double-quoted keys.
 Do not use markdown fences.
 `.trim();
 
@@ -1571,6 +1573,10 @@ Analyze this recent finalized live transcript window and return one JSON object 
   "summary": "1-2 sentence live summary of what the speaker is currently talking about",
   "intent": "short phrase describing speaker intent, such as doctrinal explanation / ritual guidance / exhortation / storytelling / prayer / instruction",
   "topic": "short current topic label",
+  "doctrinal_theme": "short doctrinal theme label, like karma / refuge / empowerment / purification / bodhicitta / devotion / mantra / lineage / vows / bardo deliverance",
+  "entities": ["up to 6 important proper nouns or TBS entities (deities, titles, places), English or Chinese as appropriate"],
+  "ritual_context": "short label like Homa Ceremony / deliverance / refuge / empowerment / merit dedication, or empty string",
+  "guidance": "one short sentence translation guidance for the next 30-60 seconds; prioritize TBS terminology and likely upcoming terms",
   "confidence": 0.0
 }
 
@@ -1578,6 +1584,10 @@ Rules:
 - summary should be concise and live-friendly
 - intent should be short and clear
 - topic should be compact, like a dashboard label
+- doctrinal_theme should be compact and doctrinal (not verbose)
+- entities must be a short array (0-6), no explanations
+- ritual_context must be short, or empty string if not applicable
+- guidance must be one short sentence, max ~160 chars
 - confidence must be between 0 and 1
 - base the output on the whole recent window, not one line only
 
@@ -1632,6 +1642,12 @@ async function summarizeRollingContext(lines, eventMode = 'Dharma Talk', routeKe
       summary: String(parsed.summary || '').trim(),
       intent: String(parsed.intent || '').trim(),
       topic: String(parsed.topic || '').trim(),
+      doctrinal_theme: String(parsed.doctrinal_theme || '').trim(),
+      entities: Array.isArray(parsed.entities)
+        ? parsed.entities.map((x) => String(x || '').trim()).filter(Boolean).slice(0, 6)
+        : [],
+      ritual_context: String(parsed.ritual_context || '').trim(),
+      guidance: String(parsed.guidance || '').trim(),
       confidence:
         typeof parsed.confidence === 'number'
           ? Math.max(0, Math.min(1, parsed.confidence))
@@ -2210,6 +2226,10 @@ wss.on('connection', async (browserWs, req) => {
     brainState.rollingSummary = rolling.summary || '';
     brainState.rollingIntent = rolling.intent || '';
     brainState.rollingTopic = rolling.topic || '';
+    brainState.rollingDoctrinalTheme = rolling.doctrinal_theme || '';
+    brainState.rollingEntities = rolling.entities || [];
+    brainState.rollingRitualContext = rolling.ritual_context || '';
+    brainState.rollingGuidance = rolling.guidance || '';
     brainState.rollingUpdatedAt = new Date().toISOString();
     brainState.lastSummaryLineCount = lineCount;
 
@@ -2221,6 +2241,10 @@ wss.on('connection', async (browserWs, req) => {
         rollingSummary: brainState.rollingSummary,
         rollingIntent: brainState.rollingIntent,
         rollingTopic: brainState.rollingTopic,
+        rollingDoctrinalTheme: brainState.rollingDoctrinalTheme,
+        rollingEntities: brainState.rollingEntities,
+        rollingRitualContext: brainState.rollingRitualContext,
+        rollingGuidance: brainState.rollingGuidance,
         rollingUpdatedAt: brainState.rollingUpdatedAt,
         confidence: rolling.confidence,
       },
