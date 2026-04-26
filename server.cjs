@@ -119,7 +119,8 @@ const resourcesDir = path.join(__dirname, 'Resources');
 
 const baseGlossary = readJson(path.join(resourcesDir, 'glossary.json'), []);
 const generatedGlossary = readJson(path.join(resourcesDir, 'glossary.generated.json'), []);
-const generatedCorrections = readJson(path.join(resourcesDir, 'corrections.generated.json'), []);
+const generatedCorrectionsPath = path.join(resourcesDir, 'corrections.generated.json');
+let generatedCorrections = readJson(generatedCorrectionsPath, []);
 const generatedPhrases = readJson(path.join(resourcesDir, 'phrases.generated.json'), []);
 
 const generatedDeities = readJson(path.join(resourcesDir, 'deities.generated.json'), []);
@@ -524,12 +525,21 @@ async function translateMixedSegments({
       continue;
     }
 
+    const correctionOverride = findGeneratedTranslationCorrection(trimmed, mode);
+    if (correctionOverride?.canOverride && correctionOverride?.correctedEnglish) {
+      translatedSegments.push(correctionOverride.correctedEnglish);
+      continue;
+    }
+
     const segmentHits = applyGlossary(trimmed);
     const segmentRetrieval = {
       sacredEntities: retrieveSacredEntities(trimmed, eventMode),
       phraseMatches: retrievePhraseMemory(trimmed, eventMode),
       ceremonyMatches: retrieveCeremonyMemory(trimmed, eventMode),
-      correctionMatches: retrieveCorrectionMemory(trimmed, eventMode),
+      correctionMatches: mergeGeneratedCorrectionMatch(
+        correctionOverride,
+        retrieveCorrectionMemory(trimmed, eventMode)
+      ),
     };
 
     const translated = await translateWithDeepSeek(
@@ -635,6 +645,108 @@ function normalizeChineseText(text) {
   }
 
   return out;
+}
+
+function getGeneratedTranslationCorrections() {
+  return Array.isArray(generatedCorrections)
+    ? generatedCorrections.filter((row) => row?.cn && row?.en)
+    : [];
+}
+
+function toGeneratedCorrectionHit(row, score = 0, canOverride = false) {
+  const cn = normalizeSpaces(row?.cn || '');
+  const en = normalizeSpaces(row?.en || '');
+
+  return {
+    ...row,
+    heard: cn,
+    intendedChinese: cn,
+    corrected: cn,
+    correctedEnglish: en,
+    source: row?.source || 'corrections.generated',
+    canOverride,
+    _score: score,
+  };
+}
+
+function mergeGeneratedCorrectionMatch(generatedCorrection, matches = []) {
+  if (!generatedCorrection) return matches || [];
+  return [generatedCorrection, ...(matches || [])];
+}
+
+function findGeneratedTranslationCorrection(text, mode = 'final') {
+  const normalized = normalizeSpaces(text);
+  if (!normalized) return null;
+
+  const rows = getGeneratedTranslationCorrections().sort(
+    (a, b) => String(b.cn || '').length - String(a.cn || '').length
+  );
+
+  for (const row of rows) {
+    const cn = normalizeSpaces(row.cn);
+    if (cn && normalized === cn) {
+      return toGeneratedCorrectionHit(row, 200, true);
+    }
+  }
+
+  if (isShortFragment(normalized)) return null;
+
+  const minLength = mode === 'interim' ? 14 : 10;
+  for (const row of rows) {
+    const cn = normalizeSpaces(row.cn);
+    if (cn && cn.length >= minLength && normalized.includes(cn)) {
+      return toGeneratedCorrectionHit(row, 120 + cn.length, false);
+    }
+  }
+
+  return null;
+}
+
+function retrieveGeneratedTranslationCorrections(text) {
+  const normalized = normalizeSpaces(text);
+  if (!normalized) return [];
+
+  return getGeneratedTranslationCorrections()
+    .map((row) => {
+      const cn = normalizeSpaces(row.cn);
+      if (!cn) return null;
+      if (normalized === cn) return toGeneratedCorrectionHit(row, 200, true);
+      if (normalized.includes(cn)) return toGeneratedCorrectionHit(row, 120 + cn.length, false);
+      return null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => b._score - a._score)
+    .slice(0, retrievalConfig.top_correction_matches || 5);
+}
+
+function registerCorrection(cn, en) {
+  const source = normalizeSpaces(cn);
+  const target = normalizeSpaces(en);
+
+  if (!source || !target) {
+    return { ok: false, error: 'cn and en are required' };
+  }
+
+  const current = Array.isArray(generatedCorrections) ? generatedCorrections : [];
+  const existing = current.find(
+    (row) =>
+      normalizeSpaces(row?.cn || '') === source &&
+      normalizeSpaces(row?.en || '') === target
+  );
+
+  if (existing) {
+    return { ok: true, row: existing, created: false };
+  }
+
+  const row = { cn: source, en: target };
+  const next = [...current, row];
+
+  if (!writeJson(generatedCorrectionsPath, next)) {
+    return { ok: false, error: 'failed to write corrections.generated.json' };
+  }
+
+  generatedCorrections = next;
+  return { ok: true, row, created: true };
 }
 
 
@@ -850,7 +962,7 @@ function retrieveCorrectionMemory(text, eventMode = 'Dharma Talk') {
   const normalized = normalizeSpaces(text);
   if (!normalized) return [];
 
-  const results = [];
+  const results = [...retrieveGeneratedTranslationCorrections(normalized)];
 
   for (const row of correctionMemory) {
     const heard = normalizeSpaces(row?.heard || '');
@@ -1725,6 +1837,11 @@ async function translateWithDeepSeek(
 ) {
   if (!text || !text.trim()) return '';
 
+  const generatedCorrection = findGeneratedTranslationCorrection(text, mode);
+  if (generatedCorrection?.canOverride && generatedCorrection?.correctedEnglish) {
+    return generatedCorrection.correctedEnglish;
+  }
+
   const phraseMatch = findPhraseMatch(text, mode);
   if (phraseMatch?.en) return phraseMatch.en;
 
@@ -1903,9 +2020,19 @@ app.post('/api/session/:id/line', async (req, res) => {
   const routeKey = req.body?.translationRoute || session.translationRoute || deriveTranslationRoute(session.sourceLanguage, session.targetLanguage);
   const prepared = runRouteNormalization(rawCn, session.eventMode, routeKey);
   const normalizedCn = prepared.normalizedText;
-  const hits = applyRouteGlossary(normalizedCn, routeKey);
+  const correctionOverride =
+    routeKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, 'final');
+  const canOverride = correctionOverride?.canOverride === true;
+  const hits = canOverride ? [] : applyRouteGlossary(normalizedCn, routeKey);
 
-  const retrieval = routeKey === 'id_en'
+  const retrieval = canOverride
+    ? {
+        sacredEntities: [],
+        phraseMatches: [],
+        ceremonyMatches: [],
+        correctionMatches: [correctionOverride],
+      }
+    : routeKey === 'id_en'
     ? {
         sacredEntities: [],
         phraseMatches: prepared.phraseHints || retrieveIndonesianPhraseMemory(normalizedCn),
@@ -1916,11 +2043,13 @@ app.post('/api/session/:id/line', async (req, res) => {
         sacredEntities: retrieveSacredEntities(normalizedCn, session.eventMode),
         phraseMatches: retrievePhraseMemory(normalizedCn, session.eventMode),
         ceremonyMatches: retrieveCeremonyMemory(normalizedCn, session.eventMode),
-        correctionMatches:
-          prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, session.eventMode),
+        correctionMatches: mergeGeneratedCorrectionMatch(
+          correctionOverride,
+          prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, session.eventMode)
+        ),
       };
 
-  const activeTopic = routeKey === 'id_en'
+  const activeTopic = canOverride || routeKey === 'id_en'
     ? null
     : getActiveTopicContext(
         updateSessionTopic(session, normalizedCn, retrieval, session.eventMode)
@@ -1928,18 +2057,20 @@ app.post('/api/session/:id/line', async (req, res) => {
 
   const rollingContext = ensureSessionBrainState(session);
 
-  const en = await translateWithDeepSeek(
-    normalizedCn,
-    hits,
-    'final',
-    retrieval,
-    session.eventMode,
-    getContextWindow(session),
-    prepared.inputMode,
-    activeTopic,
-    routeKey,
-    rollingContext
-  );
+  const en = canOverride
+    ? correctionOverride.correctedEnglish
+    : await translateWithDeepSeek(
+        normalizedCn,
+        hits,
+        'final',
+        retrieval,
+        session.eventMode,
+        getContextWindow(session),
+        prepared.inputMode,
+        activeTopic,
+        routeKey,
+        rollingContext
+      );
 
   const translationMeta = buildTranslationMeta({
     normalizedCn,
@@ -1972,9 +2103,12 @@ app.post('/api/translate-interim', async (req, res) => {
 
   const prepared = runRouteNormalization(rawCn, eventMode, routeKey);
   const normalizedCn = prepared.normalizedText;
-  const hits = applyRouteGlossary(normalizedCn, routeKey);
+  const correctionOverride =
+    routeKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, 'interim');
+  const canOverride = correctionOverride?.canOverride === true;
+  const hits = canOverride ? [] : applyRouteGlossary(normalizedCn, routeKey);
 
-  if (!isStableEnoughForInterim(normalizedCn)) {
+  if (!canOverride && !isStableEnoughForInterim(normalizedCn)) {
     return res.json({
       en: prepared.inputMode === 'english' ? normalizedCn : '',
       normalizedCn,
@@ -1983,7 +2117,14 @@ app.post('/api/translate-interim', async (req, res) => {
     });
   }
 
-  const retrieval = routeKey === 'id_en'
+  const retrieval = canOverride
+    ? {
+        sacredEntities: [],
+        phraseMatches: [],
+        ceremonyMatches: [],
+        correctionMatches: [correctionOverride],
+      }
+    : routeKey === 'id_en'
     ? {
         sacredEntities: [],
         phraseMatches: prepared.phraseHints || retrieveIndonesianPhraseMemory(normalizedCn),
@@ -1994,11 +2135,13 @@ app.post('/api/translate-interim', async (req, res) => {
         sacredEntities: retrieveSacredEntities(normalizedCn, eventMode),
         phraseMatches: retrievePhraseMemory(normalizedCn, eventMode),
         ceremonyMatches: retrieveCeremonyMemory(normalizedCn, eventMode),
-        correctionMatches:
-          prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, eventMode),
+        correctionMatches: mergeGeneratedCorrectionMatch(
+          correctionOverride,
+          prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, eventMode)
+        ),
       };
 
-  const activeTopic = routeKey === 'id_en'
+  const activeTopic = canOverride || routeKey === 'id_en'
     ? null
     : getActiveTopicContext(
         updateSessionTopic(session, normalizedCn, retrieval, eventMode)
@@ -2006,18 +2149,20 @@ app.post('/api/translate-interim', async (req, res) => {
 
   const rollingContext = ensureSessionBrainState(session);
 
-  const en = await translateWithDeepSeek(
-    normalizedCn,
-    hits,
-    'interim',
-    retrieval,
-    eventMode,
-    getContextWindow(session),
-    prepared.inputMode,
-    activeTopic,
-    routeKey,
-    rollingContext
-  );
+  const en = canOverride
+    ? correctionOverride.correctedEnglish
+    : await translateWithDeepSeek(
+        normalizedCn,
+        hits,
+        'interim',
+        retrieval,
+        eventMode,
+        getContextWindow(session),
+        prepared.inputMode,
+        activeTopic,
+        routeKey,
+        rollingContext
+      );
 
   const translationMeta = buildTranslationMeta({
     normalizedCn,
@@ -2087,7 +2232,15 @@ app.post('/api/correction-memory', (req, res) => {
     tags,
     weight,
   });
-  res.json({ ok: true, row });
+
+  const generatedCorrection = correctedEnglish
+    ? registerCorrection(
+        intendedChinese || (corrected && containsChinese(corrected) ? corrected : heard),
+        correctedEnglish
+      )
+    : null;
+
+  res.json({ ok: true, row, generatedCorrection });
 });
 
 app.post('/api/session/:id/clear', (req, res) => {
@@ -2385,10 +2538,20 @@ wss.on('connection', async (browserWs, req) => {
 
         const prepared = runRouteNormalization(rawText, activeSession.eventMode, routeKey);
         const normalizedCn = prepared.normalizedText;
-        const hits = applyRouteGlossary(normalizedCn, routeKey);
+        const correctionOverride =
+          routeKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, 'final');
+        const canOverride = correctionOverride?.canOverride === true;
+        const hits = canOverride ? [] : applyRouteGlossary(normalizedCn, routeKey);
 
         if (data.is_final) {
-          const retrieval = routeKey === 'id_en'
+          const retrieval = canOverride
+            ? {
+                sacredEntities: [],
+                phraseMatches: [],
+                ceremonyMatches: [],
+                correctionMatches: [correctionOverride],
+              }
+            : routeKey === 'id_en'
             ? {
                 sacredEntities: [],
                 phraseMatches: prepared.phraseHints || retrieveIndonesianPhraseMemory(normalizedCn),
@@ -2399,12 +2562,14 @@ wss.on('connection', async (browserWs, req) => {
                 sacredEntities: retrieveSacredEntities(normalizedCn, activeSession.eventMode),
                 phraseMatches: retrievePhraseMemory(normalizedCn, activeSession.eventMode),
                 ceremonyMatches: retrieveCeremonyMemory(normalizedCn, activeSession.eventMode),
-                correctionMatches:
+                correctionMatches: mergeGeneratedCorrectionMatch(
+                  correctionOverride,
                   prepared.correctionHits ||
-                  retrieveCorrectionMemory(normalizedCn, activeSession.eventMode),
+                    retrieveCorrectionMemory(normalizedCn, activeSession.eventMode)
+                ),
               };
 
-          const activeTopic = routeKey === 'id_en'
+          const activeTopic = canOverride || routeKey === 'id_en'
             ? null
             : getActiveTopicContext(
                 updateSessionTopic(activeSession, normalizedCn, retrieval, activeSession.eventMode)
@@ -2412,18 +2577,20 @@ wss.on('connection', async (browserWs, req) => {
 
           const rollingContext = ensureSessionBrainState(activeSession);
 
-          const en = await translateWithDeepSeek(
-            normalizedCn,
-            hits,
-            'final',
-            retrieval,
-            activeSession.eventMode,
-            getContextWindow(activeSession),
-            prepared.inputMode,
-            activeTopic,
-            routeKey,
-            rollingContext
-          );
+          const en = canOverride
+            ? correctionOverride.correctedEnglish
+            : await translateWithDeepSeek(
+                normalizedCn,
+                hits,
+                'final',
+                retrieval,
+                activeSession.eventMode,
+                getContextWindow(activeSession),
+                prepared.inputMode,
+                activeTopic,
+                routeKey,
+                rollingContext
+              );
 
           const translationMeta = buildTranslationMeta({
             normalizedCn,
