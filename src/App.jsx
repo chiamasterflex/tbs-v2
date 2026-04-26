@@ -8,7 +8,7 @@ import micIcon from './assets/mic.svg';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
 const FIXED_SESSION_ID = 'live-session';
-const DEFAULT_SESSION_OPTIONS = ['live-session', 'temple-a', 'temple-b'];
+const DEFAULT_SESSION_OPTIONS = ['live-session'];
 const NEW_SESSION_VALUE = '__new_session__';
 
 function sanitizeSessionId(value) {
@@ -70,6 +70,9 @@ export default function App() {
   const [activeAudioMode, setActiveAudioMode] = useState(null);
   const [copied, setCopied] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState(FIXED_SESSION_ID);
+  const [availableSessions, setAvailableSessions] = useState([
+    { sessionId: FIXED_SESSION_ID },
+  ]);
   const [showNewSessionInput, setShowNewSessionInput] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
 
@@ -140,6 +143,24 @@ const lastLiveSnapshotRef = useRef('');
     };
   }, []);
 
+  const fetchSessionList = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/sessions`, { cache: 'no-store' });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setAvailableSessions(data);
+      }
+    } catch (err) {
+      console.error('session list failed', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSessionList();
+  }, [fetchSessionList]);
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -157,6 +178,7 @@ const lastLiveSnapshotRef = useRef('');
           const data = await existing.json();
           setSession(data);
           setHistoryLines(data.lines || []);
+          fetchSessionList();
           if (data.sourceLanguage) setSourceLanguage(data.sourceLanguage);
           if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
           return;
@@ -178,6 +200,7 @@ const lastLiveSnapshotRef = useRef('');
         const created = await create.json();
         setSession(created);
         setHistoryLines(created.lines || []);
+        fetchSessionList();
         if (created.sourceLanguage) setSourceLanguage(created.sourceLanguage);
         if (created.targetLanguage) setTargetLanguage(created.targetLanguage);
       } catch (err) {
@@ -186,7 +209,7 @@ const lastLiveSnapshotRef = useRef('');
     };
 
     init();
-  }, [activeSessionId]);
+  }, [activeSessionId, fetchSessionList]);
 
   useEffect(() => {
     if (!session?.id) return;
@@ -678,9 +701,13 @@ lastLiveSnapshotRef.current = '';
     status === 'reconnecting';
   const sessionOptions = useMemo(() => {
     const options = new Set(DEFAULT_SESSION_OPTIONS);
+    availableSessions.forEach((entry) => {
+      const id = sanitizeSessionId(entry?.sessionId || entry?.id || '');
+      if (id) options.add(id);
+    });
     options.add(activeSessionId);
     return Array.from(options);
-  }, [activeSessionId]);
+  }, [activeSessionId, availableSessions]);
 
   const switchSession = async (nextSessionId) => {
     const sanitized = sanitizeSessionId(nextSessionId) || FIXED_SESSION_ID;
@@ -713,6 +740,7 @@ lastLiveSnapshotRef.current = '';
     setNewSessionName('');
     setShowNewSessionInput(false);
     switchSession(sanitized);
+    fetchSessionList();
   };
 
   const feedItems = useMemo(() => {
@@ -856,14 +884,15 @@ lastLiveSnapshotRef.current = '';
                 </div>
               ) : null}
 
-              <div style={styles.viewerLinkHint}>/viewer/{activeSessionId}</div>
+              <div style={styles.viewerShareRow}>
+                <span style={styles.viewerLinkHint}>/viewer/{activeSessionId}</span>
+                <button type="button" onClick={copyViewerLink} style={styles.tinyButton}>
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
             </div>
 
             <div style={styles.actionButtons}>
-              <button onClick={copyViewerLink} style={styles.primaryButton}>
-                {copied ? 'Viewer link copied' : 'Copy viewer link'}
-              </button>
-
               <button onClick={clearHistory} style={styles.secondaryButtonDark}>
                 Clear
               </button>
@@ -1161,6 +1190,11 @@ const styles = {
     color: '#8d8d95',
     fontSize: '12px',
     fontWeight: 700,
+  },
+  viewerShareRow: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
   },
   actionButtons: {
     display: 'flex',

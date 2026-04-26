@@ -223,6 +223,7 @@ function getOrCreateSession(id = 'live-session') {
   let session = sessions.find((s) => s.id === id);
 
   if (!session) {
+    const now = new Date().toISOString();
     session = {
       id,
       title: 'TBS Live Session',
@@ -230,6 +231,9 @@ function getOrCreateSession(id = 'live-session') {
       sourceLanguage: 'Mandarin',
       targetLanguage: 'English',
       translationRoute: 'zh_en',
+      createdAt: now,
+      updatedAt: now,
+      status: 'idle',
       lines: [],
       brainState: {
         activeTopic: null,
@@ -249,6 +253,17 @@ function getOrCreateSession(id = 'live-session') {
   }
 
   return session;
+}
+
+function summarizeSession(session) {
+  const lines = Array.isArray(session?.lines) ? session.lines : [];
+  return {
+    sessionId: session?.id || 'live-session',
+    createdAt: session?.createdAt || null,
+    updatedAt: session?.updatedAt || lines[0]?.at || session?.createdAt || null,
+    status: session?.status || 'idle',
+    lineCount: lines.length,
+  };
 }
 
 function ensureSessionBrainState(session) {
@@ -1990,6 +2005,10 @@ app.get('/api/session/:id', (req, res) => {
   res.json(session);
 });
 
+app.get('/api/sessions', (req, res) => {
+  res.json(sessions.map(summarizeSession));
+});
+
 app.post('/api/session', (req, res) => {
   const requestedId = req.body?.id || 'live-session';
   const session = getOrCreateSession(requestedId);
@@ -2007,6 +2026,7 @@ app.post('/api/session', (req, res) => {
   session.sourceLanguage = sourceLanguage;
   session.targetLanguage = targetLanguage;
   session.translationRoute = translationRoute;
+  session.updatedAt = new Date().toISOString();
 
   res.json(session);
 });
@@ -2089,6 +2109,7 @@ app.post('/api/session/:id/line', async (req, res) => {
   });
   session.lines.unshift(line);
   session.lines = session.lines.slice(0, 100);
+  session.updatedAt = line.at;
 
   res.json(line);
 });
@@ -2255,6 +2276,7 @@ app.post('/api/session/:id/clear', (req, res) => {
   }
 
   session.lines = [];
+  session.updatedAt = new Date().toISOString();
 
   res.json({ ok: true });
 });
@@ -2331,6 +2353,8 @@ wss.on('connection', async (browserWs, req) => {
   let lastInterimSentAt = 0;
 
   const activeSession = getOrCreateSession(sessionId);
+  activeSession.status = 'listening';
+  activeSession.updatedAt = new Date().toISOString();
   const routeKey = requestedRouteKey || activeSession.translationRoute || deriveTranslationRoute(activeSession.sourceLanguage, activeSession.targetLanguage);
   const routeConfig = getRouteConfig(routeKey);
   activeSession.translationRoute = routeKey;
@@ -2613,6 +2637,7 @@ wss.on('connection', async (browserWs, req) => {
 
           activeSession.lines.unshift(line);
           activeSession.lines = activeSession.lines.slice(0, 100);
+          activeSession.updatedAt = line.at;
 
           lastInterimSourceSent = '';
           lastInterimSentAt = 0;
@@ -2725,6 +2750,8 @@ wss.on('connection', async (browserWs, req) => {
 
   browserWs.on('close', () => {
     console.log('[Browser] disconnected');
+    activeSession.status = 'idle';
+    activeSession.updatedAt = new Date().toISOString();
     shutdown();
   });
 
