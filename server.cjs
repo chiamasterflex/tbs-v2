@@ -2006,6 +2006,7 @@ app.get('/api/session/:id', (req, res) => {
 });
 
 app.get('/api/sessions', (req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.json(sessions.map(summarizeSession));
 });
 

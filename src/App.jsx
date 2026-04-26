@@ -5,8 +5,12 @@ import Viewer from './Viewer';
 import ToolTabs from './ToolTabs';
 import micIcon from './assets/mic.svg';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
+const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8787' : '');
+const WS_URL =
+  import.meta.env.VITE_WS_URL ||
+  (import.meta.env.DEV
+    ? 'ws://localhost:8787/ws'
+    : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`);
 const FIXED_SESSION_ID = 'live-session';
 const DEFAULT_VISIBLE_SESSION_ID = 'main';
 const NEW_SESSION_VALUE = '__new_session__';
@@ -151,12 +155,15 @@ const lastLiveSnapshotRef = useRef('');
       const data = await res.json();
       if (Array.isArray(data)) {
         setAvailableSessions(data);
+        return data;
       }
     } catch (err) {
       console.error('session list failed', err);
     } finally {
       setSessionListLoaded(true);
     }
+
+    return [];
   }, []);
 
   const registerSession = useCallback(
@@ -735,7 +742,7 @@ lastLiveSnapshotRef.current = '';
 
   const sessionOptions = useMemo(() => {
     const options = new Set(realSessionIds);
-    if (activeSessionId !== FIXED_SESSION_ID) {
+    if (activeSessionId !== FIXED_SESSION_ID && realSessionIds.includes(activeSessionId)) {
       options.add(activeSessionId);
     }
     return Array.from(options);
@@ -777,8 +784,16 @@ lastLiveSnapshotRef.current = '';
     const registered = await registerSession(sanitized);
     if (!registered) return;
 
-    await fetchSessionList();
-    setActiveSessionId(sanitized);
+    const refreshed = await fetchSessionList();
+    const confirmed = Array.isArray(refreshed)
+      ? refreshed.some(
+          (entry) => sanitizeSessionId(entry?.sessionId || entry?.id || '') === sanitized
+        )
+      : false;
+
+    if (confirmed) {
+      setActiveSessionId(sanitized);
+    }
   };
 
   const handleSessionSelect = (event) => {
