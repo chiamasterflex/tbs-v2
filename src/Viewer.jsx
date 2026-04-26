@@ -292,62 +292,93 @@ export default function Viewer() {
     });
   }, [visibleLines]);
 
+  const liveContextItems = useMemo(() => {
+    if (brainStateHistory.length > 0) return brainStateHistory;
+
+    if (
+      rollingBrainState?.rollingSummary ||
+      rollingBrainState?.rollingIntent ||
+      rollingBrainState?.rollingTopic
+    ) {
+      return [
+        {
+          id: `fallback-${rollingBrainState.rollingUpdatedAt || 'now'}`,
+          rollingSummary: rollingBrainState.rollingSummary || '',
+          rollingIntent: rollingBrainState.rollingIntent || '',
+          rollingTopic: rollingBrainState.rollingTopic || '',
+          rollingUpdatedAt: rollingBrainState.rollingUpdatedAt || new Date().toISOString(),
+          confidence: rollingBrainState.confidence,
+        },
+      ];
+    }
+
+    return [];
+  }, [brainStateHistory, rollingBrainState]);
+
   return (
     <div style={styles.page}>
+      <div style={styles.bgOrbA} />
+      <div style={styles.bgOrbB} />
+
       <div style={styles.shell}>
-        <header style={styles.topBar}>
-          <div style={styles.topBarLeft}>
-            <div style={styles.topBarTitleRow}>
-              <div style={styles.cardLabel}>Viewer</div>
-            </div>
-            <div style={styles.topBarBadges}>
-              <span style={styles.badge}>Session: {FIXED_SESSION_ID}</span>
-              <span style={styles.badge}>Socket: {socketState}</span>
-              <span style={styles.badge}>Showing: {visibleLines.length}/{totalLines}</span>
+        <div style={styles.headerCard}>
+          <h1 style={styles.title}>True Buddha School Live Translation</h1>
+
+          <div style={styles.headerActions}>
+            <div style={styles.actionButtons}>
+              <button type="button" onClick={fetchSession} style={styles.secondaryButtonDark}>
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={!canLoadMore}
+                style={{
+                  ...styles.secondaryButtonDark,
+                  opacity: canLoadMore ? 1 : 0.45,
+                  cursor: canLoadMore ? 'pointer' : 'not-allowed',
+                }}
+              >
+                Load older
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = scrollRef.current;
+                  if (!el) return;
+                  el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+                  setAutoScroll(true);
+                }}
+                style={styles.secondaryButtonDark}
+              >
+                Latest
+              </button>
             </div>
           </div>
 
-          <div style={styles.topBarRight}>
-            <button type="button" onClick={fetchSession} style={styles.secondaryButton}>
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={handleLoadMore}
-              disabled={!canLoadMore}
-              style={{
-                ...styles.secondaryButton,
-                opacity: canLoadMore ? 1 : 0.45,
-                cursor: canLoadMore ? 'pointer' : 'not-allowed',
-              }}
-            >
-              Load older
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const el = scrollRef.current;
-                if (!el) return;
-                el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-                setAutoScroll(true);
-              }}
-              style={styles.secondaryButton}
-            >
-              Latest
-            </button>
+          <div style={styles.topStats}>
+            <div style={styles.topStatCard}>
+              <div style={styles.topStatLabel}>Mode</div>
+              <div style={styles.topStatValue}>Viewer</div>
+            </div>
+
+            <div style={styles.topStatCard}>
+              <div style={styles.topStatLabel}>Lines</div>
+              <div style={styles.topStatValue}>
+                {visibleLines.length}/{totalLines}
+              </div>
+            </div>
           </div>
-        </header>
+        </div>
 
         {error ? <div style={styles.errorBanner}>{error}</div> : null}
 
         <div style={styles.transcriptCard}>
-          <div style={styles.transcriptAccent} />
-
-          {brainStateHistory.length > 0 ? (
+          {liveContextItems.length > 0 ? (
             <div style={styles.brainStateScrollCard}>
               <div style={styles.brainStateLabel}>Live context</div>
               <div style={styles.brainStateScrollFeed}>
-                {brainStateHistory.map((entry) => (
+                {liveContextItems.map((entry) => (
                   <div key={entry.id} style={styles.brainStateScrollRow}>
                     <div style={styles.brainStateScrollMeta}>
                       {entry.rollingUpdatedAt ? formatTime(entry.rollingUpdatedAt) : '—'}
@@ -366,6 +397,7 @@ export default function Viewer() {
           <div style={styles.transcriptHeader}>
             <div>
               <div style={styles.cardLabel}>Transcript</div>
+              <div style={styles.cardHint}>Draft line appears first, then settles into history.</div>
             </div>
             <div style={styles.debugChip}>
               {latestLine?.at ? formatTime(latestLine.at) : status}
@@ -417,73 +449,116 @@ export default function Viewer() {
 const styles = {
   page: {
     minHeight: '100vh',
+    position: 'relative',
+    overflow: 'hidden',
     background:
       'radial-gradient(circle at top, rgba(255,106,61,0.10) 0%, rgba(15,15,15,1) 42%), linear-gradient(180deg, #0b0b0c 0%, #121214 100%)',
-    padding: '20px 16px 28px',
-    color: '#fff',
+    padding: '20px 16px 108px',
     fontFamily:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    color: '#fff',
+  },
+  bgOrbA: {
+    position: 'absolute',
+    top: '-120px',
+    left: '-80px',
+    width: '300px',
+    height: '300px',
+    borderRadius: '999px',
+    background: 'rgba(255,107,53,0.10)',
+    filter: 'blur(60px)',
+    pointerEvents: 'none',
+  },
+  bgOrbB: {
+    position: 'absolute',
+    right: '-100px',
+    bottom: '-100px',
+    width: '320px',
+    height: '320px',
+    borderRadius: '999px',
+    background: 'rgba(59,130,246,0.10)',
+    filter: 'blur(70px)',
+    pointerEvents: 'none',
   },
   shell: {
+    position: 'relative',
+    zIndex: 1,
     width: '100%',
     maxWidth: '980px',
     margin: '0 auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
+    gap: '16px',
   },
-  topBar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '12px',
-    flexWrap: 'wrap',
-    alignItems: 'flex-end',
-  },
-  topBarLeft: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-    flexWrap: 'wrap',
-    minWidth: '260px',
-    flex: '1 1 320px',
-  },
-  topBarTitleRow: {
-    display: 'flex',
-    gap: '10px',
-    alignItems: 'baseline',
-    flexWrap: 'wrap',
-  },
-  topBarBadges: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px',
-  },
-  topBarRight: {
-    display: 'flex',
-    gap: '10px',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-  },
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '7px 10px',
-    borderRadius: '999px',
+  headerCard: {
     background: 'rgba(255,255,255,0.04)',
     border: '1px solid rgba(255,255,255,0.08)',
-    color: '#e5e7eb',
-    fontSize: '12px',
-    fontWeight: 700,
+    borderRadius: '28px',
+    padding: '24px 22px',
+    textAlign: 'left',
+    backdropFilter: 'blur(14px)',
   },
-  secondaryButton: {
-    border: '1px solid rgba(255,255,255,0.10)',
-    borderRadius: '999px',
-    padding: '10px 12px',
-    fontSize: '12px',
+  title: {
+    margin: 0,
+    fontSize: '42px',
+    lineHeight: 1,
+    letterSpacing: '-0.04em',
     fontWeight: 800,
+    color: '#fff',
+    textAlign: 'left',
+  },
+  headerActions: {
+    marginTop: '18px',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '12px',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  actionButtons: {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+  secondaryButtonDark: {
+    border: '1px solid rgba(255,255,255,0.10)',
     background: 'rgba(255,255,255,0.04)',
     color: '#fff',
+    borderRadius: '999px',
+    padding: '12px 16px',
+    fontSize: '13px',
+    fontWeight: 800,
     cursor: 'pointer',
+  },
+  topStats: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+    gap: '12px',
+    marginTop: '18px',
+    maxWidth: '420px',
+  },
+  topStatCard: {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '18px',
+    padding: '14px 16px',
+    textAlign: 'left',
+  },
+  topStatLabel: {
+    fontSize: '11px',
+    fontWeight: 800,
+    color: '#8d8d95',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginBottom: '8px',
+    textAlign: 'left',
+  },
+  topStatValue: {
+    fontSize: '15px',
+    fontWeight: 800,
+    color: '#fff',
+    lineHeight: 1.35,
+    textAlign: 'left',
   },
   errorBanner: {
     marginBottom: '14px',
@@ -495,27 +570,19 @@ const styles = {
     fontWeight: 700,
   },
   transcriptCard: {
-    background: 'rgba(20,20,22,0.92)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: '22px',
-    padding: '14px',
-    boxShadow: '0 24px 60px rgba(0,0,0,0.28)',
-    backdropFilter: 'blur(16px)',
-  },
-  transcriptAccent: {
-    height: '2px',
-    width: '100%',
-    borderRadius: '999px',
-    background:
-      'linear-gradient(90deg, rgba(255,107,53,0.0) 0%, rgba(255,107,53,0.85) 50%, rgba(255,107,53,0.0) 100%)',
-    marginBottom: '12px',
+    background: '#ff764a',
+    borderRadius: '28px',
+    padding: '18px',
+    color: '#111',
+    textAlign: 'left',
+    boxShadow: '0 24px 60px rgba(0,0,0,0.22)',
   },
   brainStateScrollCard: {
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.72)',
+    border: '1px solid rgba(17,17,17,0.08)',
     borderRadius: '18px',
-    padding: '12px 14px',
-    marginBottom: '12px',
+    padding: '14px 16px',
+    marginBottom: '14px',
     textAlign: 'left',
   },
   brainStateLabel: {
@@ -523,8 +590,9 @@ const styles = {
     fontWeight: 800,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
-    color: '#b8b8c2',
+    color: '#6a4130',
     marginBottom: '8px',
+    textAlign: 'left',
   },
   brainStateScrollFeed: {
     display: 'flex',
@@ -540,18 +608,21 @@ const styles = {
     gap: '10px',
     alignItems: 'start',
     paddingBottom: '10px',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    borderBottom: '1px solid rgba(17,17,17,0.08)',
+    textAlign: 'left',
   },
   brainStateScrollMeta: {
     fontSize: '12px',
     fontWeight: 800,
-    color: '#9ca3af',
+    color: '#7a5a4a',
+    textAlign: 'left',
   },
   brainStateScrollText: {
-    fontSize: '13px',
+    fontSize: '14px',
     lineHeight: 1.45,
     fontWeight: 700,
-    color: '#f3f4f6',
+    color: '#222',
+    textAlign: 'left',
     wordBreak: 'break-word',
   },
   transcriptHeader: {
@@ -559,7 +630,7 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: '12px',
-    marginBottom: '12px',
+    marginBottom: '14px',
     flexWrap: 'wrap',
   },
   cardLabel: {
@@ -567,35 +638,42 @@ const styles = {
     fontWeight: 800,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
-    color: '#b8b8c2',
+    color: '#5a3a2e',
+    textAlign: 'left',
+  },
+  cardHint: {
+    marginTop: '6px',
+    fontSize: '14px',
+    color: '#6a4130',
+    textAlign: 'left',
   },
   debugChip: {
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: '#111',
     color: '#fff',
     borderRadius: '999px',
-    padding: '8px 10px',
+    padding: '9px 12px',
     fontSize: '12px',
-    fontWeight: 800,
+    fontWeight: 700,
   },
   transcriptFeed: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 0,
-    maxHeight: '62vh',
+    gap: '0',
+    maxHeight: '56vh',
     overflowY: 'auto',
-    background: 'rgba(255,255,255,0.03)',
-    borderRadius: '18px',
+    background: '#fff8f2',
+    borderRadius: '22px',
     padding: '6px 0',
     scrollBehavior: 'smooth',
   },
   feedRow: {
-    padding: '12px 14px 14px',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    padding: '14px 16px 16px',
+    borderBottom: '1px solid rgba(17,17,17,0.08)',
+    textAlign: 'left',
     transition: 'background 160ms ease',
   },
   feedRowLive: {
-    background: 'rgba(255,107,53,0.08)',
+    background: '#fff0e8',
   },
   feedMetaRow: {
     display: 'flex',
@@ -614,12 +692,12 @@ const styles = {
   feedMeta: {
     fontSize: '12px',
     fontWeight: 700,
-    color: '#9ca3af',
+    color: '#777',
+    textAlign: 'left',
   },
   feedTimePill: {
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    color: '#e5e7eb',
+    background: '#f3e7d8',
+    color: '#5b4b40',
     borderRadius: '999px',
     padding: '5px 8px',
     fontSize: '11px',
@@ -628,33 +706,37 @@ const styles = {
   liveBadge: {
     fontSize: '11px',
     fontWeight: 800,
-    color: '#111',
-    background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
+    color: '#7a4a38',
+    background: '#ffd8c8',
     borderRadius: '999px',
     padding: '6px 9px',
   },
   feedChinese: {
-    fontSize: '20px',
-    lineHeight: 1.28,
+    fontSize: '24px',
+    lineHeight: 1.26,
     fontWeight: 800,
-    color: '#fff',
+    color: '#111',
     marginBottom: '8px',
+    textAlign: 'left',
     wordBreak: 'break-word',
   },
   feedEnglish: {
-    fontSize: '17px',
+    fontSize: '20px',
     lineHeight: 1.4,
     fontWeight: 700,
-    color: '#c7d2fe',
+    color: '#2450d8',
+    textAlign: 'left',
     wordBreak: 'break-word',
+    transition: 'opacity 160ms ease, color 160ms ease',
   },
   feedEnglishDraft: {
-    opacity: 0.88,
+    color: '#5c72c9',
+    opacity: 0.82,
   },
   emptyState: {
-    padding: '16px 14px',
-    color: '#b8b8c2',
-    fontSize: '14px',
-    fontWeight: 700,
+    padding: '18px 16px',
+    color: '#666',
+    fontSize: '15px',
+    textAlign: 'left',
   },
 };
