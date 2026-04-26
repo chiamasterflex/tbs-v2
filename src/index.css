@@ -54,6 +54,44 @@ body {
   margin: 0;
 }
 
+.scroll-premium {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-premium:hover,
+.scroll-premium.is-scrolling {
+  scrollbar-color: rgba(17, 17, 17, 0.35) transparent;
+}
+
+.scroll-premium::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scroll-premium::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-premium::-webkit-scrollbar-thumb {
+  background: rgba(17, 17, 17, 0);
+  border-radius: 999px;
+  opacity: 0;
+  transition:
+    background-color 180ms ease,
+    opacity 180ms ease;
+}
+
+.scroll-premium:hover::-webkit-scrollbar-thumb {
+  background: rgba(17, 17, 17, 0.3);
+  opacity: 0.3;
+}
+
+.scroll-premium.is-scrolling::-webkit-scrollbar-thumb {
+  background: rgba(17, 17, 17, 0.4);
+  opacity: 0.4;
+}
+
 #root {
   width: 1126px;
   max-width: 100%;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Study from './Study';
 import Review from './Review';
 import Viewer from './Viewer';
@@ -89,7 +89,39 @@ const liveConfigRef = useRef({
 });
 const lastTranslatedChineseRef = useRef('');
 const transcriptFeedRef = useRef(null);
+const premiumScrollTimersRef = useRef(new Map());
 const lastLiveSnapshotRef = useRef('');
+
+  const handlePremiumScroll = useCallback((event) => {
+    const el = event.currentTarget;
+    const timers = premiumScrollTimersRef.current;
+
+    el.classList.add('is-scrolling');
+
+    if (timers.has(el)) {
+      clearTimeout(timers.get(el));
+    }
+
+    timers.set(
+      el,
+      setTimeout(() => {
+        el.classList.remove('is-scrolling');
+        timers.delete(el);
+      }, 700)
+    );
+  }, []);
+
+  useEffect(() => {
+    const timers = premiumScrollTimersRef.current;
+
+    return () => {
+      timers.forEach((timer, el) => {
+        clearTimeout(timer);
+        el.classList.remove('is-scrolling');
+      });
+      timers.clear();
+    };
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -787,7 +819,11 @@ lastLiveSnapshotRef.current = '';
                     {liveContextItems.length > 0 ? (
             <div style={styles.brainStateScrollCard}>
               <div style={styles.brainStateLabel}>Live context</div>
-              <div style={styles.brainStateScrollFeed}>
+              <div
+                className="scroll-premium"
+                onScroll={handlePremiumScroll}
+                style={styles.brainStateScrollFeed}
+              >
                 {liveContextItems.map((entry) => (
                   <div key={entry.id} style={styles.brainStateScrollRow}>
                     <div style={styles.brainStateScrollMeta}>
@@ -814,7 +850,12 @@ lastLiveSnapshotRef.current = '';
             </div>
           </div>
 
-          <div ref={transcriptFeedRef} style={styles.transcriptFeed}>
+          <div
+            ref={transcriptFeedRef}
+            className="scroll-premium"
+            onScroll={handlePremiumScroll}
+            style={styles.transcriptFeed}
+          >
             {feedItems.length === 0 ? (
               <div style={styles.emptyState}>Waiting for speech…</div>
             ) : (

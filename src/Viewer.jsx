@@ -39,6 +39,7 @@ export default function Viewer() {
   const scrollRef = useRef(null);
   const wsRef = useRef(null);
   const reconnectTimerRef = useRef(null);
+  const premiumScrollTimersRef = useRef(new Map());
 
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('Loading…');
@@ -50,6 +51,37 @@ export default function Viewer() {
   const [liveInterim, setLiveInterim] = useState(null);
   const [rollingBrainState, setRollingBrainState] = useState(null);
   const [brainStateHistory, setBrainStateHistory] = useState([]);
+
+  const handlePremiumScroll = useCallback((event) => {
+    const el = event.currentTarget;
+    const timers = premiumScrollTimersRef.current;
+
+    el.classList.add('is-scrolling');
+
+    if (timers.has(el)) {
+      clearTimeout(timers.get(el));
+    }
+
+    timers.set(
+      el,
+      setTimeout(() => {
+        el.classList.remove('is-scrolling');
+        timers.delete(el);
+      }, 700)
+    );
+  }, []);
+
+  useEffect(() => {
+    const timers = premiumScrollTimersRef.current;
+
+    return () => {
+      timers.forEach((timer, el) => {
+        clearTimeout(timer);
+        el.classList.remove('is-scrolling');
+      });
+      timers.clear();
+    };
+  }, []);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -260,13 +292,15 @@ export default function Viewer() {
     });
   }, [visibleLines, autoScroll]);
 
-  const handleScroll = useCallback(() => {
+  const handleScroll = useCallback((event) => {
+    handlePremiumScroll(event);
+
     const el = scrollRef.current;
     if (!el) return;
 
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     setAutoScroll(nearBottom);
-  }, []);
+  }, [handlePremiumScroll]);
 
   const handleLoadMore = useCallback(() => {
     setVisibleCount((prev) => Math.min(prev + LOAD_MORE_STEP, MAX_VISIBLE_COUNT));
@@ -377,7 +411,11 @@ export default function Viewer() {
           {liveContextItems.length > 0 ? (
             <div style={styles.brainStateScrollCard}>
               <div style={styles.brainStateLabel}>Live context</div>
-              <div style={styles.brainStateScrollFeed}>
+              <div
+                className="scroll-premium"
+                onScroll={handlePremiumScroll}
+                style={styles.brainStateScrollFeed}
+              >
                 {liveContextItems.map((entry) => (
                   <div key={entry.id} style={styles.brainStateScrollRow}>
                     <div style={styles.brainStateScrollMeta}>
@@ -404,7 +442,12 @@ export default function Viewer() {
             </div>
           </div>
 
-          <div ref={scrollRef} onScroll={handleScroll} style={styles.transcriptFeed}>
+          <div
+            ref={scrollRef}
+            className="scroll-premium"
+            onScroll={handleScroll}
+            style={styles.transcriptFeed}
+          >
             {feedItems.length === 0 ? (
               <div style={styles.emptyState}>Waiting for speech…</div>
             ) : (
