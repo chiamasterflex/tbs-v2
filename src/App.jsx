@@ -55,6 +55,7 @@ export default function App() {
     totalBytes: 0,
     lastBytes: 0,
   });
+  const [activeAudioMode, setActiveAudioMode] = useState(null);
   const [copied, setCopied] = useState(false);
 
 const [liveChinese, setLiveChinese] = useState('');
@@ -80,6 +81,7 @@ const interimTimerRef = useRef(null);
 const reconnectTimerRef = useRef(null);
 const shouldReconnectRef = useRef(false);
 const manualStopRef = useRef(false);
+const audioRunIdRef = useRef(0);
 const liveConfigRef = useRef({
   sourceLanguage: 'Mandarin',
   targetLanguage: 'English',
@@ -242,22 +244,69 @@ const lastLiveSnapshotRef = useRef('');
     }, 180);
   };
 
-  const startAudio = async () => {
+  const getAudioStream = async (mode) => {
+    if (mode === 'system') {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ audio: true });
+
+      if (stream.getAudioTracks().length === 0) {
+        stream.getTracks().forEach((track) => track.stop());
+        throw new Error('No system audio track selected');
+      }
+
+      return stream;
+    }
+
+    return navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: false,
+      },
+    });
+  };
+
+  const startAudio = async (mode = 'mic') => {
+  let switchedMode = false;
+
   if (
+    (status === 'requesting_mic' ||
+      status === 'requesting_system' ||
+      status === 'ws_open' ||
+      status === 'listening' ||
+      status === 'reconnecting') &&
+    activeAudioMode !== mode
+  ) {
+    await stopAudio();
+    switchedMode = true;
+  }
+
+  if (!switchedMode && (
     status === 'requesting_mic' ||
+    status === 'requesting_system' ||
     status === 'ws_open' ||
     status === 'listening' ||
     status === 'reconnecting'
-  ) {
+  )) {
     return;
   }
 
   manualStopRef.current = false;
   shouldReconnectRef.current = true;
+  const runId = audioRunIdRef.current + 1;
+  audioRunIdRef.current = runId;
 
   const openSocket = async () => {
+    if (audioRunIdRef.current !== runId) return;
+
     try {
-      setStatus(mediaStreamRef.current ? 'reconnecting' : 'requesting_mic');
+      setStatus(
+        mediaStreamRef.current
+          ? 'reconnecting'
+          : mode === 'system'
+            ? 'requesting_system'
+            : 'requesting_mic'
+      );
 
       const currentRoute = liveConfigRef.current.translationRoute;
       const ws = new WebSocket(`${WS_URL}?route=${encodeURIComponent(currentRoute)}`);
@@ -265,20 +314,33 @@ const lastLiveSnapshotRef = useRef('');
       wsRef.current = ws;
 
       ws.onopen = async () => {
+        if (audioRunIdRef.current !== runId) {
+          ws.close();
+          return;
+        }
+
         try {
           setStatus('ws_open');
 
           if (!mediaStreamRef.current) {
-            const stream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                channelCount: 1,
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: false,
-              },
-            });
+            const stream = await getAudioStream(mode);
+
+            if (audioRunIdRef.current !== runId) {
+              stream.getTracks().forEach((track) => track.stop());
+              ws.close();
+              return;
+            }
 
             mediaStreamRef.current = stream;
+            setActiveAudioMode(mode);
+
+            stream.getAudioTracks().forEach((track) => {
+              track.onended = () => {
+                if (mediaStreamRef.current === stream) {
+                  stopAudio();
+                }
+              };
+            });
 
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             audioContextRef.current = audioContext;
@@ -326,6 +388,8 @@ const lastLiveSnapshotRef = useRef('');
       };
 
       ws.onmessage = (event) => {
+        if (audioRunIdRef.current !== runId) return;
+
         const msg = JSON.parse(event.data);
 
         if (msg.type === 'status') {
@@ -406,6 +470,8 @@ const lastLiveSnapshotRef = useRef('');
       };
 
       ws.onclose = () => {
+        if (audioRunIdRef.current !== runId) return;
+
         wsRef.current = null;
 
         if (manualStopRef.current || !shouldReconnectRef.current) {
@@ -425,6 +491,8 @@ const lastLiveSnapshotRef = useRef('');
       };
 
       ws.onerror = () => {
+        if (audioRunIdRef.current !== runId) return;
+
         setStatus('error');
       };
     } catch (err) {
@@ -439,6 +507,7 @@ const lastLiveSnapshotRef = useRef('');
   const stopAudio = async () => {
   manualStopRef.current = true;
   shouldReconnectRef.current = false;
+  audioRunIdRef.current += 1;
   setStatus('stopping');
 
   try {
@@ -483,6 +552,7 @@ const lastLiveSnapshotRef = useRef('');
   pcmQueueRef.current = [];
   interimTimerRef.current = null;
   reconnectTimerRef.current = null;
+  setActiveAudioMode(null);
 
   setStatus('stopped');
 };
@@ -519,9 +589,11 @@ lastLiveSnapshotRef.current = '';
   const getStatusLabel = () => {
     switch (status) {
       case 'listening':
-        return 'Listening live';
+        return `Listening (${activeAudioMode === 'system' ? 'System Audio' : 'Mic'})`;
       case 'requesting_mic':
         return 'Requesting microphone';
+      case 'requesting_system':
+        return 'Select a tab for audio';
       case 'stopping':
         return 'Stopping';
       case 'stopped':
@@ -534,6 +606,8 @@ lastLiveSnapshotRef.current = '';
   };
 
   const isListening = status === 'listening';
+  const isMicActive = isListening && activeAudioMode === 'mic';
+  const isSystemActive = isListening && activeAudioMode === 'system';
 
   const feedItems = useMemo(() => {
     const items = [];
@@ -653,15 +727,28 @@ lastLiveSnapshotRef.current = '';
           <div style={styles.floatingMicWrap}>
             <div style={styles.floatingStatus}>{getStatusLabel()}</div>
 
-            <button
-              onClick={isListening ? stopAudio : startAudio}
-              style={{
-                ...styles.micButton,
-                ...(isListening ? styles.micButtonActive : {}),
-              }}
-            >
-              <img src={micIcon} alt="Microphone" style={styles.micSvg} />
-            </button>
+            <div style={styles.audioModeButtons}>
+              <button
+                onClick={() => (isMicActive ? stopAudio() : startAudio('mic'))}
+                style={{
+                  ...styles.audioModeButton,
+                  ...(isMicActive ? styles.audioModeButtonActive : {}),
+                }}
+              >
+                <img src={micIcon} alt="" style={styles.audioModeIcon} />
+                Mic
+              </button>
+
+              <button
+                onClick={() => (isSystemActive ? stopAudio() : startAudio('system'))}
+                style={{
+                  ...styles.audioModeButton,
+                  ...(isSystemActive ? styles.audioModeButtonActive : {}),
+                }}
+              >
+                System Audio
+              </button>
+            </div>
           </div>
 
           <div style={styles.languageRow}>
@@ -942,26 +1029,34 @@ const styles = {
     paddingLeft: '6px',
     whiteSpace: 'nowrap',
   },
-  micButton: {
-    width: '62px',
-    height: '62px',
-    borderRadius: '50%',
+  audioModeButtons: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  audioModeButton: {
+    minHeight: '44px',
+    borderRadius: '999px',
+    padding: '0 14px',
     border: '1px solid rgba(255,255,255,0.18)',
     background: 'rgba(255,255,255,0.86)',
     color: '#111',
-    display: 'grid',
-    placeItems: 'center',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
     cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: 800,
     boxShadow:
       '0 8px 18px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.55)',
     backdropFilter: 'blur(8px)',
   },
-  micButtonActive: {
+  audioModeButtonActive: {
     background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
   },
-  micSvg: {
-    width: '24px',
-    height: '24px',
+  audioModeIcon: {
+    width: '16px',
+    height: '16px',
     objectFit: 'contain',
     display: 'block',
   },
