@@ -8,7 +8,7 @@ import micIcon from './assets/mic.svg';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
 const FIXED_SESSION_ID = 'live-session';
-const DEFAULT_SESSION_OPTIONS = ['live-session'];
+const DEFAULT_VISIBLE_SESSION_ID = 'main';
 const NEW_SESSION_VALUE = '__new_session__';
 
 function sanitizeSessionId(value) {
@@ -70,9 +70,8 @@ export default function App() {
   const [activeAudioMode, setActiveAudioMode] = useState(null);
   const [copied, setCopied] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState(FIXED_SESSION_ID);
-  const [availableSessions, setAvailableSessions] = useState([
-    { sessionId: FIXED_SESSION_ID },
-  ]);
+  const [availableSessions, setAvailableSessions] = useState([]);
+  const [sessionListLoaded, setSessionListLoaded] = useState(false);
   const [showNewSessionInput, setShowNewSessionInput] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
 
@@ -101,6 +100,7 @@ const shouldReconnectRef = useRef(false);
 const manualStopRef = useRef(false);
 const audioRunIdRef = useRef(0);
 const pendingReconnectModeRef = useRef(null);
+const ensuredDefaultSessionRef = useRef(false);
 const liveConfigRef = useRef({
   sourceLanguage: 'Mandarin',
   targetLanguage: 'English',
@@ -154,8 +154,32 @@ const lastLiveSnapshotRef = useRef('');
       }
     } catch (err) {
       console.error('session list failed', err);
+    } finally {
+      setSessionListLoaded(true);
     }
   }, []);
+
+  const registerSession = useCallback(
+    async (sessionId) => {
+      const sanitized = sanitizeSessionId(sessionId) || FIXED_SESSION_ID;
+      const res = await fetch(`${API}/api/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: sanitized,
+          title: session?.title || 'TBS Live Session',
+          eventMode: session?.eventMode || 'Dharma Talk',
+          sourceLanguage,
+          targetLanguage,
+          translationRoute,
+        }),
+      });
+
+      if (!res.ok) return null;
+      return res.json();
+    },
+    [session?.eventMode, session?.title, sourceLanguage, targetLanguage, translationRoute]
+  );
 
   useEffect(() => {
     fetchSessionList();
@@ -699,15 +723,46 @@ lastLiveSnapshotRef.current = '';
     status === 'ws_open' ||
     status === 'listening' ||
     status === 'reconnecting';
+  const backendSessionIds = useMemo(() => {
+    return availableSessions
+      .map((entry) => sanitizeSessionId(entry?.sessionId || entry?.id || ''))
+      .filter(Boolean);
+  }, [availableSessions]);
+
+  const realSessionIds = useMemo(() => {
+    return backendSessionIds.filter((id) => id !== FIXED_SESSION_ID);
+  }, [backendSessionIds]);
+
   const sessionOptions = useMemo(() => {
-    const options = new Set(DEFAULT_SESSION_OPTIONS);
-    availableSessions.forEach((entry) => {
-      const id = sanitizeSessionId(entry?.sessionId || entry?.id || '');
-      if (id) options.add(id);
-    });
-    options.add(activeSessionId);
+    const options = new Set(realSessionIds);
+    if (activeSessionId !== FIXED_SESSION_ID) {
+      options.add(activeSessionId);
+    }
     return Array.from(options);
-  }, [activeSessionId, availableSessions]);
+  }, [activeSessionId, realSessionIds]);
+
+  useEffect(() => {
+    if (!sessionListLoaded) return;
+
+    if (realSessionIds.length > 0) {
+      if (activeSessionId === FIXED_SESSION_ID) {
+        setActiveSessionId(realSessionIds[0]);
+      }
+      return;
+    }
+
+    if (ensuredDefaultSessionRef.current) return;
+    ensuredDefaultSessionRef.current = true;
+
+    registerSession(DEFAULT_VISIBLE_SESSION_ID)
+      .then(() => fetchSessionList())
+      .then(() => {
+        setActiveSessionId(DEFAULT_VISIBLE_SESSION_ID);
+      })
+      .catch((err) => {
+        console.error('default session create failed', err);
+      });
+  }, [activeSessionId, fetchSessionList, realSessionIds, registerSession, sessionListLoaded]);
 
   const switchSession = async (nextSessionId) => {
     const sanitized = sanitizeSessionId(nextSessionId) || FIXED_SESSION_ID;
@@ -719,6 +774,10 @@ lastLiveSnapshotRef.current = '';
     }
 
     await stopAudio();
+    const registered = await registerSession(sanitized);
+    if (!registered) return;
+
+    await fetchSessionList();
     setActiveSessionId(sanitized);
   };
 
@@ -733,14 +792,13 @@ lastLiveSnapshotRef.current = '';
     switchSession(value);
   };
 
-  const createOrJoinSession = () => {
+  const createOrJoinSession = async () => {
     const sanitized = sanitizeSessionId(newSessionName);
     if (!sanitized) return;
 
     setNewSessionName('');
     setShowNewSessionInput(false);
-    switchSession(sanitized);
-    fetchSessionList();
+    await switchSession(sanitized);
   };
 
   const feedItems = useMemo(() => {
@@ -848,10 +906,15 @@ lastLiveSnapshotRef.current = '';
               <label style={styles.sessionLabel}>
                 <span style={styles.sessionLabelText}>Session</span>
                 <select
-                  value={activeSessionId}
+                  value={sessionOptions.includes(activeSessionId) ? activeSessionId : ''}
                   onChange={handleSessionSelect}
                   style={styles.sessionSelect}
                 >
+                  {sessionOptions.length === 0 ? (
+                    <option value="" disabled>
+                      Create a session
+                    </option>
+                  ) : null}
                   {sessionOptions.map((id) => (
                     <option key={id} value={id}>
                       {id}
@@ -871,7 +934,7 @@ lastLiveSnapshotRef.current = '';
                         createOrJoinSession();
                       }
                     }}
-                    placeholder="temple-name"
+                    placeholder="session name"
                     style={styles.newSessionInput}
                   />
                   <button
