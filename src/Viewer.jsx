@@ -9,6 +9,22 @@ const POLL_MS = 3000;
 const INITIAL_VISIBLE_COUNT = 24;
 const LOAD_MORE_STEP = 24;
 const MAX_VISIBLE_COUNT = 500;
+const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+function getViewerSessionId(pathname = window.location.pathname) {
+  const suffix = pathname.replace(/^\/viewer\/?/, '');
+  if (!suffix) return FIXED_SESSION_ID;
+
+  const parts = suffix.split('/').filter(Boolean);
+  if (parts.length !== 1) return FIXED_SESSION_ID;
+
+  try {
+    const decoded = decodeURIComponent(parts[0]).trim();
+    return SESSION_ID_PATTERN.test(decoded) ? decoded : FIXED_SESSION_ID;
+  } catch {
+    return FIXED_SESSION_ID;
+  }
+}
 
 function formatTime(value) {
   if (!value) return '—';
@@ -36,6 +52,7 @@ function formatDate(value) {
 }
 
 export default function Viewer() {
+  const sessionId = useMemo(() => getViewerSessionId(), []);
   const scrollRef = useRef(null);
   const wsRef = useRef(null);
   const reconnectTimerRef = useRef(null);
@@ -85,7 +102,7 @@ export default function Viewer() {
 
   const fetchSession = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/session/${FIXED_SESSION_ID}`, {
+      const res = await fetch(`${API}/api/session/${encodeURIComponent(sessionId)}`, {
         cache: 'no-store',
       });
 
@@ -105,7 +122,7 @@ export default function Viewer() {
       setStatus((prev) => (prev === 'Live via WebSocket' ? prev : 'Connection problem'));
       setError('Could not reach the live session API.');
     }
-  }, []);
+  }, [sessionId]);
 
   useEffect(() => {
     let timer = null;
@@ -162,7 +179,7 @@ export default function Viewer() {
 
             return {
               ...(prev || {}),
-              id: prev?.id || FIXED_SESSION_ID,
+              id: prev?.id || sessionId,
               eventMode: prev?.eventMode || 'Dharma Talk',
               lines: [incoming, ...deduped],
             };
@@ -223,7 +240,7 @@ export default function Viewer() {
       try {
         setSocketState('Connecting…');
         const ws = new WebSocket(
-          `${WS_URL}?viewer=1&sessionId=${encodeURIComponent(FIXED_SESSION_ID)}`
+          `${WS_URL}?viewer=1&sessionId=${encodeURIComponent(sessionId)}`
         );
         wsRef.current = ws;
 
@@ -259,7 +276,7 @@ export default function Viewer() {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (wsRef.current) wsRef.current.close();
     };
-  }, [fetchSession]);
+  }, [fetchSession, sessionId]);
 
   const lines = useMemo(() => {
     const raw = Array.isArray(session?.lines) ? session.lines : [];

@@ -8,6 +8,18 @@ import micIcon from './assets/mic.svg';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8787/ws';
 const FIXED_SESSION_ID = 'live-session';
+const DEFAULT_SESSION_OPTIONS = ['live-session', 'temple-a', 'temple-b'];
+const NEW_SESSION_VALUE = '__new_session__';
+
+function sanitizeSessionId(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9_-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^[-_]+|[-_]+$/g, '');
+}
 
 function deriveTranslationRoute(sourceLanguage, targetLanguage) {
   const source = String(sourceLanguage || '').toLowerCase();
@@ -44,7 +56,7 @@ export default function App() {
     return <Review />;
   }
 
-  if (path === '/viewer') {
+  if (path === '/viewer' || path.startsWith('/viewer/')) {
     return <Viewer />;
   }
 
@@ -57,6 +69,9 @@ export default function App() {
   });
   const [activeAudioMode, setActiveAudioMode] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState(FIXED_SESSION_ID);
+  const [showNewSessionInput, setShowNewSessionInput] = useState(false);
+  const [newSessionName, setNewSessionName] = useState('');
 
 const [liveChinese, setLiveChinese] = useState('');
 const [liveEnglish, setLiveEnglish] = useState('');
@@ -82,10 +97,12 @@ const reconnectTimerRef = useRef(null);
 const shouldReconnectRef = useRef(false);
 const manualStopRef = useRef(false);
 const audioRunIdRef = useRef(0);
+const pendingReconnectModeRef = useRef(null);
 const liveConfigRef = useRef({
   sourceLanguage: 'Mandarin',
   targetLanguage: 'English',
   translationRoute: 'zh_en',
+  sessionId: FIXED_SESSION_ID,
 });
 const lastTranslatedChineseRef = useRef('');
 const transcriptFeedRef = useRef(null);
@@ -126,7 +143,16 @@ const lastLiveSnapshotRef = useRef('');
   useEffect(() => {
     const init = async () => {
       try {
-        const existing = await fetch(`${API}/api/session/${FIXED_SESSION_ID}`);
+        setSession(null);
+        setHistoryLines([]);
+        setLiveChinese('');
+        setLiveEnglish('');
+        setRollingBrainState(null);
+        setBrainStateHistory([]);
+        lastTranslatedChineseRef.current = '';
+        lastLiveSnapshotRef.current = '';
+
+        const existing = await fetch(`${API}/api/session/${activeSessionId}`);
         if (existing.ok) {
           const data = await existing.json();
           setSession(data);
@@ -140,7 +166,7 @@ const lastLiveSnapshotRef = useRef('');
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id: FIXED_SESSION_ID,
+            id: activeSessionId,
             title: 'TBS Live Session',
             eventMode: 'Dharma Talk',
             sourceLanguage: 'Mandarin',
@@ -160,14 +186,14 @@ const lastLiveSnapshotRef = useRef('');
     };
 
     init();
-  }, []);
+  }, [activeSessionId]);
 
   useEffect(() => {
     if (!session?.id) return;
 
     const sync = async () => {
       try {
-        const res = await fetch(`${API}/api/session/${FIXED_SESSION_ID}`);
+        const res = await fetch(`${API}/api/session/${activeSessionId}`);
         if (!res.ok) return;
         const latest = await res.json();
 
@@ -183,7 +209,7 @@ const lastLiveSnapshotRef = useRef('');
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id: FIXED_SESSION_ID,
+            id: activeSessionId,
             title: session.title || 'TBS Live Session',
             eventMode: session.eventMode || 'Dharma Talk',
             sourceLanguage,
@@ -202,7 +228,7 @@ const lastLiveSnapshotRef = useRef('');
     };
 
     sync();
-  }, [session?.id, session?.title, session?.eventMode, sourceLanguage, targetLanguage, translationRoute]);
+  }, [activeSessionId, session?.id, session?.title, session?.eventMode, sourceLanguage, targetLanguage, translationRoute]);
 
   const downsampleBuffer = (buffer, inputRate, outputRate) => {
     if (inputRate === outputRate) return buffer;
@@ -262,6 +288,7 @@ const lastLiveSnapshotRef = useRef('');
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             rawCn: text,
+            sessionId: activeSessionId,
             sourceLanguage,
             targetLanguage,
             translationRoute,
@@ -341,7 +368,10 @@ const lastLiveSnapshotRef = useRef('');
       );
 
       const currentRoute = liveConfigRef.current.translationRoute;
-      const ws = new WebSocket(`${WS_URL}?route=${encodeURIComponent(currentRoute)}`);
+      const currentSessionId = liveConfigRef.current.sessionId || FIXED_SESSION_ID;
+      const ws = new WebSocket(
+        `${WS_URL}?route=${encodeURIComponent(currentRoute)}&sessionId=${encodeURIComponent(currentSessionId)}`
+      );
       ws.binaryType = 'arraybuffer';
       wsRef.current = ws;
 
@@ -590,7 +620,7 @@ const lastLiveSnapshotRef = useRef('');
 };
 
   const copyViewerLink = async () => {
-    const url = `${window.location.origin}/viewer`;
+    const url = `${window.location.origin}/viewer/${encodeURIComponent(activeSessionId)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -602,7 +632,7 @@ const lastLiveSnapshotRef = useRef('');
 
   const clearHistory = async () => {
     try {
-      await fetch(`${API}/api/session/${FIXED_SESSION_ID}/clear`, {
+      await fetch(`${API}/api/session/${encodeURIComponent(activeSessionId)}/clear`, {
         method: 'POST',
       });
 
@@ -640,6 +670,50 @@ lastLiveSnapshotRef.current = '';
   const isListening = status === 'listening';
   const isMicActive = isListening && activeAudioMode === 'mic';
   const isSystemActive = isListening && activeAudioMode === 'system';
+  const isAudioActive =
+    status === 'requesting_mic' ||
+    status === 'requesting_system' ||
+    status === 'ws_open' ||
+    status === 'listening' ||
+    status === 'reconnecting';
+  const sessionOptions = useMemo(() => {
+    const options = new Set(DEFAULT_SESSION_OPTIONS);
+    options.add(activeSessionId);
+    return Array.from(options);
+  }, [activeSessionId]);
+
+  const switchSession = async (nextSessionId) => {
+    const sanitized = sanitizeSessionId(nextSessionId) || FIXED_SESSION_ID;
+    if (sanitized === activeSessionId) return;
+
+    const reconnectMode = isAudioActive ? activeAudioMode || 'mic' : null;
+    if (reconnectMode) {
+      pendingReconnectModeRef.current = reconnectMode;
+    }
+
+    await stopAudio();
+    setActiveSessionId(sanitized);
+  };
+
+  const handleSessionSelect = (event) => {
+    const value = event.target.value;
+    if (value === NEW_SESSION_VALUE) {
+      setShowNewSessionInput(true);
+      return;
+    }
+
+    setShowNewSessionInput(false);
+    switchSession(value);
+  };
+
+  const createOrJoinSession = () => {
+    const sanitized = sanitizeSessionId(newSessionName);
+    if (!sanitized) return;
+
+    setNewSessionName('');
+    setShowNewSessionInput(false);
+    switchSession(sanitized);
+  };
 
   const feedItems = useMemo(() => {
     const items = [];
@@ -699,12 +773,23 @@ lastLiveSnapshotRef.current = '';
   }, [feedItems]);
 
   useEffect(() => {
+    if (!session?.id || session.id !== activeSessionId) return;
+
+    const reconnectMode = pendingReconnectModeRef.current;
+    if (!reconnectMode) return;
+
+    pendingReconnectModeRef.current = null;
+    startAudio(reconnectMode);
+  }, [activeSessionId, session?.id]);
+
+  useEffect(() => {
   liveConfigRef.current = {
     sourceLanguage,
     targetLanguage,
     translationRoute,
+    sessionId: activeSessionId,
   };
-}, [sourceLanguage, targetLanguage, translationRoute]);
+}, [activeSessionId, sourceLanguage, targetLanguage, translationRoute]);
 
   if (!session) {
     return (
@@ -731,6 +816,49 @@ lastLiveSnapshotRef.current = '';
           <h1 style={styles.title}>True Buddha School Live Translation</h1>
 
           <div style={styles.headerActions}>
+            <div style={styles.sessionControl}>
+              <label style={styles.sessionLabel}>
+                <span style={styles.sessionLabelText}>Session</span>
+                <select
+                  value={activeSessionId}
+                  onChange={handleSessionSelect}
+                  style={styles.sessionSelect}
+                >
+                  {sessionOptions.map((id) => (
+                    <option key={id} value={id}>
+                      {id}
+                    </option>
+                  ))}
+                  <option value={NEW_SESSION_VALUE}>+ New session</option>
+                </select>
+              </label>
+
+              {showNewSessionInput ? (
+                <div style={styles.newSessionRow}>
+                  <input
+                    value={newSessionName}
+                    onChange={(event) => setNewSessionName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        createOrJoinSession();
+                      }
+                    }}
+                    placeholder="temple-name"
+                    style={styles.newSessionInput}
+                  />
+                  <button
+                    type="button"
+                    onClick={createOrJoinSession}
+                    style={styles.tinyButton}
+                  >
+                    Create / Join
+                  </button>
+                </div>
+              ) : null}
+
+              <div style={styles.viewerLinkHint}>/viewer/{activeSessionId}</div>
+            </div>
+
             <div style={styles.actionButtons}>
               <button onClick={copyViewerLink} style={styles.primaryButton}>
                 {copied ? 'Viewer link copied' : 'Copy viewer link'}
@@ -970,10 +1098,69 @@ const styles = {
   headerActions: {
     marginTop: '18px',
     display: 'flex',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     gap: '12px',
     alignItems: 'center',
     flexWrap: 'wrap',
+  },
+  sessionControl: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+  sessionLabel: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  sessionLabelText: {
+    color: '#8d8d95',
+    fontSize: '11px',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+  sessionSelect: {
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#fff',
+    borderRadius: '999px',
+    padding: '10px 12px',
+    fontSize: '13px',
+    fontWeight: 800,
+    outline: 'none',
+  },
+  newSessionRow: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  newSessionInput: {
+    width: '150px',
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.08)',
+    color: '#fff',
+    borderRadius: '999px',
+    padding: '10px 12px',
+    fontSize: '13px',
+    fontWeight: 700,
+    outline: 'none',
+  },
+  tinyButton: {
+    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'rgba(255,255,255,0.08)',
+    color: '#fff',
+    borderRadius: '999px',
+    padding: '10px 12px',
+    fontSize: '12px',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  viewerLinkHint: {
+    color: '#8d8d95',
+    fontSize: '12px',
+    fontWeight: 700,
   },
   actionButtons: {
     display: 'flex',
