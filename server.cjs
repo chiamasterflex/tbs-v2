@@ -2096,7 +2096,8 @@ app.post('/api/session/:id/line', async (req, res) => {
 app.post('/api/translate-interim', async (req, res) => {
   const rawCn = (req.body?.rawCn || '').trim();
   const eventMode = req.body?.eventMode || 'Dharma Talk';
-  const session = getOrCreateSession('live-session');
+  const sessionId = req.body?.sessionId || 'live-session';
+  const session = getOrCreateSession(sessionId);
   const routeKey = req.body?.translationRoute || session.translationRoute || deriveTranslationRoute(req.body?.sourceLanguage, req.body?.targetLanguage);
 
   if (!rawCn) return res.json({ en: '', normalizedCn: '', hits: [] });
@@ -2180,6 +2181,7 @@ app.post('/api/translate-interim', async (req, res) => {
     hits,
     retrieval,
     inputMode: prepared.inputMode,
+    sessionId,
     translationMeta,
   });
 });
@@ -2303,7 +2305,7 @@ wss.on('connection', async (browserWs, req) => {
     const session = getOrCreateSession(sessionId);
     session.translationRoute = session.translationRoute || deriveTranslationRoute(session.sourceLanguage, session.targetLanguage);
     if (browserWs.readyState === 1) {
-      browserWs.send(JSON.stringify({ type: 'session', session }));
+      browserWs.send(JSON.stringify({ type: 'session', session, sessionId }));
     }
 
     browserWs.on('close', () => {
@@ -2445,6 +2447,7 @@ wss.on('connection', async (browserWs, req) => {
 
     const payload = {
       type: 'brain_state',
+      sessionId,
       routeKey,
       translationRoute: routeKey,
       brainState: {
@@ -2614,9 +2617,9 @@ wss.on('connection', async (browserWs, req) => {
           lastInterimSourceSent = '';
           lastInterimSentAt = 0;
 
-          sendToBrowser({ type: 'final', line, routeKey, translationRoute: routeKey });
-          broadcastToViewers(sessionId, { type: 'final', line, routeKey, translationRoute: routeKey });
-          broadcastToViewers(sessionId, { type: 'session', session: activeSession });
+          sendToBrowser({ type: 'final', line, sessionId, routeKey, translationRoute: routeKey });
+          broadcastToViewers(sessionId, { type: 'final', line, sessionId, routeKey, translationRoute: routeKey });
+          broadcastToViewers(sessionId, { type: 'session', session: activeSession, sessionId });
           queueRollingContextUpdate();
         } else {
           const now = Date.now();
@@ -2633,6 +2636,7 @@ wss.on('connection', async (browserWs, req) => {
 
             const livePayload = {
               type: 'live_cn',
+              sessionId,
               text: rawText,
               rawCn: rawText,
               cn: normalizedCn,
