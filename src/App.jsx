@@ -127,6 +127,14 @@ function getPublicSessionStatus(entry) {
   return status === 'live' || status === 'listening' ? 'LIVE' : 'Idle';
 }
 
+function formatAdminRole(role) {
+  return role === 'super_admin' ? 'Super Admin' : 'Admin';
+}
+
+function formatAdminStatus(status) {
+  return status === 'disabled' ? 'Disabled' : 'Active';
+}
+
 function isProductSessionId(sessionId) {
   const id = sanitizeSessionId(sessionId);
   return Boolean(id && id !== FIXED_SESSION_ID && id !== 'main');
@@ -222,7 +230,210 @@ function PublicSessionsList() {
   );
 }
 
-function AuthBadge({ email, roleLabel, onLogout, compact = false }) {
+function SuperAdminPanel({ open, onClose, currentUserId }) {
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminRole, setAdminRole] = useState('admin');
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [adminFeedback, setAdminFeedback] = useState('');
+
+  const loadAdminUsers = useCallback(async () => {
+    if (!supabase) return;
+
+    setAdminLoading(true);
+    setAdminFeedback('');
+
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('email,role,status,created_at,created_by')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAdminUsers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('admin users load failed', err);
+      setAdminFeedback(err?.message || 'Could not load admin users.');
+    } finally {
+      setAdminLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    loadAdminUsers();
+  }, [loadAdminUsers, open]);
+
+  const addAdminUser = async () => {
+    const normalizedEmail = String(adminEmail || '').trim().toLowerCase();
+    if (!normalizedEmail || !supabase) return;
+
+    setAdminSaving(true);
+    setAdminFeedback('');
+
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .upsert(
+          {
+            email: normalizedEmail,
+            role: adminRole,
+            status: 'active',
+            created_by: currentUserId || null,
+          },
+          { onConflict: 'email' }
+        );
+
+      if (error) throw error;
+      setAdminEmail('');
+      setAdminRole('admin');
+      setAdminFeedback('Admin user saved.');
+      await loadAdminUsers();
+    } catch (err) {
+      console.error('admin user save failed', err);
+      setAdminFeedback(err?.message || 'Could not save admin user.');
+    } finally {
+      setAdminSaving(false);
+    }
+  };
+
+  const updateAdminUser = async (email, patch) => {
+    if (!supabase) return;
+
+    setAdminSaving(true);
+    setAdminFeedback('');
+
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .update(patch)
+        .eq('email', email);
+
+      if (error) throw error;
+      setAdminFeedback('Admin user updated.');
+      await loadAdminUsers();
+    } catch (err) {
+      console.error('admin user update failed', err);
+      setAdminFeedback(err?.message || 'Could not update admin user.');
+    } finally {
+      setAdminSaving(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div style={styles.adminOverlay}>
+      <div style={styles.adminPanel}>
+        <div style={styles.adminPanelHeader}>
+          <div>
+            <div style={styles.adminPanelTitle}>Manage admins</div>
+            <div style={styles.adminPanelSubtitle}>Super Admin only</div>
+          </div>
+          <button type="button" onClick={onClose} style={styles.tinyButtonMuted}>
+            Close
+          </button>
+        </div>
+
+        <div style={styles.adminForm}>
+          <input
+            value={adminEmail}
+            onChange={(event) => setAdminEmail(event.target.value)}
+            placeholder="email@example.com"
+            style={styles.adminInput}
+          />
+          <select
+            value={adminRole}
+            onChange={(event) => setAdminRole(event.target.value)}
+            style={styles.adminSelect}
+          >
+            <option value="admin">Admin</option>
+            <option value="super_admin">Super Admin</option>
+          </select>
+          <button
+            type="button"
+            onClick={addAdminUser}
+            disabled={adminSaving || !adminEmail.trim()}
+            style={{
+              ...styles.tinyButton,
+              ...((adminSaving || !adminEmail.trim()) ? styles.tinyButtonDisabled : null),
+            }}
+          >
+            Add
+          </button>
+        </div>
+
+        {adminFeedback ? <div style={styles.adminFeedback}>{adminFeedback}</div> : null}
+
+        <div style={styles.adminUsersList}>
+          {adminLoading ? <div style={styles.adminEmpty}>Loading admins...</div> : null}
+          {!adminLoading && adminUsers.length === 0 ? (
+            <div style={styles.adminEmpty}>No admin users found.</div>
+          ) : null}
+
+          {adminUsers.map((adminUser) => {
+            const isDisabled = adminUser.status === 'disabled';
+
+            return (
+              <div key={adminUser.email} style={styles.adminUserRow}>
+                <div style={styles.adminUserMain}>
+                  <div style={styles.adminUserEmail}>{adminUser.email}</div>
+                  <div style={styles.adminUserMeta}>
+                    <span>{formatAdminRole(adminUser.role)}</span>
+                    <span
+                      style={{
+                        ...styles.adminStatusPill,
+                        ...(isDisabled ? styles.adminStatusDisabled : null),
+                      }}
+                    >
+                      {formatAdminStatus(adminUser.status)}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={styles.adminUserActions}>
+                  <select
+                    value={adminUser.role}
+                    onChange={(event) =>
+                      updateAdminUser(adminUser.email, { role: event.target.value })
+                    }
+                    disabled={adminSaving}
+                    style={styles.adminRowSelect}
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="super_admin">Super Admin</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateAdminUser(adminUser.email, {
+                        status: isDisabled ? 'active' : 'disabled',
+                      })
+                    }
+                    disabled={adminSaving}
+                    style={styles.tinyButtonMuted}
+                  >
+                    {isDisabled ? 'Reactivate' : 'Disable'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthBadge({
+  email,
+  roleLabel,
+  onLogout,
+  compact = false,
+  canManageAdmins = false,
+  onManageAdmins,
+}) {
   return (
     <div style={{ ...styles.authBadge, ...(compact ? styles.authBadgeCompact : null) }}>
       {compact ? (
@@ -234,6 +445,18 @@ function AuthBadge({ email, roleLabel, onLogout, compact = false }) {
           {roleLabel}: {email}
         </div>
       )}
+      {canManageAdmins ? (
+        <button
+          type="button"
+          onClick={onManageAdmins}
+          style={{
+            ...styles.authLogoutButton,
+            ...(compact ? styles.authLogoutButtonCompact : null),
+          }}
+        >
+          Admin
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={onLogout}
@@ -326,6 +549,7 @@ export default function App() {
   const [authSession, setAuthSession] = useState(null);
   const [roleReady, setRoleReady] = useState(true);
   const [dbRole, setDbRole] = useState(null);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -376,6 +600,7 @@ export default function App() {
   const userEmail = String(authSession?.user?.email || '').trim().toLowerCase();
   const fallbackRole = getFallbackRole(userEmail);
   const roleLabel = dbRole || fallbackRole;
+  const isSuperAdmin = roleLabel === 'Super Admin';
   const isAdminAuthorized = Boolean(
     authReady && roleReady && supabase && authSession && roleLabel
   );
@@ -1395,6 +1620,13 @@ lastLiveSnapshotRef.current = '';
           roleLabel={roleLabel}
           onLogout={logout}
           compact={isMobileViewport}
+          canManageAdmins={isSuperAdmin}
+          onManageAdmins={() => setAdminPanelOpen(true)}
+        />
+        <SuperAdminPanel
+          open={adminPanelOpen && isSuperAdmin}
+          onClose={() => setAdminPanelOpen(false)}
+          currentUserId={authSession?.user?.id}
         />
         <Study />
       </>
@@ -1409,6 +1641,13 @@ lastLiveSnapshotRef.current = '';
           roleLabel={roleLabel}
           onLogout={logout}
           compact={isMobileViewport}
+          canManageAdmins={isSuperAdmin}
+          onManageAdmins={() => setAdminPanelOpen(true)}
+        />
+        <SuperAdminPanel
+          open={adminPanelOpen && isSuperAdmin}
+          onClose={() => setAdminPanelOpen(false)}
+          currentUserId={authSession?.user?.id}
         />
         <Review />
       </>
@@ -1439,6 +1678,13 @@ lastLiveSnapshotRef.current = '';
           roleLabel={roleLabel}
           onLogout={logout}
           compact={isMobileViewport}
+          canManageAdmins={isSuperAdmin}
+          onManageAdmins={() => setAdminPanelOpen(true)}
+        />
+        <SuperAdminPanel
+          open={adminPanelOpen && isSuperAdmin}
+          onClose={() => setAdminPanelOpen(false)}
+          currentUserId={authSession?.user?.id}
         />
         <ToolTabs current="live" />
 
@@ -1805,7 +2051,7 @@ const styles = {
     overflow: 'hidden',
     overflowX: 'hidden',
     background:
-      'radial-gradient(circle at top, rgba(255,106,61,0.10) 0%, rgba(15,15,15,1) 42%), linear-gradient(180deg, #0b0b0c 0%, #121214 100%)',
+      'radial-gradient(circle at 50% 0%, rgba(255,107,53,0.18) 0%, rgba(255,107,53,0.075) 24%, rgba(13,13,14,0) 58%), radial-gradient(circle at 50% 26%, rgba(255,138,91,0.08) 0%, rgba(18,18,20,0) 48%), linear-gradient(180deg, #080809 0%, #111113 48%, #0b0b0c 100%)',
     padding: '20px 16px 108px',
     boxSizing: 'border-box',
     fontFamily:
@@ -1819,24 +2065,25 @@ const styles = {
   },
   bgOrbA: {
     position: 'absolute',
-    top: '-120px',
-    left: '-80px',
-    width: '300px',
-    height: '300px',
+    top: '-180px',
+    left: '50%',
+    width: '640px',
+    height: '360px',
     borderRadius: '999px',
-    background: 'rgba(255,107,53,0.10)',
-    filter: 'blur(60px)',
+    background: 'rgba(255,107,53,0.11)',
+    filter: 'blur(80px)',
+    transform: 'translateX(-50%)',
     pointerEvents: 'none',
   },
   bgOrbB: {
     position: 'absolute',
-    right: '-100px',
-    bottom: '-100px',
-    width: '320px',
-    height: '320px',
+    right: '10%',
+    top: '120px',
+    width: '360px',
+    height: '220px',
     borderRadius: '999px',
-    background: 'rgba(59,130,246,0.10)',
-    filter: 'blur(70px)',
+    background: 'rgba(255,138,91,0.045)',
+    filter: 'blur(82px)',
     pointerEvents: 'none',
   },
   shell: {
@@ -1917,6 +2164,166 @@ const styles = {
   authLogoutButtonCompact: {
     padding: '7px 8px',
     fontSize: '11px',
+  },
+  adminOverlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 1000,
+    display: 'grid',
+    alignItems: 'start',
+    justifyItems: 'center',
+    padding: '72px 14px 24px',
+    boxSizing: 'border-box',
+    overflowY: 'auto',
+    background: 'rgba(0,0,0,0.42)',
+    backdropFilter: 'blur(12px)',
+  },
+  adminPanel: {
+    width: '100%',
+    maxWidth: '720px',
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(18,18,20,0.92)',
+    borderRadius: '18px',
+    padding: '14px',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.42), 0 0 48px rgba(255,107,53,0.08)',
+    boxSizing: 'border-box',
+  },
+  adminPanelHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    flexWrap: 'wrap',
+  },
+  adminPanelTitle: {
+    color: '#fff',
+    fontSize: '16px',
+    fontWeight: 900,
+    lineHeight: 1.2,
+  },
+  adminPanelSubtitle: {
+    marginTop: '3px',
+    color: '#8d8d95',
+    fontSize: '11px',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+  adminForm: {
+    marginTop: '14px',
+    display: 'flex',
+    alignItems: 'stretch',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  adminInput: {
+    flex: '1 1 240px',
+    minWidth: 0,
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#fff',
+    borderRadius: '12px',
+    padding: '10px 12px',
+    fontSize: '13px',
+    fontWeight: 700,
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+  adminSelect: {
+    flex: '1 1 150px',
+    minWidth: 0,
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#fff',
+    borderRadius: '12px',
+    padding: '10px 12px',
+    fontSize: '13px',
+    fontWeight: 800,
+    outline: 'none',
+  },
+  adminFeedback: {
+    marginTop: '10px',
+    color: '#ff8a5b',
+    fontSize: '12px',
+    fontWeight: 800,
+  },
+  adminUsersList: {
+    marginTop: '12px',
+    display: 'grid',
+    gap: '8px',
+  },
+  adminEmpty: {
+    border: '1px dashed rgba(255,255,255,0.10)',
+    borderRadius: '14px',
+    padding: '12px',
+    color: '#8d8d95',
+    fontSize: '12px',
+    fontWeight: 800,
+  },
+  adminUserRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
+    flexWrap: 'wrap',
+    border: '1px solid rgba(255,255,255,0.07)',
+    background: 'rgba(0,0,0,0.18)',
+    borderRadius: '14px',
+    padding: '10px',
+  },
+  adminUserMain: {
+    minWidth: 0,
+    flex: '1 1 220px',
+  },
+  adminUserEmail: {
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: 900,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  adminUserMeta: {
+    marginTop: '5px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+    color: '#8d8d95',
+    fontSize: '11px',
+    fontWeight: 800,
+  },
+  adminStatusPill: {
+    border: '1px solid rgba(255,107,53,0.32)',
+    background: 'rgba(255,107,53,0.10)',
+    color: '#ff8a5b',
+    borderRadius: '999px',
+    padding: '4px 7px',
+    fontSize: '10px',
+    lineHeight: 1,
+    fontWeight: 900,
+  },
+  adminStatusDisabled: {
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.05)',
+    color: '#8d8d95',
+  },
+  adminUserActions: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  adminRowSelect: {
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#fff',
+    borderRadius: '999px',
+    padding: '10px 12px',
+    fontSize: '12px',
+    fontWeight: 800,
+    outline: 'none',
   },
   authShell: {
     width: '100%',
