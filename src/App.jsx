@@ -16,7 +16,6 @@ const FIXED_SESSION_ID = 'live-session';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const SUPER_ADMIN_EMAILS = parseEmailAllowlist(import.meta.env.VITE_SUPER_ADMIN_EMAILS);
-const ADMIN_EMAILS = parseEmailAllowlist(import.meta.env.VITE_ADMIN_EMAILS);
 const supabase =
   SUPABASE_URL && SUPABASE_ANON_KEY
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -35,11 +34,17 @@ function parseEmailAllowlist(value) {
   );
 }
 
-function getAllowedRole(email) {
+function getFallbackRole(email) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return null;
   if (SUPER_ADMIN_EMAILS.has(normalized)) return 'Super Admin';
-  if (ADMIN_EMAILS.has(normalized)) return 'Admin';
+  return null;
+}
+
+function formatDbRole(row) {
+  if (row?.status !== 'active') return null;
+  if (row?.role === 'super_admin') return 'Super Admin';
+  if (row?.role === 'admin') return 'Admin';
   return null;
 }
 
@@ -323,6 +328,8 @@ export default function App() {
 
   const [authReady, setAuthReady] = useState(false);
   const [authSession, setAuthSession] = useState(null);
+  const [roleReady, setRoleReady] = useState(true);
+  const [dbRole, setDbRole] = useState(null);
 
   useEffect(() => {
     const currentUrl = new URL(window.location.href);
@@ -388,8 +395,11 @@ export default function App() {
   }, []);
 
   const userEmail = authSession?.user?.email || '';
-  const roleLabel = getAllowedRole(userEmail);
-  const isAdminAuthorized = Boolean(authReady && supabase && authSession && roleLabel);
+  const fallbackRole = getFallbackRole(userEmail);
+  const roleLabel = dbRole || fallbackRole;
+  const isAdminAuthorized = Boolean(
+    authReady && roleReady && supabase && authSession && roleLabel
+  );
   const isLiveMode = path !== '/study' && path !== '/review';
 
   useEffect(() => {
@@ -398,9 +408,61 @@ export default function App() {
     logAuthDiagnostic('state', {
       hasSession: Boolean(authSession),
       userEmail: userEmail || null,
-      computedRole: roleLabel,
+      dbRole,
+      fallbackRole,
+      finalRole: roleLabel,
     });
-  }, [authReady, authSession, roleLabel, userEmail]);
+  }, [authReady, authSession, dbRole, fallbackRole, roleLabel, userEmail]);
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    if (!supabase || !authSession || !userEmail) {
+      setDbRole(null);
+      setRoleReady(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRole = async () => {
+      setRoleReady(false);
+
+      try {
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('role,status')
+          .eq('email', userEmail)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (error) {
+          console.error('admin role lookup failed', error);
+          setDbRole(null);
+          return;
+        }
+
+        setDbRole(formatDbRole(data));
+      } catch (err) {
+        if (!cancelled) {
+          console.error('admin role lookup failed', err);
+          setDbRole(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setRoleReady(true);
+        }
+      }
+    };
+
+    loadRole();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, authSession, userEmail]);
 
   const loginWithGoogle = useCallback(async () => {
     if (!supabase) return;
@@ -1328,7 +1390,7 @@ lastLiveSnapshotRef.current = '';
   };
 }, [activeSessionId, sourceLanguage, targetLanguage, translationRoute]);
 
-  if (!authReady) {
+  if (!authReady || (authSession && !roleReady)) {
     return <AuthGate mode="loading" email={userEmail} roleLabel={roleLabel} />;
   }
 
