@@ -44,6 +44,10 @@ function getAllowedRole(email) {
   return null;
 }
 
+function getIsMobileViewport() {
+  return window.matchMedia('(max-width: 720px)').matches;
+}
+
 function getAuthRedirectUrl() {
   return `${window.location.origin}${window.location.pathname}`;
 }
@@ -95,15 +99,41 @@ function formatTime(value) {
   });
 }
 
-function AuthBadge({ email, roleLabel, onLogout }) {
+function getInitials(email) {
+  const name = String(email || '').split('@')[0] || 'A';
   return (
-    <div style={styles.authBadge}>
-      <div>
-        <div style={styles.authEmail}>{email}</div>
-        <div style={styles.authRole}>{roleLabel}</div>
-      </div>
-      <button type="button" onClick={onLogout} style={styles.authLogoutButton}>
-        Logout
+    name
+      .split(/[._-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || 'A'
+  );
+}
+
+function AuthBadge({ email, roleLabel, onLogout, compact = false }) {
+  return (
+    <div style={{ ...styles.authBadge, ...(compact ? styles.authBadgeCompact : null) }}>
+      {compact ? (
+        <div style={styles.authInitials} title={`${roleLabel}: ${email}`}>
+          {getInitials(email)}
+        </div>
+      ) : (
+        <div style={styles.authBadgeText}>
+          {roleLabel}: {email}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onLogout}
+        style={{
+          ...styles.authLogoutButton,
+          ...(compact ? styles.authLogoutButtonCompact : null),
+        }}
+        aria-label="Logout"
+        title="Logout"
+      >
+        {compact ? 'Out' : 'Logout'}
       </button>
     </div>
   );
@@ -118,29 +148,45 @@ function AuthGate({ mode, email, roleLabel, onLogin, onLogout }) {
         ? 'Supabase auth is not configured'
         : isDenied
           ? 'Access not approved'
-          : 'Sign in';
+          : 'TBS Live Translation';
   const message =
     mode === 'loading'
       ? 'Checking access...'
       : mode === 'missing-config'
         ? 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable admin login.'
         : isDenied
-          ? `${email || 'This account'} is not in the admin allowlist.`
-          : 'Use Google to access Live, Study, and Review modes.';
+          ? 'This Google account is not currently approved for admin access.'
+          : 'For admins and translators only. Viewers do not need to sign in.';
 
   return (
     <div style={styles.page}>
       <div style={styles.bgOrbA} />
       <div style={styles.bgOrbB} />
-      <div style={styles.shell}>
+      <div style={{ ...styles.shell, ...styles.authShell }}>
+        {mode === 'login' ? (
+          <div style={styles.authIntro}>
+            <h1 style={styles.authHeroTitle}>TBS Live Translation</h1>
+            <p style={styles.authHeroSubtitle}>Real-time translation for temple sessions.</p>
+          </div>
+        ) : null}
         <div style={styles.authScreenCard}>
-          <h1 style={styles.authTitle}>{title}</h1>
+          <h1 style={styles.authTitle}>{mode === 'login' ? 'Sign in' : title}</h1>
           <p style={styles.authMessage}>{message}</p>
           {roleLabel ? <div style={styles.authRolePill}>{roleLabel}</div> : null}
           {mode === 'login' ? (
-            <button type="button" onClick={onLogin} style={styles.primaryButton}>
+            <button
+              type="button"
+              onClick={onLogin}
+              style={{ ...styles.primaryButton, ...styles.authPrimaryButton }}
+            >
               Continue with Google
             </button>
+          ) : null}
+          {mode === 'login' ? (
+            <div style={styles.authHelperCopy}>
+              <div>Don’t have access? Ask your temple admin to add your email.</div>
+              <div>Want to view a session? Use the viewer link shared with you.</div>
+            </div>
           ) : null}
           {isDenied ? (
             <button type="button" onClick={onLogout} style={styles.secondaryButtonDark}>
@@ -270,8 +316,10 @@ export default function App() {
   const [sessionListLoaded, setSessionListLoaded] = useState(false);
   const [showNewSessionInput, setShowNewSessionInput] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
-  const [newSessionEventMode, setNewSessionEventMode] = useState('Dharma Talk');
+  const [newSessionEventMode, setNewSessionEventMode] = useState('');
   const [newSessionRoute, setNewSessionRoute] = useState('zh_en');
+  const [isMobileViewport, setIsMobileViewport] = useState(getIsMobileViewport);
+  const [sessionsExpanded, setSessionsExpanded] = useState(() => !getIsMobileViewport());
 
 const [liveChinese, setLiveChinese] = useState('');
 const [liveEnglish, setLiveEnglish] = useState('');
@@ -341,6 +389,18 @@ const lastLiveSnapshotRef = useRef('');
     };
   }, []);
 
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 720px)');
+    const handleChange = () => setIsMobileViewport(media.matches);
+
+    handleChange();
+    media.addEventListener('change', handleChange);
+
+    return () => {
+      media.removeEventListener('change', handleChange);
+    };
+  }, []);
+
   const fetchSessionList = useCallback(async () => {
     if (!isAdminAuthorized || !isLiveMode) return [];
 
@@ -373,7 +433,7 @@ const lastLiveSnapshotRef = useRef('');
         body: JSON.stringify({
           id: sanitized,
           title: overrides.title || session?.title || 'TBS Live Session',
-          eventMode: overrides.eventMode || session?.eventMode || 'Dharma Talk',
+          eventMode: overrides.eventMode || session?.eventMode || 'Live Session',
           sourceLanguage: overrides.sourceLanguage || sourceLanguage,
           targetLanguage: overrides.targetLanguage || targetLanguage,
           translationRoute: overrides.translationRoute || translationRoute,
@@ -431,7 +491,7 @@ const lastLiveSnapshotRef = useRef('');
           body: JSON.stringify({
             id: activeSessionId,
             title: 'TBS Live Session',
-            eventMode: 'Dharma Talk',
+            eventMode: 'Live Session',
             sourceLanguage: 'Mandarin',
             targetLanguage: 'English',
             translationRoute: 'zh_en',
@@ -476,7 +536,7 @@ const lastLiveSnapshotRef = useRef('');
           body: JSON.stringify({
             id: activeSessionId,
             title: session.title || 'TBS Live Session',
-            eventMode: session.eventMode || 'Dharma Talk',
+            eventMode: session.eventMode || 'Live Session',
             sourceLanguage,
             targetLanguage,
             translationRoute,
@@ -1083,9 +1143,10 @@ lastLiveSnapshotRef.current = '';
     if (!registered) return;
 
     setNewSessionName('');
-    setNewSessionEventMode('Dharma Talk');
+    setNewSessionEventMode('');
     setNewSessionRoute('zh_en');
     setShowNewSessionInput(false);
+    setSessionsExpanded(true);
     await fetchSessionList();
     setActiveSessionId(sanitized);
   };
@@ -1201,7 +1262,12 @@ lastLiveSnapshotRef.current = '';
   if (path === '/study') {
     return (
       <>
-        <AuthBadge email={userEmail} roleLabel={roleLabel} onLogout={logout} />
+        <AuthBadge
+          email={userEmail}
+          roleLabel={roleLabel}
+          onLogout={logout}
+          compact={isMobileViewport}
+        />
         <Study />
       </>
     );
@@ -1210,7 +1276,12 @@ lastLiveSnapshotRef.current = '';
   if (path === '/review') {
     return (
       <>
-        <AuthBadge email={userEmail} roleLabel={roleLabel} onLogout={logout} />
+        <AuthBadge
+          email={userEmail}
+          roleLabel={roleLabel}
+          onLogout={logout}
+          compact={isMobileViewport}
+        />
         <Review />
       </>
     );
@@ -1235,11 +1306,18 @@ lastLiveSnapshotRef.current = '';
       <div style={styles.bgOrbB} />
 
       <div style={styles.shell}>
-        <AuthBadge email={userEmail} roleLabel={roleLabel} onLogout={logout} />
+        <AuthBadge
+          email={userEmail}
+          roleLabel={roleLabel}
+          onLogout={logout}
+          compact={isMobileViewport}
+        />
         <ToolTabs current="live" />
 
-        <div style={styles.headerCard}>
-          <h1 style={styles.title}>True Buddha School Live Translation</h1>
+        <div style={{ ...styles.headerCard, ...(isMobileViewport ? styles.headerCardMobile : null) }}>
+          <h1 style={{ ...styles.title, ...(isMobileViewport ? styles.titleMobile : null) }}>
+            True Buddha School Live Translation
+          </h1>
 
           <div style={styles.headerActions}>
             <div style={styles.actionButtons}>
@@ -1249,7 +1327,7 @@ lastLiveSnapshotRef.current = '';
             </div>
           </div>
 
-          <div style={styles.sessionsPanel}>
+          <div style={{ ...styles.sessionsPanel, ...(isMobileViewport ? styles.sessionsPanelMobile : null) }}>
             <div style={styles.sessionsPanelHeader}>
               <div>
                 <div style={styles.sessionsTitle}>Sessions</div>
@@ -1266,125 +1344,174 @@ lastLiveSnapshotRef.current = '';
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowNewSessionInput((value) => !value)}
-                style={styles.tinyButton}
-              >
-                + Create session
-              </button>
-            </div>
-
-            {showNewSessionInput ? (
-              <div style={styles.createSessionForm}>
-                <input
-                  value={newSessionName}
-                  onChange={(event) => setNewSessionName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      createOrJoinSession();
-                    }
-                  }}
-                  placeholder="Session name"
-                  style={styles.newSessionInput}
-                />
-                <input
-                  value={newSessionEventMode}
-                  onChange={(event) => setNewSessionEventMode(event.target.value)}
-                  placeholder="Event type"
-                  style={styles.newSessionInput}
-                />
-                <select
-                  value={newSessionRoute}
-                  onChange={(event) => setNewSessionRoute(event.target.value)}
-                  style={styles.sessionSelect}
+              <div style={styles.sessionHeaderActions}>
+                <button
+                  type="button"
+                  onClick={() => copyViewerLink(activeSessionId)}
+                  style={styles.tinyButtonMuted}
                 >
-                  <option value="zh_en">Mandarin to English</option>
-                  <option value="id_en">Bahasa Indonesia to English</option>
-                </select>
-                <button type="button" onClick={createOrJoinSession} style={styles.tinyButton}>
-                  Create
+                  {copiedSessionId === activeSessionId ? 'Copied' : 'Copy viewer link'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowNewSessionInput(false);
-                    setNewSessionName('');
-                  }}
-                  style={styles.tinyButtonMuted}
+                  onClick={() => setSessionsExpanded((value) => !value)}
+                  style={styles.tinyButton}
                 >
-                  Cancel
+                  {sessionsExpanded ? 'Hide sessions' : 'Show sessions'}
                 </button>
               </div>
-            ) : null}
+            </div>
 
-            <div style={styles.sessionRows}>
-              {visibleSessions.length === 0 ? (
-                <div style={styles.emptySessionRow}>Create a session to start.</div>
-              ) : null}
+            {sessionsExpanded ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowNewSessionInput((value) => !value)}
+                  style={styles.createSessionToggle}
+                >
+                  + Create session
+                </button>
 
-              {visibleSessions.map((entry) => {
-                const rowSessionId = getSessionId(entry);
-                const isSelected = rowSessionId === activeSessionId;
-                const statusLabel = getSessionStatusLabel(entry);
-                const isLive = statusLabel === 'LIVE';
-
-                return (
-                  <div
-                    key={rowSessionId}
-                    style={{
-                      ...styles.sessionRow,
-                      ...(isSelected ? styles.sessionRowActive : null),
-                    }}
-                  >
-                    <div style={styles.sessionRowMain}>
-                      <div style={styles.sessionRowTitle}>{getSessionDisplayName(entry)}</div>
-                      <div style={styles.sessionRowMeta}>
-                        <span
-                          style={{
-                            ...styles.sessionStatusPill,
-                            ...(isLive ? styles.sessionStatusLive : null),
-                          }}
-                        >
-                          {statusLabel}
-                        </span>
-                        <span>{entry?.lineCount || 0} lines</span>
-                        <span>{getSessionLanguageLabel(entry)}</span>
-                        <span>{formatTime(entry?.updatedAt)}</span>
-                      </div>
-                    </div>
-
-                    <div style={styles.sessionRowActions}>
+                {showNewSessionInput ? (
+                  <div style={styles.createSessionForm}>
+                    <input
+                      value={newSessionName}
+                      onChange={(event) => setNewSessionName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          createOrJoinSession();
+                        }
+                      }}
+                      placeholder="Session name"
+                      style={{
+                        ...styles.newSessionInput,
+                        ...(isMobileViewport ? styles.fullWidthControl : null),
+                      }}
+                    />
+                    <input
+                      value={newSessionEventMode}
+                      onChange={(event) => setNewSessionEventMode(event.target.value)}
+                      placeholder="Description"
+                      style={{
+                        ...styles.newSessionInput,
+                        ...(isMobileViewport ? styles.fullWidthControl : null),
+                      }}
+                    />
+                    <select
+                      value={newSessionRoute}
+                      onChange={(event) => setNewSessionRoute(event.target.value)}
+                      style={{
+                        ...styles.sessionSelect,
+                        ...(isMobileViewport ? styles.fullWidthControl : null),
+                      }}
+                    >
+                      <option value="zh_en">Mandarin to English</option>
+                      <option value="id_en">Bahasa Indonesia to English</option>
+                    </select>
+                    <div
+                      style={{
+                        ...styles.createSessionActions,
+                        ...(isMobileViewport ? styles.fullWidthControl : null),
+                      }}
+                    >
                       <button
                         type="button"
-                        onClick={() => switchSession(rowSessionId)}
-                        disabled={isSelected}
+                        onClick={createOrJoinSession}
                         style={{
                           ...styles.tinyButton,
-                          ...(isSelected ? styles.tinyButtonDisabled : null),
+                          ...(isMobileViewport ? styles.flexButton : null),
                         }}
                       >
-                        {isSelected ? 'Current' : 'Use'}
+                        Create
                       </button>
                       <button
                         type="button"
-                        onClick={() => copyViewerLink(rowSessionId)}
-                        style={styles.tinyButton}
+                        onClick={() => {
+                          setShowNewSessionInput(false);
+                          setNewSessionName('');
+                          setNewSessionEventMode('');
+                        }}
+                        style={{
+                          ...styles.tinyButtonMuted,
+                          ...(isMobileViewport ? styles.flexButton : null),
+                        }}
                       >
-                        {copiedSessionId === rowSessionId ? 'Copied' : 'Copy link'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openViewerLink(rowSessionId)}
-                        style={styles.tinyButtonMuted}
-                      >
-                        Open viewer
+                        Cancel
                       </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                ) : null}
+
+                <div style={styles.sessionRows}>
+                  {visibleSessions.length === 0 ? (
+                    <div style={styles.emptySessionRow}>Create a session to start.</div>
+                  ) : null}
+
+                  {visibleSessions.map((entry) => {
+                    const rowSessionId = getSessionId(entry);
+                    const isSelected = rowSessionId === activeSessionId;
+                    const statusLabel = getSessionStatusLabel(entry);
+                    const isLive = statusLabel === 'LIVE';
+
+                    return (
+                      <div
+                        key={rowSessionId}
+                        style={{
+                          ...styles.sessionRow,
+                          ...(isSelected ? styles.sessionRowActive : null),
+                          ...(isMobileViewport ? styles.sessionRowMobile : null),
+                        }}
+                      >
+                        <div style={styles.sessionRowMain}>
+                          <div style={styles.sessionRowTitle}>{getSessionDisplayName(entry)}</div>
+                          <div style={styles.sessionRowMeta}>
+                            <span
+                              style={{
+                                ...styles.sessionStatusPill,
+                                ...(isLive ? styles.sessionStatusLive : null),
+                              }}
+                            >
+                              {statusLabel}
+                            </span>
+                            <span>{entry?.lineCount || 0} lines</span>
+                            <span>{getSessionLanguageLabel(entry)}</span>
+                            <span>{formatTime(entry?.updatedAt)}</span>
+                          </div>
+                        </div>
+
+                        <div style={styles.sessionRowActions}>
+                          <button
+                            type="button"
+                            onClick={() => switchSession(rowSessionId)}
+                            disabled={isSelected}
+                            style={{
+                              ...styles.tinyButton,
+                              ...(isSelected ? styles.tinyButtonDisabled : null),
+                            }}
+                          >
+                            {isSelected ? 'Current' : 'Use'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyViewerLink(rowSessionId)}
+                            style={styles.tinyButton}
+                          >
+                            {copiedSessionId === rowSessionId ? 'Copied' : 'Copy link'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openViewerLink(rowSessionId)}
+                            style={styles.tinyButtonMuted}
+                          >
+                            Open viewer
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
           </div>
 
           <div style={styles.topStats}>
@@ -1596,7 +1723,7 @@ const styles = {
     fontWeight: 700,
   },
   authBadge: {
-    alignSelf: 'flex-end',
+    alignSelf: 'center',
     display: 'inline-flex',
     alignItems: 'center',
     gap: '12px',
@@ -1606,6 +1733,27 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.10)',
     color: '#fff',
     textAlign: 'left',
+  },
+  authBadgeCompact: {
+    alignSelf: 'flex-end',
+    gap: '8px',
+    padding: '6px',
+  },
+  authBadgeText: {
+    fontSize: '12px',
+    fontWeight: 800,
+    lineHeight: 1.2,
+  },
+  authInitials: {
+    width: '28px',
+    height: '28px',
+    display: 'grid',
+    placeItems: 'center',
+    borderRadius: '999px',
+    background: 'rgba(255,107,53,0.14)',
+    color: '#ff8a5b',
+    fontSize: '11px',
+    fontWeight: 900,
   },
   authEmail: {
     fontSize: '12px',
@@ -1630,14 +1778,43 @@ const styles = {
     fontWeight: 800,
     cursor: 'pointer',
   },
+  authLogoutButtonCompact: {
+    padding: '7px 8px',
+    fontSize: '11px',
+  },
+  authShell: {
+    minHeight: 'calc(100vh - 148px)',
+    justifyContent: 'center',
+    gap: '14px',
+  },
+  authIntro: {
+    width: '100%',
+    maxWidth: '420px',
+    margin: '0 auto',
+    textAlign: 'left',
+  },
+  authHeroTitle: {
+    margin: 0,
+    color: '#fff',
+    fontSize: '34px',
+    lineHeight: 1.05,
+    fontWeight: 900,
+  },
+  authHeroSubtitle: {
+    margin: '8px 0 0',
+    color: '#b7b7c0',
+    fontSize: '15px',
+    lineHeight: 1.4,
+    fontWeight: 700,
+  },
   authScreenCard: {
     width: '100%',
-    maxWidth: '460px',
-    margin: '12vh auto 0',
+    maxWidth: '420px',
+    margin: '0 auto',
     background: 'rgba(255,255,255,0.04)',
     border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: '24px',
-    padding: '24px',
+    borderRadius: '20px',
+    padding: '20px',
     textAlign: 'left',
     backdropFilter: 'blur(14px)',
   },
@@ -1667,6 +1844,18 @@ const styles = {
     fontSize: '12px',
     fontWeight: 800,
   },
+  authPrimaryButton: {
+    width: '100%',
+  },
+  authHelperCopy: {
+    display: 'grid',
+    gap: '6px',
+    marginTop: '14px',
+    color: '#8d8d95',
+    fontSize: '12px',
+    lineHeight: 1.35,
+    fontWeight: 700,
+  },
   headerCard: {
     background: 'rgba(255,255,255,0.04)',
     border: '1px solid rgba(255,255,255,0.08)',
@@ -1674,6 +1863,10 @@ const styles = {
     padding: '24px 22px',
     textAlign: 'left',
     backdropFilter: 'blur(14px)',
+  },
+  headerCardMobile: {
+    borderRadius: '22px',
+    padding: '18px 14px',
   },
   title: {
     margin: 0,
@@ -1683,6 +1876,10 @@ const styles = {
     fontWeight: 800,
     color: '#fff',
     textAlign: 'left',
+  },
+  titleMobile: {
+    fontSize: '30px',
+    lineHeight: 1.05,
   },
   headerActions: {
     marginTop: '18px',
@@ -1714,11 +1911,13 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.10)',
     background: 'rgba(255,255,255,0.06)',
     color: '#fff',
-    borderRadius: '999px',
+    borderRadius: '12px',
     padding: '10px 12px',
     fontSize: '13px',
     fontWeight: 800,
     outline: 'none',
+    flex: '1 1 190px',
+    minWidth: 0,
   },
   newSessionRow: {
     display: 'inline-flex',
@@ -1726,11 +1925,12 @@ const styles = {
     gap: '8px',
   },
   newSessionInput: {
-    width: '150px',
+    flex: '1 1 180px',
+    minWidth: 0,
     border: '1px solid rgba(255,255,255,0.10)',
     background: 'rgba(255,255,255,0.08)',
     color: '#fff',
-    borderRadius: '999px',
+    borderRadius: '12px',
     padding: '10px 12px',
     fontSize: '13px',
     fontWeight: 700,
@@ -1776,17 +1976,28 @@ const styles = {
     flexWrap: 'wrap',
   },
   sessionsPanel: {
-    marginTop: '18px',
+    marginTop: '14px',
     border: '1px solid rgba(255,255,255,0.08)',
     background: 'rgba(255,255,255,0.035)',
     borderRadius: '18px',
     padding: '14px',
+  },
+  sessionsPanelMobile: {
+    padding: '12px',
+    borderRadius: '16px',
   },
   sessionsPanelHeader: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: '12px',
+    flexWrap: 'wrap',
+  },
+  sessionHeaderActions: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '8px',
     flexWrap: 'wrap',
   },
   sessionsTitle: {
@@ -1808,9 +2019,32 @@ const styles = {
   createSessionForm: {
     marginTop: '12px',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'stretch',
     gap: '8px',
     flexWrap: 'wrap',
+  },
+  createSessionToggle: {
+    marginTop: '12px',
+    border: '1px solid rgba(255,107,53,0.22)',
+    background: 'rgba(255,107,53,0.10)',
+    color: '#ff8a5b',
+    borderRadius: '999px',
+    padding: '10px 12px',
+    fontSize: '12px',
+    fontWeight: 900,
+    cursor: 'pointer',
+  },
+  createSessionActions: {
+    display: 'flex',
+    gap: '8px',
+    flex: '1 1 160px',
+  },
+  fullWidthControl: {
+    width: '100%',
+    flex: '1 1 100%',
+  },
+  flexButton: {
+    flex: 1,
   },
   sessionRows: {
     marginTop: '12px',
@@ -1826,6 +2060,10 @@ const styles = {
     background: 'rgba(0,0,0,0.14)',
     borderRadius: '14px',
     padding: '10px',
+  },
+  sessionRowMobile: {
+    alignItems: 'stretch',
+    flexDirection: 'column',
   },
   sessionRowActive: {
     border: '1px solid rgba(255,107,53,0.35)',
