@@ -21,10 +21,6 @@ const supabase =
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
 
-function logAuthDiagnostic(label, details) {
-  console.info(`[auth] ${label}`, details);
-}
-
 function parseEmailAllowlist(value) {
   return new Set(
     String(value || '')
@@ -274,7 +270,7 @@ function AuthGate({ mode, email, roleLabel, onLogin, onLogout }) {
           : 'For admins and translators only. Viewers do not need to sign in.';
 
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, ...styles.authPage }}>
       <div style={styles.bgOrbA} />
       <div style={styles.bgOrbB} />
       <div style={{ ...styles.shell, ...styles.authShell }}>
@@ -332,15 +328,6 @@ export default function App() {
   const [dbRole, setDbRole] = useState(null);
 
   useEffect(() => {
-    const currentUrl = new URL(window.location.href);
-
-    logAuthDiagnostic('config', {
-      supabaseUrlPresent: Boolean(SUPABASE_URL),
-      supabaseKeyPresent: Boolean(SUPABASE_ANON_KEY),
-      currentLocationHref: window.location.href,
-      hasOAuthCode: currentUrl.searchParams.has('code'),
-    });
-
     if (!supabase) {
       setAuthReady(true);
       return undefined;
@@ -357,10 +344,6 @@ export default function App() {
           const { data, error } = await supabase.auth.exchangeCodeForSession(
             window.location.href
           );
-          logAuthDiagnostic('exchangeCodeForSession', {
-            success: !error,
-            message: error?.message || 'success',
-          });
           if (error) {
             console.error('supabase auth exchange failed', error);
           }
@@ -369,10 +352,6 @@ export default function App() {
           clearAuthQueryParams();
         } else {
           const { data } = await supabase.auth.getSession();
-          logAuthDiagnostic('getSession', {
-            hasSession: Boolean(data?.session),
-            userEmail: data?.session?.user?.email || null,
-          });
           if (!mounted) return;
           setAuthSession(data?.session || null);
         }
@@ -401,18 +380,6 @@ export default function App() {
     authReady && roleReady && supabase && authSession && roleLabel
   );
   const isLiveMode = path !== '/study' && path !== '/review';
-
-  useEffect(() => {
-    if (!authReady) return;
-
-    logAuthDiagnostic('state', {
-      hasSession: Boolean(authSession),
-      userEmail: userEmail || null,
-      dbRole,
-      fallbackRole,
-      finalRole: roleLabel,
-    });
-  }, [authReady, authSession, dbRole, fallbackRole, roleLabel, userEmail]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -1836,12 +1803,19 @@ const styles = {
     minHeight: '100vh',
     position: 'relative',
     overflow: 'hidden',
+    overflowX: 'hidden',
     background:
       'radial-gradient(circle at top, rgba(255,106,61,0.10) 0%, rgba(15,15,15,1) 42%), linear-gradient(180deg, #0b0b0c 0%, #121214 100%)',
     padding: '20px 16px 108px',
+    boxSizing: 'border-box',
     fontFamily:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     color: '#fff',
+  },
+  authPage: {
+    minHeight: '100svh',
+    padding:
+      'max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left))',
   },
   bgOrbA: {
     position: 'absolute',
@@ -1874,6 +1848,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
+    boxSizing: 'border-box',
   },
   loadingWrap: {
     minHeight: '50vh',
@@ -1944,27 +1919,34 @@ const styles = {
     fontSize: '11px',
   },
   authShell: {
-    minHeight: 'calc(100vh - 148px)',
-    justifyContent: 'center',
-    gap: '14px',
+    width: '100%',
+    maxWidth: '420px',
+    minHeight: 'calc(100svh - 40px)',
+    justifyContent: 'flex-start',
+    gap: '12px',
+    paddingTop: 'clamp(18px, 6vh, 64px)',
+    paddingBottom: '18px',
+    boxSizing: 'border-box',
   },
   authIntro: {
     width: '100%',
     maxWidth: '420px',
     margin: '0 auto',
     textAlign: 'left',
+    boxSizing: 'border-box',
   },
   authHeroTitle: {
     margin: 0,
     color: '#fff',
-    fontSize: '32px',
-    lineHeight: 1.05,
+    fontSize: 'clamp(24px, 7vw, 32px)',
+    lineHeight: 1.08,
     fontWeight: 900,
+    overflowWrap: 'break-word',
   },
   authHeroSubtitle: {
     margin: '8px 0 0',
     color: '#b7b7c0',
-    fontSize: '15px',
+    fontSize: 'clamp(13px, 3.7vw, 15px)',
     lineHeight: 1.4,
     fontWeight: 700,
   },
@@ -1972,10 +1954,11 @@ const styles = {
     width: '100%',
     maxWidth: '420px',
     margin: '0 auto',
+    boxSizing: 'border-box',
     background: 'rgba(255,255,255,0.04)',
     border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: '20px',
-    padding: '20px',
+    borderRadius: '16px',
+    padding: '16px',
     textAlign: 'left',
     backdropFilter: 'blur(14px)',
   },
@@ -2007,6 +1990,13 @@ const styles = {
   },
   authPrimaryButton: {
     width: '100%',
+    minHeight: '44px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxSizing: 'border-box',
+    textAlign: 'center',
+    whiteSpace: 'normal',
   },
   authHelperCopy: {
     marginTop: '14px',
@@ -2024,10 +2014,11 @@ const styles = {
     width: '100%',
     maxWidth: '420px',
     margin: '0 auto',
+    boxSizing: 'border-box',
     border: '1px solid rgba(255,255,255,0.08)',
     background: 'rgba(255,255,255,0.035)',
-    borderRadius: '18px',
-    padding: '14px',
+    borderRadius: '16px',
+    padding: '12px',
     textAlign: 'left',
   },
   publicSessionsTitle: {
@@ -2050,14 +2041,17 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: '10px',
     border: '1px solid rgba(255,255,255,0.07)',
     background: 'rgba(0,0,0,0.14)',
     borderRadius: '14px',
     padding: '10px',
+    boxSizing: 'border-box',
   },
   publicSessionMain: {
     minWidth: 0,
+    flex: '1 1 180px',
   },
   publicSessionName: {
     color: '#fff',
@@ -2078,7 +2072,7 @@ const styles = {
     fontWeight: 800,
   },
   publicSessionLink: {
-    flex: '0 0 auto',
+    flex: '1 1 120px',
     border: '1px solid rgba(255,107,53,0.22)',
     background: 'rgba(255,107,53,0.10)',
     color: '#ff8a5b',
@@ -2087,6 +2081,8 @@ const styles = {
     fontSize: '12px',
     fontWeight: 900,
     textDecoration: 'none',
+    textAlign: 'center',
+    boxSizing: 'border-box',
   },
   headerCard: {
     background: 'rgba(255,255,255,0.04)',
@@ -2363,6 +2359,7 @@ const styles = {
     fontWeight: 800,
     cursor: 'pointer',
     boxShadow: '0 10px 24px rgba(255,107,53,0.22)',
+    boxSizing: 'border-box',
   },
   secondaryButtonDark: {
     border: '1px solid rgba(255,255,255,0.10)',
