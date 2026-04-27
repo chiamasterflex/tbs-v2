@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Study from './Study';
 import Review from './Review';
@@ -14,6 +15,31 @@ const WS_URL =
 const FIXED_SESSION_ID = 'live-session';
 const DEFAULT_VISIBLE_SESSION_ID = 'main';
 const NEW_SESSION_VALUE = '__new_session__';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPER_ADMIN_EMAILS = parseEmailAllowlist(import.meta.env.VITE_SUPER_ADMIN_EMAILS);
+const ADMIN_EMAILS = parseEmailAllowlist(import.meta.env.VITE_ADMIN_EMAILS);
+const supabase =
+  SUPABASE_URL && SUPABASE_ANON_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+function parseEmailAllowlist(value) {
+  return new Set(
+    String(value || '')
+      .split(/[,\s]+/)
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+function getAllowedRole(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return null;
+  if (SUPER_ADMIN_EMAILS.has(normalized)) return 'Super Admin';
+  if (ADMIN_EMAILS.has(normalized)) return 'Admin';
+  return null;
+}
 
 function sanitizeSessionId(value) {
   return String(value || '')
@@ -49,20 +75,118 @@ function formatTime(value) {
   });
 }
 
+function AuthBadge({ email, roleLabel, onLogout }) {
+  return (
+    <div style={styles.authBadge}>
+      <div>
+        <div style={styles.authEmail}>{email}</div>
+        <div style={styles.authRole}>{roleLabel}</div>
+      </div>
+      <button type="button" onClick={onLogout} style={styles.authLogoutButton}>
+        Logout
+      </button>
+    </div>
+  );
+}
+
+function AuthGate({ mode, email, roleLabel, onLogin, onLogout }) {
+  const isDenied = mode === 'denied';
+  const title =
+    mode === 'loading'
+      ? 'Loading'
+      : mode === 'missing-config'
+        ? 'Supabase auth is not configured'
+        : isDenied
+          ? 'Access not approved'
+          : 'Sign in';
+  const message =
+    mode === 'loading'
+      ? 'Checking access...'
+      : mode === 'missing-config'
+        ? 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable admin login.'
+        : isDenied
+          ? `${email || 'This account'} is not in the admin allowlist.`
+          : 'Use Google to access Live, Study, and Review modes.';
+
+  return (
+    <div style={styles.page}>
+      <div style={styles.bgOrbA} />
+      <div style={styles.bgOrbB} />
+      <div style={styles.shell}>
+        <div style={styles.authScreenCard}>
+          <h1 style={styles.authTitle}>{title}</h1>
+          <p style={styles.authMessage}>{message}</p>
+          {roleLabel ? <div style={styles.authRolePill}>{roleLabel}</div> : null}
+          {mode === 'login' ? (
+            <button type="button" onClick={onLogin} style={styles.primaryButton}>
+              Continue with Google
+            </button>
+          ) : null}
+          {isDenied ? (
+            <button type="button" onClick={onLogout} style={styles.secondaryButtonDark}>
+              Logout
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const path = window.location.pathname;
-
-  if (path === '/study') {
-    return <Study />;
-  }
-
-  if (path === '/review') {
-    return <Review />;
-  }
 
   if (path === '/viewer' || path.startsWith('/viewer/')) {
     return <Viewer />;
   }
+
+  const [authReady, setAuthReady] = useState(false);
+  const [authSession, setAuthSession] = useState(null);
+
+  useEffect(() => {
+    if (!supabase) {
+      setAuthReady(true);
+      return undefined;
+    }
+
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setAuthSession(data?.session || null);
+      setAuthReady(true);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setAuthSession(nextSession);
+      setAuthReady(true);
+    });
+
+    return () => {
+      mounted = false;
+      data?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  const userEmail = authSession?.user?.email || '';
+  const roleLabel = getAllowedRole(userEmail);
+  const isAdminAuthorized = Boolean(authReady && supabase && authSession && roleLabel);
+  const isLiveMode = path !== '/study' && path !== '/review';
+
+  const loginWithGoogle = useCallback(async () => {
+    if (!supabase) return;
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href,
+      },
+    });
+  }, []);
+
+  const logout = useCallback(async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+  }, []);
 
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('idle');
@@ -148,6 +272,8 @@ const lastLiveSnapshotRef = useRef('');
   }, []);
 
   const fetchSessionList = useCallback(async () => {
+    if (!isAdminAuthorized || !isLiveMode) return [];
+
     try {
       const res = await fetch(`${API}/api/sessions`, { cache: 'no-store' });
       if (!res.ok) return;
@@ -164,10 +290,12 @@ const lastLiveSnapshotRef = useRef('');
     }
 
     return [];
-  }, []);
+  }, [isAdminAuthorized, isLiveMode]);
 
   const registerSession = useCallback(
     async (sessionId) => {
+      if (!isAdminAuthorized || !isLiveMode) return null;
+
       const sanitized = sanitizeSessionId(sessionId) || FIXED_SESSION_ID;
       const res = await fetch(`${API}/api/session`, {
         method: 'POST',
@@ -185,14 +313,26 @@ const lastLiveSnapshotRef = useRef('');
       if (!res.ok) return null;
       return res.json();
     },
-    [session?.eventMode, session?.title, sourceLanguage, targetLanguage, translationRoute]
+    [
+      isAdminAuthorized,
+      isLiveMode,
+      session?.eventMode,
+      session?.title,
+      sourceLanguage,
+      targetLanguage,
+      translationRoute,
+    ]
   );
 
   useEffect(() => {
+    if (!isAdminAuthorized || !isLiveMode) return;
+
     fetchSessionList();
-  }, [fetchSessionList]);
+  }, [fetchSessionList, isAdminAuthorized, isLiveMode]);
 
   useEffect(() => {
+    if (!isAdminAuthorized || !isLiveMode) return;
+
     const init = async () => {
       try {
         setSession(null);
@@ -240,9 +380,10 @@ const lastLiveSnapshotRef = useRef('');
     };
 
     init();
-  }, [activeSessionId, fetchSessionList]);
+  }, [activeSessionId, fetchSessionList, isAdminAuthorized, isLiveMode]);
 
   useEffect(() => {
+    if (!isAdminAuthorized || !isLiveMode) return;
     if (!session?.id) return;
 
     const sync = async () => {
@@ -282,7 +423,7 @@ const lastLiveSnapshotRef = useRef('');
     };
 
     sync();
-  }, [activeSessionId, session?.id, session?.title, session?.eventMode, sourceLanguage, targetLanguage, translationRoute]);
+  }, [activeSessionId, isAdminAuthorized, isLiveMode, session?.id, session?.title, session?.eventMode, sourceLanguage, targetLanguage, translationRoute]);
 
   const downsampleBuffer = (buffer, inputRate, outputRate) => {
     if (inputRate === outputRate) return buffer;
@@ -749,6 +890,7 @@ lastLiveSnapshotRef.current = '';
   }, [activeSessionId, realSessionIds]);
 
   useEffect(() => {
+    if (!isAdminAuthorized || !isLiveMode) return;
     if (!sessionListLoaded) return;
 
     if (realSessionIds.length > 0) {
@@ -769,7 +911,7 @@ lastLiveSnapshotRef.current = '';
       .catch((err) => {
         console.error('default session create failed', err);
       });
-  }, [activeSessionId, fetchSessionList, realSessionIds, registerSession, sessionListLoaded]);
+  }, [activeSessionId, fetchSessionList, isAdminAuthorized, isLiveMode, realSessionIds, registerSession, sessionListLoaded]);
 
   const switchSession = async (nextSessionId) => {
     const sanitized = sanitizeSessionId(nextSessionId) || FIXED_SESSION_ID;
@@ -868,12 +1010,14 @@ lastLiveSnapshotRef.current = '';
   }, [brainStateHistory, rollingBrainState]);
 
   useEffect(() => {
+    if (!isAdminAuthorized || !isLiveMode) return;
     const el = transcriptFeedRef.current;
     if (!el) return;
     el.scrollTop = 0;
-  }, [feedItems]);
+  }, [feedItems, isAdminAuthorized, isLiveMode]);
 
   useEffect(() => {
+    if (!isAdminAuthorized || !isLiveMode) return;
     if (!session?.id || session.id !== activeSessionId) return;
 
     const reconnectMode = pendingReconnectModeRef.current;
@@ -881,7 +1025,7 @@ lastLiveSnapshotRef.current = '';
 
     pendingReconnectModeRef.current = null;
     startAudio(reconnectMode);
-  }, [activeSessionId, session?.id]);
+  }, [activeSessionId, isAdminAuthorized, isLiveMode, session?.id]);
 
   useEffect(() => {
   liveConfigRef.current = {
@@ -891,6 +1035,54 @@ lastLiveSnapshotRef.current = '';
     sessionId: activeSessionId,
   };
 }, [activeSessionId, sourceLanguage, targetLanguage, translationRoute]);
+
+  if (!authReady) {
+    return <AuthGate mode="loading" email={userEmail} roleLabel={roleLabel} />;
+  }
+
+  if (!supabase) {
+    return <AuthGate mode="missing-config" email={userEmail} roleLabel={roleLabel} />;
+  }
+
+  if (!authSession) {
+    return (
+      <AuthGate
+        mode="login"
+        email={userEmail}
+        roleLabel={roleLabel}
+        onLogin={loginWithGoogle}
+      />
+    );
+  }
+
+  if (!roleLabel) {
+    return (
+      <AuthGate
+        mode="denied"
+        email={userEmail}
+        roleLabel={roleLabel}
+        onLogout={logout}
+      />
+    );
+  }
+
+  if (path === '/study') {
+    return (
+      <>
+        <AuthBadge email={userEmail} roleLabel={roleLabel} onLogout={logout} />
+        <Study />
+      </>
+    );
+  }
+
+  if (path === '/review') {
+    return (
+      <>
+        <AuthBadge email={userEmail} roleLabel={roleLabel} onLogout={logout} />
+        <Review />
+      </>
+    );
+  }
 
   if (!session) {
     return (
@@ -911,6 +1103,7 @@ lastLiveSnapshotRef.current = '';
       <div style={styles.bgOrbB} />
 
       <div style={styles.shell}>
+        <AuthBadge email={userEmail} roleLabel={roleLabel} onLogout={logout} />
         <ToolTabs current="live" />
 
         <div style={styles.headerCard}>
@@ -1184,6 +1377,78 @@ const styles = {
     color: '#fff',
     fontSize: '24px',
     fontWeight: 700,
+  },
+  authBadge: {
+    alignSelf: 'flex-end',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '9px 10px 9px 14px',
+    borderRadius: '999px',
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.10)',
+    color: '#fff',
+    textAlign: 'left',
+  },
+  authEmail: {
+    fontSize: '12px',
+    fontWeight: 800,
+    lineHeight: 1.2,
+  },
+  authRole: {
+    marginTop: '2px',
+    color: '#8d8d95',
+    fontSize: '11px',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+  authLogoutButton: {
+    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'rgba(255,255,255,0.08)',
+    color: '#fff',
+    borderRadius: '999px',
+    padding: '8px 10px',
+    fontSize: '12px',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  authScreenCard: {
+    width: '100%',
+    maxWidth: '460px',
+    margin: '12vh auto 0',
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '24px',
+    padding: '24px',
+    textAlign: 'left',
+    backdropFilter: 'blur(14px)',
+  },
+  authTitle: {
+    margin: 0,
+    color: '#fff',
+    fontSize: '30px',
+    lineHeight: 1.1,
+    fontWeight: 800,
+    letterSpacing: '-0.03em',
+    textAlign: 'left',
+  },
+  authMessage: {
+    margin: '12px 0 18px',
+    color: '#b7b7c0',
+    fontSize: '14px',
+    lineHeight: 1.45,
+    textAlign: 'left',
+  },
+  authRolePill: {
+    display: 'inline-flex',
+    marginBottom: '14px',
+    borderRadius: '999px',
+    background: 'rgba(255,255,255,0.08)',
+    color: '#fff',
+    padding: '8px 10px',
+    fontSize: '12px',
+    fontWeight: 800,
   },
   headerCard: {
     background: 'rgba(255,255,255,0.04)',

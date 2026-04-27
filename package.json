@@ -13,8 +13,9 @@
   },
   "dependencies": {
     "@deepgram/sdk": "^5.0.0",
-    "cross-fetch": "^4.1.0",
+    "@supabase/supabase-js": "^2.104.1",
     "cors": "^2.8.5",
+    "cross-fetch": "^4.1.0",
     "dotenv": "^17.3.1",
     "express": "^4.21.2",
     "lucide-react": "^0.577.0",
