@@ -708,6 +708,7 @@ export default function App() {
   const [newSessionName, setNewSessionName] = useState('');
   const [newSessionEventMode, setNewSessionEventMode] = useState('');
   const [newSessionRoute, setNewSessionRoute] = useState('zh_en');
+  const [newSessionError, setNewSessionError] = useState('');
   const [isMobileViewport, setIsMobileViewport] = useState(getIsMobileViewport);
   const [sessionsExpanded, setSessionsExpanded] = useState(() => !getIsMobileViewport());
 
@@ -813,34 +814,34 @@ const lastLiveSnapshotRef = useRef('');
 
   const registerSession = useCallback(
     async (sessionId, overrides = {}) => {
-      if (!isAdminAuthorized || !isLiveMode) return null;
+      if (!isAdminAuthorized || !isLiveMode) {
+        console.log('[session:create] blocked', { isAdminAuthorized, isLiveMode });
+        return null;
+      }
 
       const sanitized = sanitizeSessionId(sessionId) || FIXED_SESSION_ID;
+      const payload = {
+        id: sanitized,
+        title: overrides.title || 'Untitled session',
+        description: overrides.description || '',
+        eventMode: overrides.eventMode || overrides.description || '',
+        sourceLanguage: overrides.sourceLanguage,
+        targetLanguage: overrides.targetLanguage,
+        translationRoute: overrides.translationRoute,
+      };
+      console.log('[session:create] payload', payload);
+
       const res = await fetch(`${API}/api/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: sanitized,
-          title: overrides.title || session?.title || 'TBS Live Session',
-          eventMode: overrides.eventMode || session?.eventMode || 'Live Session',
-          sourceLanguage: overrides.sourceLanguage || sourceLanguage,
-          targetLanguage: overrides.targetLanguage || targetLanguage,
-          translationRoute: overrides.translationRoute || translationRoute,
-        }),
+        body: JSON.stringify(payload),
       });
 
+      console.log('[session:create] response', { ok: res.ok, status: res.status });
       if (!res.ok) return null;
       return res.json();
     },
-    [
-      isAdminAuthorized,
-      isLiveMode,
-      session?.eventMode,
-      session?.title,
-      sourceLanguage,
-      targetLanguage,
-      translationRoute,
-    ]
+    [isAdminAuthorized, isLiveMode]
   );
 
   useEffect(() => {
@@ -1548,6 +1549,12 @@ const lastLiveSnapshotRef = useRef('');
     }
   };
 
+  const toggleCreateSessionForm = () => {
+    console.log('[session:create] toggle form', { nextOpen: !showNewSessionInput });
+    setNewSessionError('');
+    setShowNewSessionInput((value) => !value);
+  };
+
   const endSession = async (sessionId) => {
     const sanitized = sanitizeSessionId(sessionId);
     if (!sanitized) return;
@@ -1625,8 +1632,18 @@ const lastLiveSnapshotRef = useRef('');
   };
 
   const createOrJoinSession = async () => {
+    console.log('[session:create] create clicked', {
+      name: newSessionName,
+      description: newSessionEventMode,
+      route: newSessionRoute,
+    });
+    setNewSessionError('');
+
     const sanitized = makeUniqueSessionId(newSessionName, backendSessionIds);
-    if (!sanitized) return;
+    if (!sanitized) {
+      setNewSessionError('Enter a session name.');
+      return;
+    }
 
     const routeConfig =
       newSessionRoute === 'id_en'
@@ -1646,19 +1663,26 @@ const lastLiveSnapshotRef = useRef('');
     }
 
     await stopAudio();
-    const registered = await registerSession(sanitized, {
+    const payload = {
       title: newSessionName.trim(),
-      eventMode: newSessionEventMode,
+      description: newSessionEventMode.trim(),
+      eventMode: newSessionEventMode.trim(),
       ...routeConfig,
-    });
-    if (!registered) return;
+    };
+    const registered = await registerSession(sanitized, payload);
+    if (!registered) {
+      setNewSessionError('Could not create session. Please try again.');
+      return;
+    }
 
     setNewSessionName('');
     setNewSessionEventMode('');
     setNewSessionRoute('zh_en');
+    setNewSessionError('');
     setShowNewSessionInput(false);
     setSessionsExpanded(true);
-    await fetchSessionList();
+    const refreshed = await fetchSessionList();
+    console.log('[session:create] refreshed sessions', refreshed);
     setActiveSessionId(sanitized);
   };
 
@@ -1883,7 +1907,7 @@ const lastLiveSnapshotRef = useRef('');
               <>
                 <button
                   type="button"
-                  onClick={() => setShowNewSessionInput((value) => !value)}
+                  onClick={toggleCreateSessionForm}
                   style={styles.createSessionToggle}
                 >
                   + Create session
@@ -1947,6 +1971,7 @@ const lastLiveSnapshotRef = useRef('');
                           setShowNewSessionInput(false);
                           setNewSessionName('');
                           setNewSessionEventMode('');
+                          setNewSessionError('');
                         }}
                         style={{
                           ...styles.tinyButtonMuted,
@@ -1956,6 +1981,9 @@ const lastLiveSnapshotRef = useRef('');
                         Cancel
                       </button>
                     </div>
+                    {newSessionError ? (
+                      <div style={styles.createSessionError}>{newSessionError}</div>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -2865,6 +2893,13 @@ const styles = {
     display: 'flex',
     gap: '8px',
     flex: '1 1 160px',
+  },
+  createSessionError: {
+    width: '100%',
+    color: '#ff8a5b',
+    fontSize: '12px',
+    fontWeight: 800,
+    lineHeight: 1.35,
   },
   fullWidthControl: {
     width: '100%',
