@@ -14,7 +14,6 @@ const WS_URL =
     : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`);
 const FIXED_SESSION_ID = 'live-session';
 const DEFAULT_VISIBLE_SESSION_ID = 'main';
-const NEW_SESSION_VALUE = '__new_session__';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const SUPER_ADMIN_EMAILS = parseEmailAllowlist(import.meta.env.VITE_SUPER_ADMIN_EMAILS);
@@ -265,12 +264,14 @@ export default function App() {
     lastBytes: 0,
   });
   const [activeAudioMode, setActiveAudioMode] = useState(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedSessionId, setCopiedSessionId] = useState(null);
   const [activeSessionId, setActiveSessionId] = useState(FIXED_SESSION_ID);
   const [availableSessions, setAvailableSessions] = useState([]);
   const [sessionListLoaded, setSessionListLoaded] = useState(false);
   const [showNewSessionInput, setShowNewSessionInput] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
+  const [newSessionEventMode, setNewSessionEventMode] = useState('Dharma Talk');
+  const [newSessionRoute, setNewSessionRoute] = useState('zh_en');
 
 const [liveChinese, setLiveChinese] = useState('');
 const [liveEnglish, setLiveEnglish] = useState('');
@@ -362,7 +363,7 @@ const lastLiveSnapshotRef = useRef('');
   }, [isAdminAuthorized, isLiveMode]);
 
   const registerSession = useCallback(
-    async (sessionId) => {
+    async (sessionId, overrides = {}) => {
       if (!isAdminAuthorized || !isLiveMode) return null;
 
       const sanitized = sanitizeSessionId(sessionId) || FIXED_SESSION_ID;
@@ -371,11 +372,11 @@ const lastLiveSnapshotRef = useRef('');
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: sanitized,
-          title: session?.title || 'TBS Live Session',
-          eventMode: session?.eventMode || 'Dharma Talk',
-          sourceLanguage,
-          targetLanguage,
-          translationRoute,
+          title: overrides.title || session?.title || 'TBS Live Session',
+          eventMode: overrides.eventMode || session?.eventMode || 'Dharma Talk',
+          sourceLanguage: overrides.sourceLanguage || sourceLanguage,
+          targetLanguage: overrides.targetLanguage || targetLanguage,
+          translationRoute: overrides.translationRoute || translationRoute,
         }),
       });
 
@@ -883,15 +884,19 @@ const lastLiveSnapshotRef = useRef('');
   setStatus('stopped');
 };
 
-  const copyViewerLink = async () => {
-    const url = `${window.location.origin}/viewer/${encodeURIComponent(activeSessionId)}`;
+  const copyViewerLink = async (sessionId = activeSessionId) => {
+    const url = `${window.location.origin}/viewer/${encodeURIComponent(sessionId)}`;
     try {
       await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
+      setCopiedSessionId(sessionId);
+      setTimeout(() => setCopiedSessionId(null), 1600);
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const openViewerLink = (sessionId = activeSessionId) => {
+    window.open(`/viewer/${encodeURIComponent(sessionId)}`, '_blank', 'noopener,noreferrer');
   };
 
   const clearHistory = async () => {
@@ -940,9 +945,18 @@ lastLiveSnapshotRef.current = '';
     status === 'ws_open' ||
     status === 'listening' ||
     status === 'reconnecting';
+
+  const getSessionId = (entry) => sanitizeSessionId(entry?.sessionId || entry?.id || '');
+  const getSessionDisplayName = (entry) => {
+    const id = getSessionId(entry);
+    const title = String(entry?.title || '').trim();
+    if (title && title !== 'TBS Live Session') return title;
+    return id || 'Session';
+  };
+
   const backendSessionIds = useMemo(() => {
     return availableSessions
-      .map((entry) => sanitizeSessionId(entry?.sessionId || entry?.id || ''))
+      .map((entry) => getSessionId(entry))
       .filter(Boolean);
   }, [availableSessions]);
 
@@ -950,13 +964,45 @@ lastLiveSnapshotRef.current = '';
     return backendSessionIds.filter((id) => id !== FIXED_SESSION_ID);
   }, [backendSessionIds]);
 
-  const sessionOptions = useMemo(() => {
-    const options = new Set(realSessionIds);
-    if (activeSessionId !== FIXED_SESSION_ID && realSessionIds.includes(activeSessionId)) {
-      options.add(activeSessionId);
+  const visibleSessions = useMemo(() => {
+    const rows = availableSessions.filter((entry) => {
+      const id = getSessionId(entry);
+      return id && (id !== FIXED_SESSION_ID || realSessionIds.length === 0);
+    });
+
+    return rows.sort((a, b) => {
+      const aId = getSessionId(a);
+      const bId = getSessionId(b);
+      if (aId === activeSessionId) return -1;
+      if (bId === activeSessionId) return 1;
+      return String(b?.updatedAt || '').localeCompare(String(a?.updatedAt || ''));
+    });
+  }, [activeSessionId, availableSessions, realSessionIds.length]);
+
+  const activeSessionSummary = useMemo(() => {
+    return visibleSessions.find((entry) => getSessionId(entry) === activeSessionId) || null;
+  }, [activeSessionId, visibleSessions]);
+
+  const currentSessionName = activeSessionSummary
+    ? getSessionDisplayName(activeSessionSummary)
+    : activeSessionId === FIXED_SESSION_ID
+      ? 'Default'
+      : activeSessionId;
+  const currentSessionIsLive = isAudioActive && status !== 'stopped' && status !== 'idle';
+  const getSessionStatusLabel = (entry) => {
+    const id = getSessionId(entry);
+    const backendStatus = String(entry?.status || '').toLowerCase();
+    if (id === activeSessionId && currentSessionIsLive) return 'LIVE';
+    if (backendStatus === 'live' || backendStatus === 'listening') return 'LIVE';
+    return 'Idle';
+  };
+  const getSessionLanguageLabel = (entry) => {
+    if (entry?.translationRoute) return entry.translationRoute;
+    if (entry?.sourceLanguage && entry?.targetLanguage) {
+      return `${entry.sourceLanguage} -> ${entry.targetLanguage}`;
     }
-    return Array.from(options);
-  }, [activeSessionId, realSessionIds]);
+    return 'zh_en';
+  };
 
   useEffect(() => {
     if (!isAdminAuthorized || !isLiveMode) return;
@@ -992,8 +1038,8 @@ lastLiveSnapshotRef.current = '';
     }
 
     await stopAudio();
-    const registered = await registerSession(sanitized);
-    if (!registered) return;
+    const registered = await fetch(`${API}/api/session/${encodeURIComponent(sanitized)}`);
+    if (!registered.ok) return;
 
     const refreshed = await fetchSessionList();
     const confirmed = Array.isArray(refreshed)
@@ -1007,24 +1053,41 @@ lastLiveSnapshotRef.current = '';
     }
   };
 
-  const handleSessionSelect = (event) => {
-    const value = event.target.value;
-    if (value === NEW_SESSION_VALUE) {
-      setShowNewSessionInput(true);
-      return;
-    }
-
-    setShowNewSessionInput(false);
-    switchSession(value);
-  };
-
   const createOrJoinSession = async () => {
     const sanitized = sanitizeSessionId(newSessionName);
     if (!sanitized) return;
 
+    const routeConfig =
+      newSessionRoute === 'id_en'
+        ? {
+            sourceLanguage: 'Bahasa Indonesia',
+            targetLanguage: 'English',
+            translationRoute: 'id_en',
+          }
+        : {
+            sourceLanguage: 'Mandarin',
+            targetLanguage: 'English',
+            translationRoute: 'zh_en',
+          };
+    const reconnectMode = isAudioActive ? activeAudioMode || 'mic' : null;
+    if (reconnectMode) {
+      pendingReconnectModeRef.current = reconnectMode;
+    }
+
+    await stopAudio();
+    const registered = await registerSession(sanitized, {
+      title: newSessionName.trim(),
+      eventMode: newSessionEventMode,
+      ...routeConfig,
+    });
+    if (!registered) return;
+
     setNewSessionName('');
+    setNewSessionEventMode('Dharma Talk');
+    setNewSessionRoute('zh_en');
     setShowNewSessionInput(false);
-    await switchSession(sanitized);
+    await fetchSessionList();
+    setActiveSessionId(sanitized);
   };
 
   const feedItems = useMemo(() => {
@@ -1179,63 +1242,148 @@ lastLiveSnapshotRef.current = '';
           <h1 style={styles.title}>True Buddha School Live Translation</h1>
 
           <div style={styles.headerActions}>
-            <div style={styles.sessionControl}>
-              <label style={styles.sessionLabel}>
-                <span style={styles.sessionLabelText}>Session</span>
-                <select
-                  value={sessionOptions.includes(activeSessionId) ? activeSessionId : ''}
-                  onChange={handleSessionSelect}
-                  style={styles.sessionSelect}
-                >
-                  {sessionOptions.length === 0 ? (
-                    <option value="" disabled>
-                      Create a session
-                    </option>
-                  ) : null}
-                  {sessionOptions.map((id) => (
-                    <option key={id} value={id}>
-                      {id}
-                    </option>
-                  ))}
-                  <option value={NEW_SESSION_VALUE}>+ New session</option>
-                </select>
-              </label>
-
-              {showNewSessionInput ? (
-                <div style={styles.newSessionRow}>
-                  <input
-                    value={newSessionName}
-                    onChange={(event) => setNewSessionName(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        createOrJoinSession();
-                      }
-                    }}
-                    placeholder="session name"
-                    style={styles.newSessionInput}
-                  />
-                  <button
-                    type="button"
-                    onClick={createOrJoinSession}
-                    style={styles.tinyButton}
-                  >
-                    Create / Join
-                  </button>
-                </div>
-              ) : null}
-
-              <div style={styles.viewerShareRow}>
-                <span style={styles.viewerLinkHint}>/viewer/{activeSessionId}</span>
-                <button type="button" onClick={copyViewerLink} style={styles.tinyButton}>
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-            </div>
-
             <div style={styles.actionButtons}>
               <button onClick={clearHistory} style={styles.secondaryButtonDark}>
                 Clear
               </button>
+            </div>
+          </div>
+
+          <div style={styles.sessionsPanel}>
+            <div style={styles.sessionsPanelHeader}>
+              <div>
+                <div style={styles.sessionsTitle}>Sessions</div>
+                <div style={styles.sessionsCurrent}>
+                  Current: {currentSessionName}
+                  <span
+                    style={{
+                      ...styles.sessionStatusPill,
+                      ...(currentSessionIsLive ? styles.sessionStatusLive : null),
+                    }}
+                  >
+                    {currentSessionIsLive ? 'LIVE' : 'Idle'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowNewSessionInput((value) => !value)}
+                style={styles.tinyButton}
+              >
+                + Create session
+              </button>
+            </div>
+
+            {showNewSessionInput ? (
+              <div style={styles.createSessionForm}>
+                <input
+                  value={newSessionName}
+                  onChange={(event) => setNewSessionName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      createOrJoinSession();
+                    }
+                  }}
+                  placeholder="Session name"
+                  style={styles.newSessionInput}
+                />
+                <input
+                  value={newSessionEventMode}
+                  onChange={(event) => setNewSessionEventMode(event.target.value)}
+                  placeholder="Event type"
+                  style={styles.newSessionInput}
+                />
+                <select
+                  value={newSessionRoute}
+                  onChange={(event) => setNewSessionRoute(event.target.value)}
+                  style={styles.sessionSelect}
+                >
+                  <option value="zh_en">Mandarin to English</option>
+                  <option value="id_en">Bahasa Indonesia to English</option>
+                </select>
+                <button type="button" onClick={createOrJoinSession} style={styles.tinyButton}>
+                  Create
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNewSessionInput(false);
+                    setNewSessionName('');
+                  }}
+                  style={styles.tinyButtonMuted}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : null}
+
+            <div style={styles.sessionRows}>
+              {visibleSessions.length === 0 ? (
+                <div style={styles.emptySessionRow}>Create a session to start.</div>
+              ) : null}
+
+              {visibleSessions.map((entry) => {
+                const rowSessionId = getSessionId(entry);
+                const isSelected = rowSessionId === activeSessionId;
+                const statusLabel = getSessionStatusLabel(entry);
+                const isLive = statusLabel === 'LIVE';
+
+                return (
+                  <div
+                    key={rowSessionId}
+                    style={{
+                      ...styles.sessionRow,
+                      ...(isSelected ? styles.sessionRowActive : null),
+                    }}
+                  >
+                    <div style={styles.sessionRowMain}>
+                      <div style={styles.sessionRowTitle}>{getSessionDisplayName(entry)}</div>
+                      <div style={styles.sessionRowMeta}>
+                        <span
+                          style={{
+                            ...styles.sessionStatusPill,
+                            ...(isLive ? styles.sessionStatusLive : null),
+                          }}
+                        >
+                          {statusLabel}
+                        </span>
+                        <span>{entry?.lineCount || 0} lines</span>
+                        <span>{getSessionLanguageLabel(entry)}</span>
+                        <span>{formatTime(entry?.updatedAt)}</span>
+                      </div>
+                    </div>
+
+                    <div style={styles.sessionRowActions}>
+                      <button
+                        type="button"
+                        onClick={() => switchSession(rowSessionId)}
+                        disabled={isSelected}
+                        style={{
+                          ...styles.tinyButton,
+                          ...(isSelected ? styles.tinyButtonDisabled : null),
+                        }}
+                      >
+                        {isSelected ? 'Current' : 'Use'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyViewerLink(rowSessionId)}
+                        style={styles.tinyButton}
+                      >
+                        {copiedSessionId === rowSessionId ? 'Copied' : 'Copy link'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openViewerLink(rowSessionId)}
+                        style={styles.tinyButtonMuted}
+                      >
+                        Open viewer
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -1598,6 +1746,20 @@ const styles = {
     fontWeight: 800,
     cursor: 'pointer',
   },
+  tinyButtonMuted: {
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'transparent',
+    color: '#b7b7c0',
+    borderRadius: '999px',
+    padding: '10px 12px',
+    fontSize: '12px',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  tinyButtonDisabled: {
+    opacity: 0.55,
+    cursor: 'default',
+  },
   viewerLinkHint: {
     color: '#8d8d95',
     fontSize: '12px',
@@ -1612,6 +1774,114 @@ const styles = {
     display: 'flex',
     gap: '10px',
     flexWrap: 'wrap',
+  },
+  sessionsPanel: {
+    marginTop: '18px',
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.035)',
+    borderRadius: '18px',
+    padding: '14px',
+  },
+  sessionsPanelHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    flexWrap: 'wrap',
+  },
+  sessionsTitle: {
+    color: '#fff',
+    fontSize: '15px',
+    fontWeight: 900,
+    lineHeight: 1.2,
+  },
+  sessionsCurrent: {
+    marginTop: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+    color: '#8d8d95',
+    fontSize: '12px',
+    fontWeight: 800,
+  },
+  createSessionForm: {
+    marginTop: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  sessionRows: {
+    marginTop: '12px',
+    display: 'grid',
+    gap: '8px',
+  },
+  sessionRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    border: '1px solid rgba(255,255,255,0.07)',
+    background: 'rgba(0,0,0,0.14)',
+    borderRadius: '14px',
+    padding: '10px',
+  },
+  sessionRowActive: {
+    border: '1px solid rgba(255,107,53,0.35)',
+    background: 'rgba(255,107,53,0.08)',
+  },
+  sessionRowMain: {
+    minWidth: 0,
+  },
+  sessionRowTitle: {
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: 900,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  sessionRowMeta: {
+    marginTop: '5px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+    color: '#8d8d95',
+    fontSize: '11px',
+    fontWeight: 800,
+  },
+  sessionStatusPill: {
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#b7b7c0',
+    borderRadius: '999px',
+    padding: '4px 7px',
+    fontSize: '10px',
+    lineHeight: 1,
+    fontWeight: 900,
+    letterSpacing: '0.04em',
+  },
+  sessionStatusLive: {
+    border: '1px solid rgba(255,107,53,0.42)',
+    background: 'rgba(255,107,53,0.14)',
+    color: '#ff8a5b',
+  },
+  sessionRowActions: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  emptySessionRow: {
+    border: '1px dashed rgba(255,255,255,0.10)',
+    borderRadius: '14px',
+    padding: '12px',
+    color: '#8d8d95',
+    fontSize: '12px',
+    fontWeight: 800,
   },
   primaryButton: {
     border: 'none',

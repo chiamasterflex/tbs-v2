@@ -259,6 +259,13 @@ function summarizeSession(session) {
   const lines = Array.isArray(session?.lines) ? session.lines : [];
   return {
     sessionId: session?.id || 'live-session',
+    title: session?.title || 'TBS Live Session',
+    eventMode: session?.eventMode || 'Dharma Talk',
+    sourceLanguage: session?.sourceLanguage || 'Mandarin',
+    targetLanguage: session?.targetLanguage || 'English',
+    translationRoute:
+      session?.translationRoute ||
+      deriveTranslationRoute(session?.sourceLanguage, session?.targetLanguage),
     createdAt: session?.createdAt || null,
     updatedAt: session?.updatedAt || lines[0]?.at || session?.createdAt || null,
     status: session?.status || 'idle',
