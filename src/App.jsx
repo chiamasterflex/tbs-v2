@@ -1796,43 +1796,51 @@ const lastLiveSnapshotRef = useRef('');
 
   if (path === '/study') {
     return (
-      <>
-        <AuthBadge
-          email={userEmail}
-          roleLabel={roleLabel}
-          onLogout={logout}
-          compact={isMobileViewport}
-          canManageAdmins={isSuperAdmin}
-          onManageAdmins={() => setAdminPanelOpen(true)}
-        />
-        <SuperAdminPanel
-          open={adminPanelOpen && isSuperAdmin}
-          onClose={() => setAdminPanelOpen(false)}
-          currentUserId={authSession?.user?.id}
-        />
-        <Study />
-      </>
+      <div style={styles.page}>
+        <div style={styles.bgOrbA} />
+        <div style={styles.bgOrbB} />
+        <div style={styles.shell}>
+          <AuthBadge
+            email={userEmail}
+            roleLabel={roleLabel}
+            onLogout={logout}
+            compact={isMobileViewport}
+            canManageAdmins={isSuperAdmin}
+            onManageAdmins={() => setAdminPanelOpen(true)}
+          />
+          <SuperAdminPanel
+            open={adminPanelOpen && isSuperAdmin}
+            onClose={() => setAdminPanelOpen(false)}
+            currentUserId={authSession?.user?.id}
+          />
+          <Study />
+        </div>
+      </div>
     );
   }
 
   if (path === '/review') {
     return (
-      <>
-        <AuthBadge
-          email={userEmail}
-          roleLabel={roleLabel}
-          onLogout={logout}
-          compact={isMobileViewport}
-          canManageAdmins={isSuperAdmin}
-          onManageAdmins={() => setAdminPanelOpen(true)}
-        />
-        <SuperAdminPanel
-          open={adminPanelOpen && isSuperAdmin}
-          onClose={() => setAdminPanelOpen(false)}
-          currentUserId={authSession?.user?.id}
-        />
-        <Review />
-      </>
+      <div style={styles.page}>
+        <div style={styles.bgOrbA} />
+        <div style={styles.bgOrbB} />
+        <div style={styles.shell}>
+          <AuthBadge
+            email={userEmail}
+            roleLabel={roleLabel}
+            onLogout={logout}
+            compact={isMobileViewport}
+            canManageAdmins={isSuperAdmin}
+            onManageAdmins={() => setAdminPanelOpen(true)}
+          />
+          <SuperAdminPanel
+            open={adminPanelOpen && isSuperAdmin}
+            onClose={() => setAdminPanelOpen(false)}
+            currentUserId={authSession?.user?.id}
+          />
+          <Review />
+        </div>
+      </div>
     );
   }
 
@@ -1938,17 +1946,34 @@ const lastLiveSnapshotRef = useRef('');
                         ...(isMobileViewport ? styles.fullWidthControl : null),
                       }}
                     />
-                    <select
-                      value={newSessionRoute}
-                      onChange={(event) => setNewSessionRoute(event.target.value)}
+                    <div
                       style={{
-                        ...styles.sessionSelect,
+                        ...styles.createRouteSelector,
                         ...(isMobileViewport ? styles.fullWidthControl : null),
                       }}
                     >
-                      <option value="zh_en">Mandarin to English</option>
-                      <option value="id_en">Bahasa Indonesia to English</option>
-                    </select>
+                      {[
+                        ['zh_en', 'Mandarin -> English'],
+                        ['id_en', 'Bahasa -> English'],
+                      ].map(([routeKey, label]) => {
+                        const isActive = newSessionRoute === routeKey;
+
+                        return (
+                          <button
+                            key={routeKey}
+                            type="button"
+                            onClick={() => setNewSessionRoute(routeKey)}
+                            style={{
+                              ...styles.createRouteOption,
+                              ...(isActive ? styles.createRouteOptionActive : null),
+                              ...(isMobileViewport ? styles.fullWidthControl : null),
+                            }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
                     <div
                       style={{
                         ...styles.createSessionActions,
@@ -2250,8 +2275,8 @@ const lastLiveSnapshotRef = useRef('');
 const styles = {
   page: {
     minHeight: '100vh',
+    width: '100%',
     position: 'relative',
-    overflow: 'hidden',
     overflowX: 'hidden',
     background:
       'radial-gradient(circle at 50% 0%, rgba(255,107,53,0.18) 0%, rgba(255,107,53,0.075) 24%, rgba(13,13,14,0) 58%), radial-gradient(circle at 50% 26%, rgba(255,138,91,0.08) 0%, rgba(18,18,20,0) 48%), linear-gradient(180deg, #080809 0%, #111113 48%, #0b0b0c 100%)',
@@ -2893,6 +2918,30 @@ const styles = {
     display: 'flex',
     gap: '8px',
     flex: '1 1 160px',
+  },
+  createRouteSelector: {
+    display: 'flex',
+    gap: '8px',
+    flex: '1 1 280px',
+    flexWrap: 'wrap',
+  },
+  createRouteOption: {
+    flex: '1 1 130px',
+    minHeight: '40px',
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.05)',
+    color: '#d9d9df',
+    borderRadius: '999px',
+    padding: '10px 12px',
+    fontSize: '12px',
+    fontWeight: 900,
+    cursor: 'pointer',
+    boxSizing: 'border-box',
+  },
+  createRouteOptionActive: {
+    border: '1px solid rgba(255,107,53,0.38)',
+    background: 'rgba(255,107,53,0.16)',
+    color: '#ff8a5b',
   },
   createSessionError: {
     width: '100%',
