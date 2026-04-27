@@ -1327,6 +1327,34 @@ const lastLiveSnapshotRef = useRef('');
     window.open(`/viewer/${encodeURIComponent(sessionId)}`, '_blank', 'noopener,noreferrer');
   };
 
+  const exportSession = async (sessionId = activeSessionId) => {
+    const sanitized = sanitizeSessionId(sessionId);
+    if (!sanitized) return;
+
+    try {
+      const res = await fetch(`${API}/api/session/${encodeURIComponent(sanitized)}/export.md`, {
+        cache: 'no-store',
+      });
+
+      if (!res.ok) {
+        throw new Error(`Export failed with status ${res.status}`);
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${sanitized}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('session export failed', err);
+      window.alert('Session export failed. Please try again.');
+    }
+  };
+
   const clearHistory = async () => {
     try {
       await fetch(`${API}/api/session/${encodeURIComponent(activeSessionId)}/clear`, {
@@ -1395,7 +1423,7 @@ lastLiveSnapshotRef.current = '';
   const visibleSessions = useMemo(() => {
     const rows = availableSessions.filter((entry) => {
       const id = getSessionId(entry);
-      return isProductSessionId(id);
+      return isProductSessionId(id) && !entry?.deletedAt && !entry?.deleted_at;
     });
 
     return rows.sort((a, b) => {
@@ -1420,10 +1448,16 @@ lastLiveSnapshotRef.current = '';
   const getSessionStatusLabel = (entry) => {
     const id = getSessionId(entry);
     const backendStatus = String(entry?.status || '').toLowerCase();
+    if (backendStatus === 'ended') return 'Ended';
     if (id === activeSessionId && currentSessionIsLive) return 'LIVE';
     if (backendStatus === 'live' || backendStatus === 'listening') return 'LIVE';
     return 'Idle';
   };
+  const currentSessionStatusLabel = activeSessionSummary
+    ? getSessionStatusLabel(activeSessionSummary)
+    : currentSessionIsLive
+      ? 'LIVE'
+      : 'Idle';
   const getSessionLanguageLabel = (entry) => {
     if (entry?.translationRoute) return entry.translationRoute;
     if (entry?.sourceLanguage && entry?.targetLanguage) {
@@ -1463,6 +1497,82 @@ lastLiveSnapshotRef.current = '';
 
     if (confirmed) {
       setActiveSessionId(sanitized);
+    }
+  };
+
+  const endSession = async (sessionId) => {
+    const sanitized = sanitizeSessionId(sessionId);
+    if (!sanitized) return;
+
+    const isCurrentSession = sanitized === activeSessionId;
+    if (
+      !window.confirm(
+        isCurrentSession && isAudioActive
+          ? 'Stop audio and end this session?'
+          : 'End this session?'
+      )
+    ) {
+      return;
+    }
+
+    if (isCurrentSession && isAudioActive) {
+      await stopAudio();
+    }
+
+    try {
+      const res = await fetch(`${API}/api/session/${encodeURIComponent(sanitized)}/end`, {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        throw new Error(`End session failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (isCurrentSession && data?.session) {
+        setSession((current) => ({ ...(current || {}), ...data.session }));
+      }
+      await fetchSessionList();
+    } catch (err) {
+      console.error('end session failed', err);
+      window.alert('Could not end this session. Please try again.');
+    }
+  };
+
+  const deleteSession = async (sessionId) => {
+    const sanitized = sanitizeSessionId(sessionId);
+    if (!sanitized) return;
+
+    if (!window.confirm('Remove this ended session from active lists? Transcript lines remain archived.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/api/session/${encodeURIComponent(sanitized)}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error(`Delete session failed with status ${res.status}`);
+      }
+
+      if (sanitized === activeSessionId) {
+        await stopAudio();
+        setActiveSessionId(FIXED_SESSION_ID);
+        setSession(null);
+        setHistoryLines([]);
+        setLiveChinese('');
+        setLiveEnglish('');
+        setRollingBrainState(null);
+        setBrainStateHistory([]);
+        lastTranslatedChineseRef.current = '';
+        lastLiveSnapshotRef.current = '';
+      }
+
+      await fetchSessionList();
+    } catch (err) {
+      console.error('delete session failed', err);
+      window.alert('Only ended sessions can be deleted.');
     }
   };
 
@@ -1702,10 +1812,10 @@ lastLiveSnapshotRef.current = '';
                   <span
                     style={{
                       ...styles.sessionStatusPill,
-                      ...(currentSessionIsLive ? styles.sessionStatusLive : null),
+                      ...(currentSessionStatusLabel === 'LIVE' ? styles.sessionStatusLive : null),
                     }}
                   >
-                    {currentSessionIsLive ? 'LIVE' : 'Idle'}
+                    {currentSessionStatusLabel}
                   </span>
                 </div>
               </div>
@@ -1821,6 +1931,7 @@ lastLiveSnapshotRef.current = '';
                     const isSelected = rowSessionId === activeSessionId;
                     const statusLabel = getSessionStatusLabel(entry);
                     const isLive = statusLabel === 'LIVE';
+                    const isEnded = statusLabel === 'Ended';
 
                     return (
                       <div
@@ -1874,6 +1985,30 @@ lastLiveSnapshotRef.current = '';
                           >
                             Open viewer
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => exportSession(rowSessionId)}
+                            style={styles.tinyButtonMuted}
+                          >
+                            Export
+                          </button>
+                          {isEnded ? (
+                            <button
+                              type="button"
+                              onClick={() => deleteSession(rowSessionId)}
+                              style={styles.tinyButtonMuted}
+                            >
+                              Delete
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => endSession(rowSessionId)}
+                              style={styles.tinyButtonMuted}
+                            >
+                              End session
+                            </button>
+                          )}
                         </div>
                       </div>
                     );

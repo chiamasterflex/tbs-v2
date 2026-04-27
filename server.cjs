@@ -207,6 +207,29 @@ function warnSupabaseFailure(label, err) {
   console.warn(`[Supabase] ${label} failed: ${message}`);
 }
 
+function escapeMarkdown(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/([*_`#[\]])/g, '\\$1');
+}
+
+function formatExportDate(value) {
+  if (!value) return 'Not set';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString();
+}
+
+function safeExportFilename(value) {
+  return (
+    String(value || 'session-export')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9_-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^[-_]+|[-_]+$/g, '') || 'session-export'
+  );
+}
+
 function persistLiveSession(session) {
   if (!supabase || !session?.id) return;
 
@@ -224,6 +247,7 @@ function persistLiveSession(session) {
     created_at: session.createdAt || new Date().toISOString(),
     updated_at: session.updatedAt || new Date().toISOString(),
     ended_at: session.endedAt || null,
+    deleted_at: session.deletedAt || null,
     created_by_email: session.createdByEmail || null,
   };
 
@@ -374,6 +398,7 @@ function getOrCreateSession(id = 'live-session', metadata = {}) {
       updatedAt: now,
       status: 'idle',
       endedAt: null,
+      deletedAt: null,
       createdByEmail: null,
       lines: [],
       brainState: {
@@ -414,6 +439,7 @@ function summarizeSession(session) {
     createdAt: session?.createdAt || null,
     updatedAt: session?.updatedAt || lines[0]?.at || session?.createdAt || null,
     endedAt: session?.endedAt || null,
+    deletedAt: session?.deletedAt || null,
     status: session?.status || 'idle',
     lineCount: lines.length,
   };
@@ -2160,7 +2186,7 @@ app.get('/api/session/:id', (req, res) => {
 
 app.get('/api/sessions', (req, res) => {
   res.set('Cache-Control', 'no-store');
-  res.json(sessions.map(summarizeSession));
+  res.json(sessions.filter((session) => !session.deletedAt).map(summarizeSession));
 });
 
 app.post('/api/session', (req, res) => {
@@ -2442,6 +2468,135 @@ app.post('/api/session/:id/clear', (req, res) => {
   persistLiveSession(session);
 
   res.json({ ok: true });
+});
+
+app.post('/api/session/:id/end', (req, res) => {
+  const { id } = req.params;
+  const session = sessions.find((s) => s.id === id);
+
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  persistSessionStatus(session, 'ended');
+
+  res.json({ ok: true, session: summarizeSession(session) });
+});
+
+app.delete('/api/session/:id', (req, res) => {
+  const { id } = req.params;
+  const session = sessions.find((s) => s.id === id);
+
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  if (session.status !== 'ended') {
+    return res.status(409).json({ error: 'Only ended sessions can be deleted' });
+  }
+
+  const now = new Date().toISOString();
+  session.deletedAt = now;
+  session.updatedAt = now;
+  persistLiveSession(session);
+
+  res.json({ ok: true, session: summarizeSession(session) });
+});
+
+app.get('/api/session/:id/export.md', async (req, res) => {
+  const { id } = req.params;
+
+  if (!supabase) {
+    return res.status(503).type('text/plain').send('Supabase export storage is not configured.');
+  }
+
+  try {
+    const { data: persistedSession, error: sessionError } = await supabase
+      .from('live_sessions')
+      .select('*')
+      .eq('session_id', id)
+      .maybeSingle();
+
+    if (sessionError) {
+      warnSupabaseFailure('live_sessions export fetch', sessionError);
+      return res.status(500).type('text/plain').send('Unable to export session.');
+    }
+
+    const memorySession = sessions.find((s) => s.id === id);
+    const session = persistedSession || (memorySession ? summarizeSession(memorySession) : null);
+
+    if (!session || session.deleted_at || session.deletedAt) {
+      return res.status(404).type('text/plain').send('Session not found.');
+    }
+
+    const { data: lines = [], error: linesError } = await supabase
+      .from('session_lines')
+      .select('*')
+      .eq('session_id', id)
+      .order('at', { ascending: true });
+
+    if (linesError) {
+      warnSupabaseFailure('session_lines export fetch', linesError);
+      return res.status(500).type('text/plain').send('Unable to export session lines.');
+    }
+
+    const title = session.title || session.sessionName || session.session_id || session.sessionId || id;
+    const description = session.description || session.event_mode || session.eventMode || '';
+    const sourceLanguage = session.source_language || session.sourceLanguage || 'Mandarin';
+    const targetLanguage = session.target_language || session.targetLanguage || 'English';
+    const translationRoute =
+      session.translation_route ||
+      session.translationRoute ||
+      deriveTranslationRoute(sourceLanguage, targetLanguage);
+    const status = session.status || 'idle';
+    const createdAt = session.created_at || session.createdAt;
+    const endedAt = session.ended_at || session.endedAt;
+
+    const markdown = [
+      `# ${escapeMarkdown(title)}`,
+      '',
+      description ? `**Description:** ${escapeMarkdown(description)}` : null,
+      `**Language:** ${escapeMarkdown(sourceLanguage)} -> ${escapeMarkdown(targetLanguage)}`,
+      `**Route:** ${escapeMarkdown(translationRoute)}`,
+      `**Status:** ${escapeMarkdown(status)}`,
+      `**Created:** ${escapeMarkdown(formatExportDate(createdAt))}`,
+      `**Ended:** ${escapeMarkdown(formatExportDate(endedAt))}`,
+      '',
+      '## Transcript',
+      '',
+      ...(lines.length
+        ? lines.flatMap((line, index) => {
+            const source = line.normalized_source || line.raw_source || '';
+            const rawSource =
+              line.raw_source && line.raw_source !== source ? line.raw_source : '';
+            return [
+              `### ${index + 1}. ${escapeMarkdown(formatExportDate(line.at))}`,
+              '',
+              '**Source**',
+              '',
+              source ? escapeMarkdown(source) : '_No source text recorded._',
+              rawSource ? '' : null,
+              rawSource ? `Raw source: ${escapeMarkdown(rawSource)}` : null,
+              '',
+              '**English**',
+              '',
+              line.english ? escapeMarkdown(line.english) : '_No English translation recorded._',
+              '',
+            ].filter((part) => part !== null);
+          })
+        : ['_No transcript lines were recorded for this session._', '']),
+    ]
+      .filter((part) => part !== null)
+      .join('\n');
+
+    const filename = `${safeExportFilename(title || id)}.md`;
+    res.set('Content-Type', 'text/markdown; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(markdown);
+  } catch (err) {
+    warnSupabaseFailure('session export', err);
+    res.status(500).type('text/plain').send('Unable to export session.');
+  }
 });
 const viewerClientsBySession = new Map();
 
