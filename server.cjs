@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const { DeepgramClient } = require('@deepgram/sdk');
+const { createClient } = require('@supabase/supabase-js');
 const fetch = require('cross-fetch');
 
 const app = express();
@@ -16,6 +17,8 @@ app.use(express.json());
 const PORT = process.env.PORT || 8787;
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DEEPGRAM_MODEL = process.env.DEEPGRAM_MODEL || 'nova-3';
 const DEEPSEEK_CHAT_COMPLETIONS_URL = 'https://api.deepseek.com/chat/completions';
 
@@ -25,6 +28,19 @@ if (!DEEPGRAM_API_KEY) {
 }
 
 const deepgram = new DeepgramClient({ apiKey: DEEPGRAM_API_KEY });
+const supabase =
+  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      })
+    : null;
+
+if (!supabase) {
+  console.warn('[Supabase] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY; archive persistence disabled');
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -186,6 +202,98 @@ const ROUTES = {
 
 const bahasaGlossary = Object.entries(glossaryIdEn).map(([cn, en]) => ({ cn, en }));
 
+function warnSupabaseFailure(label, err) {
+  const message = err?.message || String(err || 'unknown error');
+  console.warn(`[Supabase] ${label} failed: ${message}`);
+}
+
+function persistLiveSession(session) {
+  if (!supabase || !session?.id) return;
+
+  const row = {
+    session_id: session.id,
+    title: session.title || session.sessionName || 'TBS Live Session',
+    description: session.description || session.eventMode || '',
+    event_mode: session.eventMode || session.description || 'Dharma Talk',
+    translation_route:
+      session.translationRoute ||
+      deriveTranslationRoute(session.sourceLanguage, session.targetLanguage),
+    source_language: session.sourceLanguage || 'Mandarin',
+    target_language: session.targetLanguage || 'English',
+    status: session.status || 'idle',
+    created_at: session.createdAt || new Date().toISOString(),
+    updated_at: session.updatedAt || new Date().toISOString(),
+    ended_at: session.endedAt || null,
+    created_by_email: session.createdByEmail || null,
+  };
+
+  supabase
+    .from('live_sessions')
+    .upsert(row, { onConflict: 'session_id' })
+    .then(({ error }) => {
+      if (error) warnSupabaseFailure('live_sessions upsert', error);
+    })
+    .catch((err) => warnSupabaseFailure('live_sessions upsert', err));
+}
+
+function persistSessionStatus(session, status, extra = {}) {
+  if (!session) return;
+  const now = new Date().toISOString();
+  session.status = status;
+  session.updatedAt = now;
+  if (status === 'ended' && !session.endedAt) {
+    session.endedAt = now;
+  }
+  Object.assign(session, extra);
+  persistLiveSession(session);
+}
+
+function persistSessionLine(session, line, routeKey, retrieval) {
+  if (!supabase || !session?.id || !line) return;
+
+  const row = {
+    session_id: session.id,
+    at: line.at || new Date().toISOString(),
+    raw_source: line.rawCn || '',
+    normalized_source: line.normalizedCn || '',
+    english: line.en || '',
+    translation_route: routeKey || session.translationRoute || 'zh_en',
+    input_mode: line.inputMode || line.translationMeta?.inputMode || null,
+    translation_meta: line.translationMeta || null,
+    retrieval: retrieval || null,
+  };
+
+  supabase
+    .from('session_lines')
+    .insert(row)
+    .then(({ error }) => {
+      if (error) warnSupabaseFailure('session_lines insert', error);
+    })
+    .catch((err) => warnSupabaseFailure('session_lines insert', err));
+}
+
+function persistSessionBrainState(session) {
+  if (!supabase || !session?.id) return;
+
+  const brainState = ensureSessionBrainState(session);
+  const row = {
+    session_id: session.id,
+    brain_state: brainState,
+    rolling_summary: brainState.rollingSummary || '',
+    rolling_intent: brainState.rollingIntent || '',
+    rolling_topic: brainState.rollingTopic || '',
+    updated_at: brainState.rollingUpdatedAt || new Date().toISOString(),
+  };
+
+  supabase
+    .from('session_brain_state')
+    .upsert(row, { onConflict: 'session_id' })
+    .then(({ error }) => {
+      if (error) warnSupabaseFailure('session_brain_state upsert', error);
+    })
+    .catch((err) => warnSupabaseFailure('session_brain_state upsert', err));
+}
+
 function deriveTranslationRoute(sourceLanguage = 'Mandarin', targetLanguage = 'English') {
   const source = String(sourceLanguage || '').toLowerCase();
   const target = String(targetLanguage || '').toLowerCase();
@@ -219,7 +327,37 @@ function getDeepgramVocabularyOptions(routeConfig) {
 }
 
 
-function getOrCreateSession(id = 'live-session') {
+function applySessionMetadata(session, metadata = {}) {
+  if (!session || !metadata || typeof metadata !== 'object') return session;
+
+  if (metadata.title !== undefined || metadata.sessionName !== undefined) {
+    session.title = metadata.title || metadata.sessionName || session.title;
+  }
+  if (metadata.description !== undefined || metadata.eventMode !== undefined) {
+    const description = metadata.description ?? metadata.eventMode;
+    session.description = description || session.description || '';
+    session.eventMode = metadata.eventMode || description || session.eventMode;
+  }
+  if (metadata.sourceLanguage !== undefined) {
+    session.sourceLanguage = metadata.sourceLanguage || session.sourceLanguage;
+  }
+  if (metadata.targetLanguage !== undefined) {
+    session.targetLanguage = metadata.targetLanguage || session.targetLanguage;
+  }
+  if (metadata.translationRoute !== undefined || metadata.routeKey !== undefined) {
+    session.translationRoute = metadata.translationRoute || metadata.routeKey || session.translationRoute;
+  }
+  if (metadata.status !== undefined) {
+    session.status = metadata.status || session.status;
+  }
+  if (metadata.createdByEmail !== undefined || metadata.created_by_email !== undefined) {
+    session.createdByEmail = metadata.createdByEmail || metadata.created_by_email || session.createdByEmail;
+  }
+
+  return session;
+}
+
+function getOrCreateSession(id = 'live-session', metadata = {}) {
   let session = sessions.find((s) => s.id === id);
 
   if (!session) {
@@ -227,6 +365,7 @@ function getOrCreateSession(id = 'live-session') {
     session = {
       id,
       title: 'TBS Live Session',
+      description: 'Dharma Talk',
       eventMode: 'Dharma Talk',
       sourceLanguage: 'Mandarin',
       targetLanguage: 'English',
@@ -234,6 +373,8 @@ function getOrCreateSession(id = 'live-session') {
       createdAt: now,
       updatedAt: now,
       status: 'idle',
+      endedAt: null,
+      createdByEmail: null,
       lines: [],
       brainState: {
         activeTopic: null,
@@ -252,6 +393,9 @@ function getOrCreateSession(id = 'live-session') {
     sessions.unshift(session);
   }
 
+  applySessionMetadata(session, metadata);
+  persistLiveSession(session);
+
   return session;
 }
 
@@ -260,6 +404,7 @@ function summarizeSession(session) {
   return {
     sessionId: session?.id || 'live-session',
     title: session?.title || 'TBS Live Session',
+    description: session?.description || session?.eventMode || 'Dharma Talk',
     eventMode: session?.eventMode || 'Dharma Talk',
     sourceLanguage: session?.sourceLanguage || 'Mandarin',
     targetLanguage: session?.targetLanguage || 'English',
@@ -268,6 +413,7 @@ function summarizeSession(session) {
       deriveTranslationRoute(session?.sourceLanguage, session?.targetLanguage),
     createdAt: session?.createdAt || null,
     updatedAt: session?.updatedAt || lines[0]?.at || session?.createdAt || null,
+    endedAt: session?.endedAt || null,
     status: session?.status || 'idle',
     lineCount: lines.length,
   };
@@ -2019,7 +2165,7 @@ app.get('/api/sessions', (req, res) => {
 
 app.post('/api/session', (req, res) => {
   const requestedId = req.body?.id || 'live-session';
-  const session = getOrCreateSession(requestedId);
+  const session = getOrCreateSession(requestedId, req.body || {});
 
   const {
     title = session.title,
@@ -2030,11 +2176,17 @@ app.post('/api/session', (req, res) => {
   } = req.body || {};
 
   session.title = title;
+  session.description = req.body?.description ?? req.body?.eventMode ?? session.description;
   session.eventMode = eventMode;
   session.sourceLanguage = sourceLanguage;
   session.targetLanguage = targetLanguage;
   session.translationRoute = translationRoute;
   session.updatedAt = new Date().toISOString();
+  if (req.body?.createdByEmail || req.body?.created_by_email) {
+    session.createdByEmail = req.body.createdByEmail || req.body.created_by_email;
+  }
+
+  persistLiveSession(session);
 
   res.json(session);
 });
@@ -2118,6 +2270,8 @@ app.post('/api/session/:id/line', async (req, res) => {
   session.lines.unshift(line);
   session.lines = session.lines.slice(0, 100);
   session.updatedAt = line.at;
+  persistLiveSession(session);
+  persistSessionLine(session, line, routeKey, retrieval);
 
   res.json(line);
 });
@@ -2285,6 +2439,7 @@ app.post('/api/session/:id/clear', (req, res) => {
 
   session.lines = [];
   session.updatedAt = new Date().toISOString();
+  persistLiveSession(session);
 
   res.json({ ok: true });
 });
@@ -2361,11 +2516,11 @@ wss.on('connection', async (browserWs, req) => {
   let lastInterimSentAt = 0;
 
   const activeSession = getOrCreateSession(sessionId);
-  activeSession.status = 'listening';
-  activeSession.updatedAt = new Date().toISOString();
+  persistSessionStatus(activeSession, 'listening');
   const routeKey = requestedRouteKey || activeSession.translationRoute || deriveTranslationRoute(activeSession.sourceLanguage, activeSession.targetLanguage);
   const routeConfig = getRouteConfig(routeKey);
   activeSession.translationRoute = routeKey;
+  persistLiveSession(activeSession);
 
   console.log('[Browser] connected', routeKey, sessionId, {
     sourceLanguage: activeSession.sourceLanguage,
@@ -2502,6 +2657,7 @@ wss.on('connection', async (browserWs, req) => {
       rollingSummary: brainState.rollingSummary,
     });
 
+    persistSessionBrainState(activeSession);
     sendToBrowser(payload);
     broadcastToViewers(sessionId, payload);
   }
@@ -2646,6 +2802,8 @@ wss.on('connection', async (browserWs, req) => {
           activeSession.lines.unshift(line);
           activeSession.lines = activeSession.lines.slice(0, 100);
           activeSession.updatedAt = line.at;
+          persistLiveSession(activeSession);
+          persistSessionLine(activeSession, line, routeKey, retrieval);
 
           lastInterimSourceSent = '';
           lastInterimSentAt = 0;
@@ -2758,8 +2916,7 @@ wss.on('connection', async (browserWs, req) => {
 
   browserWs.on('close', () => {
     console.log('[Browser] disconnected');
-    activeSession.status = 'idle';
-    activeSession.updatedAt = new Date().toISOString();
+    persistSessionStatus(activeSession, 'idle');
     shutdown();
   });
 
