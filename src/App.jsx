@@ -41,6 +41,23 @@ function getAllowedRole(email) {
   return null;
 }
 
+function getAuthRedirectUrl() {
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+function clearAuthQueryParams() {
+  const url = new URL(window.location.href);
+  ['code', 'error', 'error_code', 'error_description'].forEach((key) => {
+    url.searchParams.delete(key);
+  });
+
+  window.history.replaceState(
+    {},
+    document.title,
+    `${url.pathname}${url.search}${url.hash}`
+  );
+}
+
 function sanitizeSessionId(value) {
   return String(value || '')
     .trim()
@@ -151,11 +168,32 @@ export default function App() {
 
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setAuthSession(data?.session || null);
-      setAuthReady(true);
-    });
+    const syncSession = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const hasOAuthCode = url.searchParams.has('code');
+
+        if (hasOAuthCode) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(
+            window.location.href
+          );
+          if (error) {
+            console.error('supabase auth exchange failed', error);
+          }
+          if (!mounted) return;
+          setAuthSession(data?.session || null);
+          clearAuthQueryParams();
+        } else {
+          const { data } = await supabase.auth.getSession();
+          if (!mounted) return;
+          setAuthSession(data?.session || null);
+        }
+      } finally {
+        if (mounted) setAuthReady(true);
+      }
+    };
+
+    syncSession();
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setAuthSession(nextSession);
@@ -178,7 +216,7 @@ export default function App() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.href,
+        redirectTo: getAuthRedirectUrl(),
       },
     });
   }, []);
