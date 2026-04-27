@@ -1838,7 +1838,9 @@ const lastLiveSnapshotRef = useRef('');
             currentUserId={authSession?.user?.id}
           />
         </div>
-        <Study />
+        <div className="study-review-embed">
+          <Study />
+        </div>
       </div>
     );
   }
@@ -1863,7 +1865,9 @@ const lastLiveSnapshotRef = useRef('');
             currentUserId={authSession?.user?.id}
           />
         </div>
-        <Review />
+        <div className="study-review-embed">
+          <Review />
+        </div>
       </div>
     );
   }

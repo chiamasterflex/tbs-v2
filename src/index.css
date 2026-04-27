@@ -108,6 +108,24 @@ body {
   box-sizing: border-box;
 }
 
+.study-review-embed {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.study-review-embed > div {
+  min-height: auto !important;
+  background: transparent !important;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+.study-review-embed > div > div:first-child,
+.study-review-embed > div > div:nth-child(2) {
+  display: none !important;
+}
+
 h1,
 h2 {
   font-family: var(--heading);
