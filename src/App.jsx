@@ -377,19 +377,18 @@ function SuperAdminPanel({ open, onClose, currentUserId }) {
 
             return (
               <div key={adminUser.email} style={styles.adminUserRow}>
-                <div style={styles.adminUserMain}>
-                  <div style={styles.adminUserEmail}>{adminUser.email}</div>
-                  <div style={styles.adminUserMeta}>
-                    <span>{formatAdminRole(adminUser.role)}</span>
-                    <span
-                      style={{
-                        ...styles.adminStatusPill,
-                        ...(isDisabled ? styles.adminStatusDisabled : null),
-                      }}
-                    >
-                      {formatAdminStatus(adminUser.status)}
-                    </span>
-                  </div>
+                <div style={styles.adminUserEmail}>{adminUser.email}</div>
+
+                <div style={styles.adminUserMeta}>
+                  <span>{formatAdminRole(adminUser.role)}</span>
+                  <span
+                    style={{
+                      ...styles.adminStatusPill,
+                      ...(isDisabled ? styles.adminStatusDisabled : null),
+                    }}
+                  >
+                    {formatAdminStatus(adminUser.status)}
+                  </span>
                 </div>
 
                 <div style={styles.adminUserActions}>
@@ -1374,19 +1373,26 @@ const lastLiveSnapshotRef = useRef('');
     }
   };
 
-  const clearHistory = async () => {
+  const clearHistory = async (sessionId = activeSessionId) => {
+    const sanitized = sanitizeSessionId(sessionId);
+    if (!sanitized) return;
+
     try {
-      await fetch(`${API}/api/session/${encodeURIComponent(activeSessionId)}/clear`, {
+      await fetch(`${API}/api/session/${encodeURIComponent(sanitized)}/clear`, {
         method: 'POST',
       });
 
-      setHistoryLines([]);
-setLiveChinese('');
-setLiveEnglish('');
-setRollingBrainState(null);
-setBrainStateHistory([]);
-lastTranslatedChineseRef.current = '';
-lastLiveSnapshotRef.current = '';
+      if (sanitized === activeSessionId) {
+        setHistoryLines([]);
+        setLiveChinese('');
+        setLiveEnglish('');
+        setRollingBrainState(null);
+        setBrainStateHistory([]);
+        lastTranslatedChineseRef.current = '';
+        lastLiveSnapshotRef.current = '';
+      }
+
+      await fetchSessionList();
     } catch (err) {
       console.error('clear history failed', err);
     }
@@ -1842,16 +1848,6 @@ lastLiveSnapshotRef.current = '';
               <div style={styles.sessionHeaderActions}>
                 <button
                   type="button"
-                  onClick={() => copyViewerLink(activeSessionId)}
-                  style={styles.tinyButtonMuted}
-                >
-                  {copiedSessionId === activeSessionId ? 'Copied' : 'Copy viewer link'}
-                </button>
-                <button type="button" onClick={clearHistory} style={styles.tinyButtonMuted}>
-                  Clear session
-                </button>
-                <button
-                  type="button"
                   onClick={() => setSessionsExpanded((value) => !value)}
                   style={styles.tinyButton}
                 >
@@ -2010,6 +2006,13 @@ lastLiveSnapshotRef.current = '';
                             style={styles.tinyButtonMuted}
                           >
                             Export
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => clearHistory(rowSessionId)}
+                            style={styles.tinyButtonMuted}
+                          >
+                            Clear session
                           </button>
                           {isEnded ? (
                             <button
@@ -2413,21 +2416,18 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '14px',
+    gap: '12px',
     flexWrap: 'wrap',
     border: '1px solid rgba(255,255,255,0.07)',
     background: 'rgba(0,0,0,0.18)',
     borderRadius: '14px',
     padding: '12px',
-    minHeight: '68px',
+    minHeight: '64px',
     boxSizing: 'border-box',
   },
   adminUserMain: {
-    display: 'grid',
-    alignContent: 'center',
-    gap: '5px',
     minWidth: 0,
-    flex: '1 1 300px',
+    flex: '1 1 100%',
   },
   adminUserEmail: {
     color: '#fff',
@@ -2436,15 +2436,21 @@ const styles = {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    minWidth: 0,
+    flex: '1 1 240px',
+    alignSelf: 'center',
   },
   adminUserMeta: {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'flex-start',
     gap: '8px',
     flexWrap: 'wrap',
     color: '#8d8d95',
     fontSize: '11px',
     fontWeight: 800,
+    flex: '0 1 auto',
+    alignSelf: 'center',
   },
   adminStatusPill: {
     border: '1px solid rgba(255,107,53,0.32)',
@@ -2469,6 +2475,7 @@ const styles = {
     flexWrap: 'wrap',
     flex: '0 0 auto',
     marginLeft: 'auto',
+    alignSelf: 'center',
   },
   adminRowSelect: {
     border: '1px solid rgba(255,255,255,0.10)',
