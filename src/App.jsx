@@ -24,6 +24,10 @@ const supabase =
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
 
+function logAuthDiagnostic(label, details) {
+  console.info(`[auth] ${label}`, details);
+}
+
 function parseEmailAllowlist(value) {
   return new Set(
     String(value || '')
@@ -161,6 +165,15 @@ export default function App() {
   const [authSession, setAuthSession] = useState(null);
 
   useEffect(() => {
+    const currentUrl = new URL(window.location.href);
+
+    logAuthDiagnostic('config', {
+      supabaseUrlPresent: Boolean(SUPABASE_URL),
+      supabaseKeyPresent: Boolean(SUPABASE_ANON_KEY),
+      currentLocationHref: window.location.href,
+      hasOAuthCode: currentUrl.searchParams.has('code'),
+    });
+
     if (!supabase) {
       setAuthReady(true);
       return undefined;
@@ -177,6 +190,10 @@ export default function App() {
           const { data, error } = await supabase.auth.exchangeCodeForSession(
             window.location.href
           );
+          logAuthDiagnostic('exchangeCodeForSession', {
+            success: !error,
+            message: error?.message || 'success',
+          });
           if (error) {
             console.error('supabase auth exchange failed', error);
           }
@@ -185,6 +202,10 @@ export default function App() {
           clearAuthQueryParams();
         } else {
           const { data } = await supabase.auth.getSession();
+          logAuthDiagnostic('getSession', {
+            hasSession: Boolean(data?.session),
+            userEmail: data?.session?.user?.email || null,
+          });
           if (!mounted) return;
           setAuthSession(data?.session || null);
         }
@@ -210,6 +231,16 @@ export default function App() {
   const roleLabel = getAllowedRole(userEmail);
   const isAdminAuthorized = Boolean(authReady && supabase && authSession && roleLabel);
   const isLiveMode = path !== '/study' && path !== '/review';
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    logAuthDiagnostic('state', {
+      hasSession: Boolean(authSession),
+      userEmail: userEmail || null,
+      computedRole: roleLabel,
+    });
+  }, [authReady, authSession, roleLabel, userEmail]);
 
   const loginWithGoogle = useCallback(async () => {
     if (!supabase) return;
