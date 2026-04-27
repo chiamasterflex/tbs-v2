@@ -2193,25 +2193,31 @@ app.get('/api/sessions', (req, res) => {
 
 app.post('/api/session', (req, res) => {
   const requestedId = req.body?.id || 'live-session';
-  const session = getOrCreateSession(requestedId, req.body || {});
+  const body = req.body || {};
+  const session = getOrCreateSession(requestedId);
 
-  const {
-    title = session.title,
-    eventMode = session.eventMode,
-    sourceLanguage = session.sourceLanguage,
-    targetLanguage = session.targetLanguage,
-    translationRoute = deriveTranslationRoute(sourceLanguage, targetLanguage),
-  } = req.body || {};
-
-  session.title = title;
-  session.description = req.body?.description ?? req.body?.eventMode ?? session.description;
-  session.eventMode = eventMode;
-  session.sourceLanguage = sourceLanguage;
-  session.targetLanguage = targetLanguage;
-  session.translationRoute = translationRoute;
+  if (body.title !== undefined || body.sessionName !== undefined) {
+    session.title = body.title || body.sessionName || session.title;
+  }
+  if (body.description !== undefined || body.eventMode !== undefined) {
+    const description = body.description ?? body.eventMode;
+    session.description = description || session.description;
+    session.eventMode = body.eventMode || description || session.eventMode;
+  }
+  if (body.sourceLanguage !== undefined) {
+    session.sourceLanguage = body.sourceLanguage || session.sourceLanguage;
+  }
+  if (body.targetLanguage !== undefined) {
+    session.targetLanguage = body.targetLanguage || session.targetLanguage;
+  }
+  if (body.translationRoute !== undefined || body.routeKey !== undefined) {
+    session.translationRoute = body.translationRoute || body.routeKey || session.translationRoute;
+  } else if (body.sourceLanguage !== undefined || body.targetLanguage !== undefined) {
+    session.translationRoute = deriveTranslationRoute(session.sourceLanguage, session.targetLanguage);
+  }
   session.updatedAt = new Date().toISOString();
-  if (req.body?.createdByEmail || req.body?.created_by_email) {
-    session.createdByEmail = req.body.createdByEmail || req.body.created_by_email;
+  if (body.createdByEmail !== undefined || body.created_by_email !== undefined) {
+    session.createdByEmail = body.createdByEmail || body.created_by_email || session.createdByEmail;
   }
 
   persistLiveSession(session);

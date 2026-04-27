@@ -75,6 +75,28 @@ function sanitizeSessionId(value) {
     .replace(/^[-_]+|[-_]+$/g, '');
 }
 
+function makeUniqueSessionId(baseSessionId, existingSessionIds = []) {
+  const base = sanitizeSessionId(baseSessionId);
+  if (!base) return '';
+
+  const existing = new Set(
+    existingSessionIds
+      .map((sessionId) => sanitizeSessionId(sessionId))
+      .filter(Boolean)
+  );
+
+  if (!existing.has(base)) return base;
+
+  let suffix = 2;
+  let candidate = `${base}-${suffix}`;
+  while (existing.has(candidate)) {
+    suffix += 1;
+    candidate = `${base}-${suffix}`;
+  }
+
+  return candidate;
+}
+
 function deriveTranslationRoute(sourceLanguage, targetLanguage) {
   const source = String(sourceLanguage || '').toLowerCase();
   const target = String(targetLanguage || '').toLowerCase();
@@ -882,6 +904,7 @@ const lastLiveSnapshotRef = useRef('');
   useEffect(() => {
     if (!isAdminAuthorized || !isLiveMode) return;
     if (!session?.id) return;
+    if (session.id !== activeSessionId) return;
 
     const sync = async () => {
       try {
@@ -1602,7 +1625,7 @@ const lastLiveSnapshotRef = useRef('');
   };
 
   const createOrJoinSession = async () => {
-    const sanitized = sanitizeSessionId(newSessionName);
+    const sanitized = makeUniqueSessionId(newSessionName, backendSessionIds);
     if (!sanitized) return;
 
     const routeConfig =
@@ -2433,6 +2456,7 @@ const styles = {
     color: '#fff',
     fontSize: '13px',
     fontWeight: 900,
+    textAlign: 'left',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -2451,6 +2475,7 @@ const styles = {
     fontWeight: 800,
     flex: '0 1 auto',
     alignSelf: 'center',
+    textAlign: 'left',
   },
   adminStatusPill: {
     border: '1px solid rgba(255,107,53,0.32)',
@@ -2482,13 +2507,15 @@ const styles = {
     background: 'rgba(255,255,255,0.06)',
     color: '#fff',
     borderRadius: '999px',
-    padding: '10px 12px',
+    padding: '10px 14px',
     fontSize: '12px',
     fontWeight: 800,
     outline: 'none',
     minWidth: '136px',
     height: '40px',
     boxSizing: 'border-box',
+    textAlign: 'left',
+    textAlignLast: 'left',
   },
   authShell: {
     width: '100%',
