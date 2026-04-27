@@ -51,6 +51,24 @@ function formatDate(value) {
   });
 }
 
+function buildBrainStateHistoryEntry(brainState) {
+  if (
+    !brainState ||
+    (!brainState.rollingSummary && !brainState.rollingIntent && !brainState.rollingTopic)
+  ) {
+    return null;
+  }
+
+  return {
+    id: `${brainState.rollingUpdatedAt || Date.now()}-${brainState.rollingTopic || ''}-${brainState.rollingIntent || ''}`,
+    rollingSummary: brainState.rollingSummary || '',
+    rollingIntent: brainState.rollingIntent || '',
+    rollingTopic: brainState.rollingTopic || '',
+    rollingUpdatedAt: brainState.rollingUpdatedAt || new Date().toISOString(),
+    confidence: brainState.confidence,
+  };
+}
+
 function getSessionDisplayName(session, sessionId) {
   const title = String(session?.title || '').trim();
   if (title && title !== 'TBS Live Session') return title;
@@ -133,6 +151,9 @@ export default function Viewer() {
 
       const data = await res.json();
       setSession(data);
+      setRollingBrainState(data.brainState || null);
+      const brainStateEntry = buildBrainStateHistoryEntry(data.brainState);
+      setBrainStateHistory(brainStateEntry ? [brainStateEntry] : []);
       setStatus((prev) => (prev === 'Live via WebSocket' ? prev : 'Live'));
       setError('');
       setLastUpdated(new Date().toISOString());
@@ -220,21 +241,10 @@ export default function Viewer() {
             nextBrainState?.rollingTopic
           ) {
             setBrainStateHistory((prev) => {
-              const entryId = `${nextBrainState.rollingUpdatedAt || Date.now()}-${nextBrainState.rollingTopic || ''}-${nextBrainState.rollingIntent || ''}`;
-              if (prev[0]?.id === entryId) return prev;
+              const entry = buildBrainStateHistoryEntry(nextBrainState);
+              if (!entry || prev[0]?.id === entry.id) return prev;
 
-              return [
-                {
-                  id: entryId,
-                  rollingSummary: nextBrainState.rollingSummary || '',
-                  rollingIntent: nextBrainState.rollingIntent || '',
-                  rollingTopic: nextBrainState.rollingTopic || '',
-                  rollingUpdatedAt:
-                    nextBrainState.rollingUpdatedAt || new Date().toISOString(),
-                  confidence: nextBrainState.confidence,
-                },
-                ...prev,
-              ].slice(0, 24);
+              return [entry, ...prev].slice(0, 24);
             });
           }
 

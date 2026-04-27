@@ -308,6 +308,10 @@ function persistSessionBrainState(session) {
     rolling_summary: brainState.rollingSummary || '',
     rolling_intent: brainState.rollingIntent || '',
     rolling_topic: brainState.rollingTopic || '',
+    rolling_doctrinal_theme: brainState.rollingDoctrinalTheme || '',
+    rolling_ritual_context: brainState.rollingRitualContext || '',
+    rolling_guidance: brainState.rollingGuidance || '',
+    rolling_entities: brainState.rollingEntities || [],
     updated_at: brainState.rollingUpdatedAt || new Date().toISOString(),
   };
 
@@ -318,6 +322,103 @@ function persistSessionBrainState(session) {
       if (error) warnSupabaseFailure('session_brain_state upsert', error);
     })
     .catch((err) => warnSupabaseFailure('session_brain_state upsert', err));
+}
+
+function normalizePersistedBrainState(row = {}) {
+  const jsonState =
+    row.brain_state && typeof row.brain_state === 'object' ? row.brain_state : {};
+
+  return {
+    activeTopic: jsonState.activeTopic || null,
+    activeTopicEn: jsonState.activeTopicEn || '',
+    activeTopicType: jsonState.activeTopicType || null,
+    activeTopicConfidence: jsonState.activeTopicConfidence || 0,
+    lockedUntilLineCount: jsonState.lockedUntilLineCount || 0,
+    lastTopics: Array.isArray(jsonState.lastTopics) ? jsonState.lastTopics : [],
+    rollingSummary: jsonState.rollingSummary || row.rolling_summary || '',
+    rollingIntent: jsonState.rollingIntent || row.rolling_intent || '',
+    rollingTopic: jsonState.rollingTopic || row.rolling_topic || '',
+    rollingDoctrinalTheme:
+      jsonState.rollingDoctrinalTheme || row.rolling_doctrinal_theme || '',
+    rollingRitualContext: jsonState.rollingRitualContext || row.rolling_ritual_context || '',
+    rollingGuidance: jsonState.rollingGuidance || row.rolling_guidance || '',
+    rollingEntities: Array.isArray(jsonState.rollingEntities)
+      ? jsonState.rollingEntities
+      : Array.isArray(row.rolling_entities)
+      ? row.rolling_entities
+      : [],
+    rollingUpdatedAt: jsonState.rollingUpdatedAt || row.updated_at || null,
+    lastSummaryLineCount: jsonState.lastSummaryLineCount || 0,
+  };
+}
+
+function hasRollingBrainState(brainState = {}) {
+  return Boolean(
+    brainState.rollingSummary ||
+      brainState.rollingIntent ||
+      brainState.rollingTopic ||
+      brainState.rollingDoctrinalTheme ||
+      brainState.rollingRitualContext ||
+      brainState.rollingGuidance ||
+      (Array.isArray(brainState.rollingEntities) && brainState.rollingEntities.length)
+  );
+}
+
+async function hydrateSessionBrainState(session) {
+  if (!supabase || !session?.id) return session?.brainState || null;
+
+  try {
+    const { data, error } = await supabase
+      .from('session_brain_state')
+      .select('*')
+      .eq('session_id', session.id)
+      .maybeSingle();
+
+    if (error) {
+      warnSupabaseFailure('session_brain_state fetch', error);
+      return session.brainState || null;
+    }
+
+    if (!data) return session.brainState || null;
+
+    const persistedBrainState = normalizePersistedBrainState(data);
+    const currentBrainState = ensureSessionBrainState(session);
+
+    if (!hasRollingBrainState(currentBrainState) || data.updated_at) {
+      session.brainState = {
+        ...currentBrainState,
+        ...persistedBrainState,
+      };
+    }
+
+    return session.brainState;
+  } catch (err) {
+    warnSupabaseFailure('session_brain_state fetch', err);
+    return session.brainState || null;
+  }
+}
+
+function summarizeBrainStateForExport(brainState = {}) {
+  if (!hasRollingBrainState(brainState)) {
+    return ['## Live Context', '', 'No live context captured.', ''];
+  }
+
+  const entities = Array.isArray(brainState.rollingEntities)
+    ? brainState.rollingEntities.filter(Boolean).join(', ')
+    : '';
+
+  return [
+    '## Live Context',
+    '',
+    `- Topic: ${escapeMarkdown(brainState.rollingTopic || '')}`,
+    `- Intent: ${escapeMarkdown(brainState.rollingIntent || '')}`,
+    `- Doctrinal theme: ${escapeMarkdown(brainState.rollingDoctrinalTheme || '')}`,
+    `- Ritual context: ${escapeMarkdown(brainState.rollingRitualContext || '')}`,
+    `- Guidance: ${escapeMarkdown(brainState.rollingGuidance || '')}`,
+    `- Entities: ${escapeMarkdown(entities)}`,
+    `- Summary: ${escapeMarkdown(brainState.rollingSummary || '')}`,
+    '',
+  ];
 }
 
 function deriveTranslationRoute(sourceLanguage = 'Mandarin', targetLanguage = 'English') {
@@ -413,6 +514,10 @@ function getOrCreateSession(id = 'live-session', metadata = {}) {
         rollingSummary: '',
         rollingIntent: '',
         rollingTopic: '',
+        rollingDoctrinalTheme: '',
+        rollingRitualContext: '',
+        rollingGuidance: '',
+        rollingEntities: [],
         rollingUpdatedAt: null,
         lastSummaryLineCount: 0,
       },
@@ -461,6 +566,10 @@ function ensureSessionBrainState(session) {
       rollingSummary: '',
       rollingIntent: '',
       rollingTopic: '',
+      rollingDoctrinalTheme: '',
+      rollingRitualContext: '',
+      rollingGuidance: '',
+      rollingEntities: [],
       rollingUpdatedAt: null,
       lastSummaryLineCount: 0,
     };
@@ -2181,8 +2290,9 @@ function appendMishearLog(entry) {
   return row;
 }
 
-app.get('/api/session/:id', (req, res) => {
+app.get('/api/session/:id', async (req, res) => {
   const session = getOrCreateSession(req.params.id);
+  await hydrateSessionBrainState(session);
   res.json(session);
 });
 
@@ -2561,6 +2671,20 @@ app.get('/api/session/:id/export.md', async (req, res) => {
       return res.status(500).type('text/plain').send('Unable to export session lines.');
     }
 
+    const { data: persistedBrainState, error: brainStateError } = await supabase
+      .from('session_brain_state')
+      .select('*')
+      .eq('session_id', id)
+      .maybeSingle();
+
+    if (brainStateError) {
+      warnSupabaseFailure('session_brain_state export fetch', brainStateError);
+    }
+
+    const brainState = persistedBrainState
+      ? normalizePersistedBrainState(persistedBrainState)
+      : memorySession?.brainState || null;
+
     const title = session.title || session.sessionName || session.session_id || session.sessionId || id;
     const description = session.description || session.event_mode || session.eventMode || '';
     const sourceLanguage = session.source_language || session.sourceLanguage || 'Mandarin';
@@ -2583,6 +2707,7 @@ app.get('/api/session/:id/export.md', async (req, res) => {
       `**Created:** ${escapeMarkdown(formatExportDate(createdAt))}`,
       `**Ended:** ${escapeMarkdown(formatExportDate(endedAt))}`,
       '',
+      ...summarizeBrainStateForExport(brainState),
       '## Transcript',
       '',
       ...(lines.length
@@ -2664,9 +2789,19 @@ wss.on('connection', async (browserWs, req) => {
     addViewerClient(sessionId, browserWs);
 
     const session = getOrCreateSession(sessionId);
+    await hydrateSessionBrainState(session);
     session.translationRoute = session.translationRoute || deriveTranslationRoute(session.sourceLanguage, session.targetLanguage);
     if (browserWs.readyState === 1) {
       browserWs.send(JSON.stringify({ type: 'session', session, sessionId }));
+      if (hasRollingBrainState(session.brainState)) {
+        browserWs.send(
+          JSON.stringify({
+            type: 'brain_state',
+            sessionId,
+            brainState: session.brainState,
+          })
+        );
+      }
     }
 
     browserWs.on('close', () => {
@@ -2692,6 +2827,7 @@ wss.on('connection', async (browserWs, req) => {
   let lastInterimSentAt = 0;
 
   const activeSession = getOrCreateSession(sessionId);
+  await hydrateSessionBrainState(activeSession);
   persistSessionStatus(activeSession, 'listening');
   const routeKey = requestedRouteKey || activeSession.translationRoute || deriveTranslationRoute(activeSession.sourceLanguage, activeSession.targetLanguage);
   const routeConfig = getRouteConfig(routeKey);

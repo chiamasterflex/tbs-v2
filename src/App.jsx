@@ -125,6 +125,24 @@ function formatTime(value) {
   });
 }
 
+function buildBrainStateHistoryEntry(brainState) {
+  if (
+    !brainState ||
+    (!brainState.rollingSummary && !brainState.rollingIntent && !brainState.rollingTopic)
+  ) {
+    return null;
+  }
+
+  return {
+    id: `${brainState.rollingUpdatedAt || Date.now()}-${brainState.rollingTopic || ''}-${brainState.rollingIntent || ''}`,
+    rollingSummary: brainState.rollingSummary || '',
+    rollingIntent: brainState.rollingIntent || '',
+    rollingTopic: brainState.rollingTopic || '',
+    rollingUpdatedAt: brainState.rollingUpdatedAt || new Date().toISOString(),
+    confidence: brainState.confidence,
+  };
+}
+
 function getInitials(email) {
   const name = String(email || '').split('@')[0] || 'A';
   return (
@@ -874,6 +892,9 @@ const lastLiveSnapshotRef = useRef('');
           const data = await existing.json();
           setSession(data);
           setHistoryLines(data.lines || []);
+          setRollingBrainState(data.brainState || null);
+          const brainStateEntry = buildBrainStateHistoryEntry(data.brainState);
+          setBrainStateHistory(brainStateEntry ? [brainStateEntry] : []);
           fetchSessionList();
           if (data.sourceLanguage) setSourceLanguage(data.sourceLanguage);
           if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
@@ -896,6 +917,9 @@ const lastLiveSnapshotRef = useRef('');
         const created = await create.json();
         setSession(created);
         setHistoryLines(created.lines || []);
+        setRollingBrainState(created.brainState || null);
+        const brainStateEntry = buildBrainStateHistoryEntry(created.brainState);
+        setBrainStateHistory(brainStateEntry ? [brainStateEntry] : []);
         fetchSessionList();
         if (created.sourceLanguage) setSourceLanguage(created.sourceLanguage);
         if (created.targetLanguage) setTargetLanguage(created.targetLanguage);
@@ -1244,21 +1268,10 @@ const lastLiveSnapshotRef = useRef('');
             nextBrainState?.rollingTopic
           ) {
             setBrainStateHistory((prev) => {
-              const entryId = `${nextBrainState.rollingUpdatedAt || Date.now()}-${nextBrainState.rollingTopic || ''}-${nextBrainState.rollingIntent || ''}`;
-              if (prev[0]?.id === entryId) return prev;
+              const entry = buildBrainStateHistoryEntry(nextBrainState);
+              if (!entry || prev[0]?.id === entry.id) return prev;
 
-              return [
-                {
-                  id: entryId,
-                  rollingSummary: nextBrainState.rollingSummary || '',
-                  rollingIntent: nextBrainState.rollingIntent || '',
-                  rollingTopic: nextBrainState.rollingTopic || '',
-                  rollingUpdatedAt:
-                    nextBrainState.rollingUpdatedAt || new Date().toISOString(),
-                  confidence: nextBrainState.confidence,
-                },
-                ...prev,
-              ].slice(0, 24);
+              return [entry, ...prev].slice(0, 24);
             });
           }
 
