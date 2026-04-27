@@ -16,6 +16,10 @@ const FIXED_SESSION_ID = 'live-session';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const SUPER_ADMIN_EMAILS = parseEmailAllowlist(import.meta.env.VITE_SUPER_ADMIN_EMAILS);
+const sessionRouteOptions = [
+  { value: 'zh_en', label: 'Mandarin -> English' },
+  { value: 'id_en', label: 'Bahasa -> English' },
+];
 const supabase =
   SUPABASE_URL && SUPABASE_ANON_KEY
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -709,6 +713,7 @@ export default function App() {
   const [newSessionEventMode, setNewSessionEventMode] = useState('');
   const [newSessionRoute, setNewSessionRoute] = useState('zh_en');
   const [newSessionError, setNewSessionError] = useState('');
+  const [sessionRouteDropdownOpen, setSessionRouteDropdownOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(getIsMobileViewport);
   const [sessionsExpanded, setSessionsExpanded] = useState(() => !getIsMobileViewport());
 
@@ -1552,8 +1557,13 @@ const lastLiveSnapshotRef = useRef('');
   const toggleCreateSessionForm = () => {
     console.log('[session:create] toggle form', { nextOpen: !showNewSessionInput });
     setNewSessionError('');
+    setSessionRouteDropdownOpen(false);
     setShowNewSessionInput((value) => !value);
   };
+
+  const selectedSessionRouteLabel =
+    sessionRouteOptions.find((option) => option.value === newSessionRoute)?.label ||
+    'Mandarin -> English';
 
   const endSession = async (sessionId) => {
     const sanitized = sanitizeSessionId(sessionId);
@@ -1679,6 +1689,7 @@ const lastLiveSnapshotRef = useRef('');
     setNewSessionEventMode('');
     setNewSessionRoute('zh_en');
     setNewSessionError('');
+    setSessionRouteDropdownOpen(false);
     setShowNewSessionInput(false);
     setSessionsExpanded(true);
     const refreshed = await fetchSessionList();
@@ -1799,7 +1810,7 @@ const lastLiveSnapshotRef = useRef('');
       <div style={styles.page}>
         <div style={styles.bgOrbA} />
         <div style={styles.bgOrbB} />
-        <div style={styles.shell}>
+        <div style={styles.studyReviewChrome}>
           <AuthBadge
             email={userEmail}
             roleLabel={roleLabel}
@@ -1813,8 +1824,8 @@ const lastLiveSnapshotRef = useRef('');
             onClose={() => setAdminPanelOpen(false)}
             currentUserId={authSession?.user?.id}
           />
-          <Study />
         </div>
+        <Study />
       </div>
     );
   }
@@ -1824,7 +1835,7 @@ const lastLiveSnapshotRef = useRef('');
       <div style={styles.page}>
         <div style={styles.bgOrbA} />
         <div style={styles.bgOrbB} />
-        <div style={styles.shell}>
+        <div style={styles.studyReviewChrome}>
           <AuthBadge
             email={userEmail}
             roleLabel={roleLabel}
@@ -1838,8 +1849,8 @@ const lastLiveSnapshotRef = useRef('');
             onClose={() => setAdminPanelOpen(false)}
             currentUserId={authSession?.user?.id}
           />
-          <Review />
         </div>
+        <Review />
       </div>
     );
   }
@@ -1948,31 +1959,44 @@ const lastLiveSnapshotRef = useRef('');
                     />
                     <div
                       style={{
-                        ...styles.createRouteSelector,
+                        ...styles.createRouteDropdown,
                         ...(isMobileViewport ? styles.fullWidthControl : null),
                       }}
                     >
-                      {[
-                        ['zh_en', 'Mandarin -> English'],
-                        ['id_en', 'Bahasa -> English'],
-                      ].map(([routeKey, label]) => {
-                        const isActive = newSessionRoute === routeKey;
+                      <button
+                        type="button"
+                        onClick={() => setSessionRouteDropdownOpen((value) => !value)}
+                        style={styles.createRouteTrigger}
+                      >
+                        <span>{selectedSessionRouteLabel}</span>
+                        <span style={styles.createRouteChevron}>
+                          {sessionRouteDropdownOpen ? '▲' : '▼'}
+                        </span>
+                      </button>
+                      {sessionRouteDropdownOpen ? (
+                        <div style={styles.createRouteMenu}>
+                          {sessionRouteOptions.map((option) => {
+                            const isActive = newSessionRoute === option.value;
 
-                        return (
-                          <button
-                            key={routeKey}
-                            type="button"
-                            onClick={() => setNewSessionRoute(routeKey)}
-                            style={{
-                              ...styles.createRouteOption,
-                              ...(isActive ? styles.createRouteOptionActive : null),
-                              ...(isMobileViewport ? styles.fullWidthControl : null),
-                            }}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                  setNewSessionRoute(option.value);
+                                  setSessionRouteDropdownOpen(false);
+                                }}
+                                style={{
+                                  ...styles.createRouteMenuOption,
+                                  ...(isActive ? styles.createRouteMenuOptionActive : null),
+                                }}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
                     </div>
                     <div
                       style={{
@@ -1997,6 +2021,7 @@ const lastLiveSnapshotRef = useRef('');
                           setNewSessionName('');
                           setNewSessionEventMode('');
                           setNewSessionError('');
+                          setSessionRouteDropdownOpen(false);
                         }}
                         style={{
                           ...styles.tinyButtonMuted,
@@ -2324,6 +2349,21 @@ const styles = {
     flexDirection: 'column',
     gap: '16px',
     boxSizing: 'border-box',
+  },
+  studyReviewChrome: {
+    position: 'relative',
+    zIndex: 2,
+    width: '100%',
+    maxWidth: '980px',
+    margin: '0 auto 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    boxSizing: 'border-box',
+    background: 'transparent',
+    border: 'none',
+    boxShadow: 'none',
+    backdropFilter: 'none',
   },
   loadingWrap: {
     minHeight: '50vh',
@@ -2919,28 +2959,67 @@ const styles = {
     gap: '8px',
     flex: '1 1 160px',
   },
-  createRouteSelector: {
-    display: 'flex',
-    gap: '8px',
+  createRouteDropdown: {
+    position: 'relative',
     flex: '1 1 280px',
-    flexWrap: 'wrap',
+    minWidth: '180px',
   },
-  createRouteOption: {
-    flex: '1 1 130px',
+  createRouteTrigger: {
+    width: '100%',
     minHeight: '40px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
     border: '1px solid rgba(255,255,255,0.10)',
     background: 'rgba(255,255,255,0.05)',
-    color: '#d9d9df',
-    borderRadius: '999px',
+    color: '#fff',
+    borderRadius: '12px',
     padding: '10px 12px',
     fontSize: '12px',
     fontWeight: 900,
     cursor: 'pointer',
     boxSizing: 'border-box',
+    textAlign: 'left',
   },
-  createRouteOptionActive: {
-    border: '1px solid rgba(255,107,53,0.38)',
-    background: 'rgba(255,107,53,0.16)',
+  createRouteChevron: {
+    color: '#ff8a5b',
+    fontSize: '10px',
+    lineHeight: 1,
+  },
+  createRouteMenu: {
+    position: 'absolute',
+    top: 'calc(100% + 6px)',
+    left: 0,
+    right: 0,
+    zIndex: 30,
+    display: 'grid',
+    gap: '4px',
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(18,18,20,0.96)',
+    borderRadius: '14px',
+    padding: '6px',
+    boxShadow: '0 18px 48px rgba(0,0,0,0.34), 0 0 24px rgba(255,107,53,0.08)',
+    boxSizing: 'border-box',
+    maxWidth: '100%',
+  },
+  createRouteMenuOption: {
+    width: '100%',
+    minHeight: '42px',
+    border: '1px solid transparent',
+    background: 'transparent',
+    color: '#d9d9df',
+    borderRadius: '10px',
+    padding: '10px 11px',
+    fontSize: '12px',
+    fontWeight: 900,
+    cursor: 'pointer',
+    textAlign: 'left',
+    boxSizing: 'border-box',
+  },
+  createRouteMenuOptionActive: {
+    border: '1px solid rgba(255,107,53,0.32)',
+    background: 'rgba(255,107,53,0.14)',
     color: '#ff8a5b',
   },
   createSessionError: {
