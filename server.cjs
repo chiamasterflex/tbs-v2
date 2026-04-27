@@ -267,6 +267,8 @@ function persistSessionStatus(session, status, extra = {}) {
   session.updatedAt = now;
   if (status === 'ended' && !session.endedAt) {
     session.endedAt = now;
+  } else if (status === 'listening') {
+    session.endedAt = null;
   }
   Object.assign(session, extra);
   persistLiveSession(session);
@@ -2479,6 +2481,19 @@ app.post('/api/session/:id/end', (req, res) => {
   }
 
   persistSessionStatus(session, 'ended');
+
+  res.json({ ok: true, session: summarizeSession(session) });
+});
+
+app.post('/api/session/:id/resume', (req, res) => {
+  const { id } = req.params;
+  const session = sessions.find((s) => s.id === id);
+
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  persistSessionStatus(session, 'listening', { endedAt: null });
 
   res.json({ ok: true, session: summarizeSession(session) });
 });

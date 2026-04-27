@@ -1048,6 +1048,25 @@ const lastLiveSnapshotRef = useRef('');
   const runId = audioRunIdRef.current + 1;
   audioRunIdRef.current = runId;
 
+  const selectedSessionStatus = String(activeSessionSummary?.status || session?.status || '').toLowerCase();
+  if (selectedSessionStatus === 'ended') {
+    try {
+      const res = await fetch(`${API}/api/session/${encodeURIComponent(activeSessionId)}/resume`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.session) {
+          setSession((current) => ({ ...(current || {}), ...data.session }));
+        }
+        await fetchSessionList();
+      }
+    } catch (err) {
+      console.error('session resume failed', err);
+    }
+  }
+
   const openSocket = async () => {
     if (audioRunIdRef.current !== runId) return;
 
@@ -2404,8 +2423,11 @@ const styles = {
     boxSizing: 'border-box',
   },
   adminUserMain: {
+    display: 'grid',
+    alignContent: 'center',
+    gap: '5px',
     minWidth: 0,
-    flex: '1 1 280px',
+    flex: '1 1 300px',
   },
   adminUserEmail: {
     color: '#fff',
@@ -2416,7 +2438,6 @@ const styles = {
     whiteSpace: 'nowrap',
   },
   adminUserMeta: {
-    marginTop: '5px',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
@@ -2446,7 +2467,8 @@ const styles = {
     justifyContent: 'flex-end',
     gap: '8px',
     flexWrap: 'wrap',
-    flex: '0 1 300px',
+    flex: '0 0 auto',
+    marginLeft: 'auto',
   },
   adminRowSelect: {
     border: '1px solid rgba(255,255,255,0.10)',
