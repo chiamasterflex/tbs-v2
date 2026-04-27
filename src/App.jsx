@@ -394,7 +394,7 @@ export default function App() {
     };
   }, []);
 
-  const userEmail = authSession?.user?.email || '';
+  const userEmail = String(authSession?.user?.email || '').trim().toLowerCase();
   const fallbackRole = getFallbackRole(userEmail);
   const roleLabel = dbRole || fallbackRole;
   const isAdminAuthorized = Boolean(
