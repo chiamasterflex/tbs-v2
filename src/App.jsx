@@ -1693,14 +1693,6 @@ lastLiveSnapshotRef.current = '';
             True Buddha School Live Translation
           </h1>
 
-          <div style={styles.headerActions}>
-            <div style={styles.actionButtons}>
-              <button onClick={clearHistory} style={styles.secondaryButtonDark}>
-                Clear
-              </button>
-            </div>
-          </div>
-
           <div style={{ ...styles.sessionsPanel, ...(isMobileViewport ? styles.sessionsPanelMobile : null) }}>
             <div style={styles.sessionsPanelHeader}>
               <div>
@@ -1725,6 +1717,9 @@ lastLiveSnapshotRef.current = '';
                   style={styles.tinyButtonMuted}
                 >
                   {copiedSessionId === activeSessionId ? 'Copied' : 'Copy viewer link'}
+                </button>
+                <button type="button" onClick={clearHistory} style={styles.tinyButtonMuted}>
+                  Clear session
                 </button>
                 <button
                   type="button"
@@ -2264,16 +2259,18 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '10px',
+    gap: '14px',
     flexWrap: 'wrap',
     border: '1px solid rgba(255,255,255,0.07)',
     background: 'rgba(0,0,0,0.18)',
     borderRadius: '14px',
-    padding: '10px',
+    padding: '12px',
+    minHeight: '68px',
+    boxSizing: 'border-box',
   },
   adminUserMain: {
     minWidth: 0,
-    flex: '1 1 220px',
+    flex: '1 1 280px',
   },
   adminUserEmail: {
     color: '#fff',
@@ -2314,6 +2311,7 @@ const styles = {
     justifyContent: 'flex-end',
     gap: '8px',
     flexWrap: 'wrap',
+    flex: '0 1 300px',
   },
   adminRowSelect: {
     border: '1px solid rgba(255,255,255,0.10)',
@@ -2324,6 +2322,9 @@ const styles = {
     fontSize: '12px',
     fontWeight: 800,
     outline: 'none',
+    minWidth: '136px',
+    height: '40px',
+    boxSizing: 'border-box',
   },
   authShell: {
     width: '100%',
