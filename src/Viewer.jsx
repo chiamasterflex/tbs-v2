@@ -51,6 +51,25 @@ function formatDate(value) {
   });
 }
 
+function getSessionDisplayName(session, sessionId) {
+  const title = String(session?.title || '').trim();
+  if (title && title !== 'TBS Live Session') return title;
+  if (sessionId === FIXED_SESSION_ID) return 'Live viewer';
+  return sessionId;
+}
+
+function getSessionDescription(session) {
+  const description = String(session?.eventMode || '').trim();
+  if (!description || description === 'Dharma Talk') return 'Live translation session';
+  return description;
+}
+
+function getSessionLanguageLabel(session) {
+  const source = session?.sourceLanguage || 'Mandarin';
+  const target = session?.targetLanguage || 'English';
+  return `${source} → ${target}`;
+}
+
 export default function Viewer() {
   const sessionId = useMemo(() => getViewerSessionId(), []);
   const scrollRef = useRef(null);
@@ -326,6 +345,13 @@ export default function Viewer() {
   const latestLine = lines.length ? lines[lines.length - 1] : null;
   const canLoadMore = visibleCount < Math.min(lines.length, MAX_VISIBLE_COUNT);
   const totalLines = lines.length;
+  const sessionStatus = String(session?.status || '').toLowerCase();
+  const isSessionLive =
+    socketState === 'Live' ||
+    status === 'Live via WebSocket' ||
+    sessionStatus === 'live' ||
+    sessionStatus === 'listening';
+  const sessionStatusLabel = isSessionLive ? 'LIVE' : 'Idle';
 
   const feedItems = useMemo(() => {
     return visibleLines.map((line) => {
@@ -404,6 +430,27 @@ export default function Viewer() {
               >
                 Latest
               </button>
+            </div>
+          </div>
+
+          <div style={styles.sessionIdentityCard}>
+            <div style={styles.sessionIdentityTitle}>
+              {getSessionDisplayName(session, sessionId)}
+            </div>
+            <div style={styles.sessionIdentityDescription}>
+              {getSessionDescription(session)}
+            </div>
+            <div style={styles.sessionIdentityMeta}>
+              <span>{getSessionLanguageLabel(session)}</span>
+              <span
+                style={{
+                  ...styles.sessionStatusPill,
+                  ...(isSessionLive ? styles.sessionStatusLive : null),
+                }}
+              >
+                {sessionStatusLabel}
+              </span>
+              <span>{totalLines} lines</span>
             </div>
           </div>
 
@@ -579,6 +626,53 @@ const styles = {
     display: 'flex',
     gap: '10px',
     flexWrap: 'wrap',
+  },
+  sessionIdentityCard: {
+    marginTop: '16px',
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.035)',
+    borderRadius: '18px',
+    padding: '14px',
+    textAlign: 'left',
+  },
+  sessionIdentityTitle: {
+    color: '#fff',
+    fontSize: '16px',
+    fontWeight: 900,
+    lineHeight: 1.25,
+  },
+  sessionIdentityDescription: {
+    marginTop: '4px',
+    color: '#b7b7c0',
+    fontSize: '13px',
+    lineHeight: 1.35,
+    fontWeight: 700,
+  },
+  sessionIdentityMeta: {
+    marginTop: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+    color: '#8d8d95',
+    fontSize: '12px',
+    fontWeight: 800,
+  },
+  sessionStatusPill: {
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#b7b7c0',
+    borderRadius: '999px',
+    padding: '4px 7px',
+    fontSize: '10px',
+    lineHeight: 1,
+    fontWeight: 900,
+    letterSpacing: '0.04em',
+  },
+  sessionStatusLive: {
+    border: '1px solid rgba(255,107,53,0.42)',
+    background: 'rgba(255,107,53,0.14)',
+    color: '#ff8a5b',
   },
   secondaryButtonDark: {
     border: '1px solid rgba(255,255,255,0.10)',

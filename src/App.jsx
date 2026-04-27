@@ -13,7 +13,6 @@ const WS_URL =
     ? 'ws://localhost:8787/ws'
     : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`);
 const FIXED_SESSION_ID = 'live-session';
-const DEFAULT_VISIBLE_SESSION_ID = 'main';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const SUPER_ADMIN_EMAILS = parseEmailAllowlist(import.meta.env.VITE_SUPER_ADMIN_EMAILS);
@@ -127,6 +126,11 @@ function getPublicSessionStatus(entry) {
   return status === 'live' || status === 'listening' ? 'LIVE' : 'Idle';
 }
 
+function isProductSessionId(sessionId) {
+  const id = sanitizeSessionId(sessionId);
+  return Boolean(id && id !== FIXED_SESSION_ID && id !== 'main');
+}
+
 function PublicSessionsList() {
   const [sessions, setSessions] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -157,14 +161,8 @@ function PublicSessionsList() {
   }, []);
 
   const visibleSessions = useMemo(() => {
-    const ids = sessions.map(getPublicSessionId).filter(Boolean);
-    const realIds = ids.filter((id) => id !== FIXED_SESSION_ID);
-
     return sessions
-      .filter((entry) => {
-        const id = getPublicSessionId(entry);
-        return id && (id !== FIXED_SESSION_ID || realIds.length === 0);
-      })
+      .filter((entry) => isProductSessionId(getPublicSessionId(entry)))
       .sort((a, b) => {
         const aLive = getPublicSessionStatus(a) === 'LIVE';
         const bLive = getPublicSessionStatus(b) === 'LIVE';
@@ -463,7 +461,6 @@ const shouldReconnectRef = useRef(false);
 const manualStopRef = useRef(false);
 const audioRunIdRef = useRef(0);
 const pendingReconnectModeRef = useRef(null);
-const ensuredDefaultSessionRef = useRef(false);
 const liveConfigRef = useRef({
   sourceLanguage: 'Mandarin',
   targetLanguage: 'English',
@@ -1138,13 +1135,13 @@ lastLiveSnapshotRef.current = '';
   }, [availableSessions]);
 
   const realSessionIds = useMemo(() => {
-    return backendSessionIds.filter((id) => id !== FIXED_SESSION_ID);
+    return backendSessionIds.filter(isProductSessionId);
   }, [backendSessionIds]);
 
   const visibleSessions = useMemo(() => {
     const rows = availableSessions.filter((entry) => {
       const id = getSessionId(entry);
-      return id && (id !== FIXED_SESSION_ID || realSessionIds.length === 0);
+      return isProductSessionId(id);
     });
 
     return rows.sort((a, b) => {
@@ -1184,26 +1181,11 @@ lastLiveSnapshotRef.current = '';
   useEffect(() => {
     if (!isAdminAuthorized || !isLiveMode) return;
     if (!sessionListLoaded) return;
+    if (activeSessionId !== FIXED_SESSION_ID) return;
+    if (realSessionIds.length === 0) return;
 
-    if (realSessionIds.length > 0) {
-      if (activeSessionId === FIXED_SESSION_ID) {
-        setActiveSessionId(realSessionIds[0]);
-      }
-      return;
-    }
-
-    if (ensuredDefaultSessionRef.current) return;
-    ensuredDefaultSessionRef.current = true;
-
-    registerSession(DEFAULT_VISIBLE_SESSION_ID)
-      .then(() => fetchSessionList())
-      .then(() => {
-        setActiveSessionId(DEFAULT_VISIBLE_SESSION_ID);
-      })
-      .catch((err) => {
-        console.error('default session create failed', err);
-      });
-  }, [activeSessionId, fetchSessionList, isAdminAuthorized, isLiveMode, realSessionIds, registerSession, sessionListLoaded]);
+    setActiveSessionId(realSessionIds[0]);
+  }, [activeSessionId, isAdminAuthorized, isLiveMode, realSessionIds, sessionListLoaded]);
 
   const switchSession = async (nextSessionId) => {
     const sanitized = sanitizeSessionId(nextSessionId) || FIXED_SESSION_ID;
