@@ -111,6 +111,118 @@ function getInitials(email) {
   );
 }
 
+function getPublicSessionId(entry) {
+  return sanitizeSessionId(entry?.sessionId || entry?.id || '');
+}
+
+function getPublicSessionName(entry) {
+  const id = getPublicSessionId(entry);
+  const title = String(entry?.title || '').trim();
+  if (title && title !== 'TBS Live Session') return title;
+  return id || 'Session';
+}
+
+function getPublicSessionStatus(entry) {
+  const status = String(entry?.status || '').toLowerCase();
+  return status === 'live' || status === 'listening' ? 'LIVE' : 'Idle';
+}
+
+function PublicSessionsList() {
+  const [sessions, setSessions] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchSessions = async () => {
+      try {
+        const res = await fetch(`${API}/api/sessions`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted && Array.isArray(data)) {
+          setSessions(data);
+        }
+      } catch (err) {
+        console.error('public sessions failed', err);
+      } finally {
+        if (mounted) setLoaded(true);
+      }
+    };
+
+    fetchSessions();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const visibleSessions = useMemo(() => {
+    const ids = sessions.map(getPublicSessionId).filter(Boolean);
+    const realIds = ids.filter((id) => id !== FIXED_SESSION_ID);
+
+    return sessions
+      .filter((entry) => {
+        const id = getPublicSessionId(entry);
+        return id && (id !== FIXED_SESSION_ID || realIds.length === 0);
+      })
+      .sort((a, b) => {
+        const aLive = getPublicSessionStatus(a) === 'LIVE';
+        const bLive = getPublicSessionStatus(b) === 'LIVE';
+        if (aLive !== bLive) return aLive ? -1 : 1;
+        return String(b?.updatedAt || '').localeCompare(String(a?.updatedAt || ''));
+      });
+  }, [sessions]);
+
+  return (
+    <section style={styles.publicSessionsPanel}>
+      <div style={styles.publicSessionsTitle}>Ongoing live sessions</div>
+
+      {loaded && visibleSessions.length === 0 ? (
+        <div style={styles.publicSessionsEmpty}>No live sessions available right now.</div>
+      ) : null}
+
+      {!loaded ? <div style={styles.publicSessionsEmpty}>Checking sessions...</div> : null}
+
+      {visibleSessions.length > 0 ? (
+        <div style={styles.publicSessionRows}>
+          {visibleSessions.map((entry) => {
+            const sessionId = getPublicSessionId(entry);
+            const status = getPublicSessionStatus(entry);
+            const isLive = status === 'LIVE';
+
+            return (
+              <div key={sessionId} style={styles.publicSessionRow}>
+                <div style={styles.publicSessionMain}>
+                  <div style={styles.publicSessionName}>{getPublicSessionName(entry)}</div>
+                  <div style={styles.publicSessionMeta}>
+                    <span
+                      style={{
+                        ...styles.sessionStatusPill,
+                        ...(isLive ? styles.sessionStatusLive : null),
+                      }}
+                    >
+                      {status}
+                    </span>
+                    {Number.isFinite(entry?.lineCount) ? (
+                      <span>{entry.lineCount} lines</span>
+                    ) : null}
+                  </div>
+                </div>
+                <a
+                  href={`/viewer/${encodeURIComponent(sessionId)}`}
+                  style={styles.publicSessionLink}
+                >
+                  Join viewer
+                </a>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function AuthBadge({ email, roleLabel, onLogout, compact = false }) {
   return (
     <div style={{ ...styles.authBadge, ...(compact ? styles.authBadgeCompact : null) }}>
@@ -165,12 +277,14 @@ function AuthGate({ mode, email, roleLabel, onLogin, onLogout }) {
       <div style={{ ...styles.shell, ...styles.authShell }}>
         {mode === 'login' ? (
           <div style={styles.authIntro}>
-            <h1 style={styles.authHeroTitle}>TBS Live Translation</h1>
-            <p style={styles.authHeroSubtitle}>Real-time translation for temple sessions.</p>
+            <h1 style={styles.authHeroTitle}>True Buddha School Live Translation</h1>
+            <p style={styles.authHeroSubtitle}>
+              Real-time translation trained with TBS resources
+            </p>
           </div>
         ) : null}
         <div style={styles.authScreenCard}>
-          <h1 style={styles.authTitle}>{mode === 'login' ? 'Sign in' : title}</h1>
+          {mode !== 'login' ? <h1 style={styles.authTitle}>{title}</h1> : null}
           <p style={styles.authMessage}>{message}</p>
           {roleLabel ? <div style={styles.authRolePill}>{roleLabel}</div> : null}
           {mode === 'login' ? (
@@ -179,13 +293,15 @@ function AuthGate({ mode, email, roleLabel, onLogin, onLogout }) {
               onClick={onLogin}
               style={{ ...styles.primaryButton, ...styles.authPrimaryButton }}
             >
-              Continue with Google
+              Sign in with Google
             </button>
           ) : null}
           {mode === 'login' ? (
             <div style={styles.authHelperCopy}>
-              <div>Don’t have access? Ask your temple admin to add your email.</div>
-              <div>Want to view a session? Use the viewer link shared with you.</div>
+              For access please contact{' '}
+              <a href="mailto:chiamasterflex@gmail.com" style={styles.authHelperLink}>
+                Admin
+              </a>
             </div>
           ) : null}
           {isDenied ? (
@@ -194,6 +310,7 @@ function AuthGate({ mode, email, roleLabel, onLogin, onLogout }) {
             </button>
           ) : null}
         </div>
+        {mode === 'login' ? <PublicSessionsList /> : null}
       </div>
     </div>
   );
@@ -1796,7 +1913,7 @@ const styles = {
   authHeroTitle: {
     margin: 0,
     color: '#fff',
-    fontSize: '34px',
+    fontSize: '32px',
     lineHeight: 1.05,
     fontWeight: 900,
   },
@@ -1848,13 +1965,84 @@ const styles = {
     width: '100%',
   },
   authHelperCopy: {
-    display: 'grid',
-    gap: '6px',
     marginTop: '14px',
     color: '#8d8d95',
     fontSize: '12px',
     lineHeight: 1.35,
     fontWeight: 700,
+  },
+  authHelperLink: {
+    color: '#ff8a5b',
+    fontWeight: 900,
+    textDecoration: 'none',
+  },
+  publicSessionsPanel: {
+    width: '100%',
+    maxWidth: '420px',
+    margin: '0 auto',
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.035)',
+    borderRadius: '18px',
+    padding: '14px',
+    textAlign: 'left',
+  },
+  publicSessionsTitle: {
+    color: '#fff',
+    fontSize: '14px',
+    fontWeight: 900,
+    marginBottom: '10px',
+  },
+  publicSessionsEmpty: {
+    color: '#8d8d95',
+    fontSize: '12px',
+    fontWeight: 700,
+    lineHeight: 1.35,
+  },
+  publicSessionRows: {
+    display: 'grid',
+    gap: '8px',
+  },
+  publicSessionRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
+    border: '1px solid rgba(255,255,255,0.07)',
+    background: 'rgba(0,0,0,0.14)',
+    borderRadius: '14px',
+    padding: '10px',
+  },
+  publicSessionMain: {
+    minWidth: 0,
+  },
+  publicSessionName: {
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: 900,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  publicSessionMeta: {
+    marginTop: '5px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+    color: '#8d8d95',
+    fontSize: '11px',
+    fontWeight: 800,
+  },
+  publicSessionLink: {
+    flex: '0 0 auto',
+    border: '1px solid rgba(255,107,53,0.22)',
+    background: 'rgba(255,107,53,0.10)',
+    color: '#ff8a5b',
+    borderRadius: '999px',
+    padding: '9px 10px',
+    fontSize: '12px',
+    fontWeight: 900,
+    textDecoration: 'none',
   },
   headerCard: {
     background: 'rgba(255,255,255,0.04)',
