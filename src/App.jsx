@@ -1387,12 +1387,14 @@ const lastLiveSnapshotRef = useRef('');
     window.open(`/viewer/${encodeURIComponent(sessionId)}`, '_blank', 'noopener,noreferrer');
   };
 
-  const exportSession = async (sessionId = activeSessionId) => {
+  const exportSession = async (sessionId = activeSessionId, format = 'md') => {
     const sanitized = sanitizeSessionId(sessionId);
     if (!sanitized) return;
 
+    const extension = format === 'docx' ? 'docx' : 'md';
+
     try {
-      const res = await fetch(`${API}/api/session/${encodeURIComponent(sanitized)}/export.md`, {
+      const res = await fetch(`${API}/api/session/${encodeURIComponent(sanitized)}/export.${extension}`, {
         cache: 'no-store',
       });
 
@@ -1404,7 +1406,7 @@ const lastLiveSnapshotRef = useRef('');
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${sanitized}.md`;
+      link.download = `${sanitized}.${extension}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -2120,10 +2122,17 @@ const lastLiveSnapshotRef = useRef('');
                           </button>
                           <button
                             type="button"
-                            onClick={() => exportSession(rowSessionId)}
+                            onClick={() => exportSession(rowSessionId, 'md')}
                             style={styles.tinyButtonMuted}
                           >
-                            Export
+                            Export MD
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => exportSession(rowSessionId, 'docx')}
+                            style={styles.tinyButtonMuted}
+                          >
+                            Export Word
                           </button>
                           <button
                             type="button"

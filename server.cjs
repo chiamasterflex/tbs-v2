@@ -8,6 +8,13 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 const { DeepgramClient } = require('@deepgram/sdk');
 const { createClient } = require('@supabase/supabase-js');
+const {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+} = require('docx');
 const fetch = require('cross-fetch');
 
 const app = express();
@@ -419,6 +426,218 @@ function summarizeBrainStateForExport(brainState = {}) {
     `- Summary: ${escapeMarkdown(brainState.rollingSummary || '')}`,
     '',
   ];
+}
+
+async function getSessionExportData(id) {
+  if (!supabase) {
+    const err = new Error('Supabase export storage is not configured.');
+    err.statusCode = 503;
+    throw err;
+  }
+
+  const { data: persistedSession, error: sessionError } = await supabase
+    .from('live_sessions')
+    .select('*')
+    .eq('session_id', id)
+    .maybeSingle();
+
+  if (sessionError) {
+    warnSupabaseFailure('live_sessions export fetch', sessionError);
+    const err = new Error('Unable to export session.');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  const memorySession = sessions.find((s) => s.id === id);
+  const session = persistedSession || (memorySession ? summarizeSession(memorySession) : null);
+
+  if (!session || session.deleted_at || session.deletedAt) {
+    const err = new Error('Session not found.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const { data: lines = [], error: linesError } = await supabase
+    .from('session_lines')
+    .select('*')
+    .eq('session_id', id)
+    .order('at', { ascending: true });
+
+  if (linesError) {
+    warnSupabaseFailure('session_lines export fetch', linesError);
+    const err = new Error('Unable to export session lines.');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  const { data: persistedBrainState, error: brainStateError } = await supabase
+    .from('session_brain_state')
+    .select('*')
+    .eq('session_id', id)
+    .maybeSingle();
+
+  if (brainStateError) {
+    warnSupabaseFailure('session_brain_state export fetch', brainStateError);
+  }
+
+  const sourceLanguage = session.source_language || session.sourceLanguage || 'Mandarin';
+  const targetLanguage = session.target_language || session.targetLanguage || 'English';
+  const brainState = persistedBrainState
+    ? normalizePersistedBrainState(persistedBrainState)
+    : memorySession?.brainState || null;
+
+  return {
+    id,
+    title: session.title || session.sessionName || session.session_id || session.sessionId || id,
+    description: session.description || session.event_mode || session.eventMode || '',
+    sourceLanguage,
+    targetLanguage,
+    translationRoute:
+      session.translation_route ||
+      session.translationRoute ||
+      deriveTranslationRoute(sourceLanguage, targetLanguage),
+    status: session.status || 'idle',
+    createdAt: session.created_at || session.createdAt,
+    endedAt: session.ended_at || session.endedAt,
+    brainState,
+    lines,
+  };
+}
+
+function renderSessionMarkdown(exportData) {
+  const {
+    title,
+    description,
+    sourceLanguage,
+    targetLanguage,
+    translationRoute,
+    status,
+    createdAt,
+    endedAt,
+    brainState,
+    lines,
+  } = exportData;
+
+  return [
+    `# ${escapeMarkdown(title)}`,
+    '',
+    description ? `**Description:** ${escapeMarkdown(description)}` : null,
+    `**Language:** ${escapeMarkdown(sourceLanguage)} -> ${escapeMarkdown(targetLanguage)}`,
+    `**Route:** ${escapeMarkdown(translationRoute)}`,
+    `**Status:** ${escapeMarkdown(status)}`,
+    `**Created:** ${escapeMarkdown(formatExportDate(createdAt))}`,
+    `**Ended:** ${escapeMarkdown(formatExportDate(endedAt))}`,
+    '',
+    ...summarizeBrainStateForExport(brainState),
+    '## Transcript',
+    '',
+    ...(lines.length
+      ? lines.flatMap((line, index) => {
+          const source = line.normalized_source || line.raw_source || '';
+          const rawSource = line.raw_source && line.raw_source !== source ? line.raw_source : '';
+          return [
+            `### ${index + 1}. ${escapeMarkdown(formatExportDate(line.at))}`,
+            '',
+            '**Source**',
+            '',
+            source ? escapeMarkdown(source) : '_No source text recorded._',
+            rawSource ? '' : null,
+            rawSource ? `Raw source: ${escapeMarkdown(rawSource)}` : null,
+            '',
+            '**English**',
+            '',
+            line.english ? escapeMarkdown(line.english) : '_No English translation recorded._',
+            '',
+          ].filter((part) => part !== null);
+        })
+      : ['_No transcript lines were recorded for this session._', '']),
+  ]
+    .filter((part) => part !== null)
+    .join('\n');
+}
+
+function docParagraph(text = '', options = {}) {
+  return new Paragraph({
+    ...options,
+    children: [new TextRun(String(text || ''))],
+  });
+}
+
+function labeledDocParagraph(label, value) {
+  return new Paragraph({
+    children: [
+      new TextRun({ text: `${label}: `, bold: true }),
+      new TextRun(String(value || '')),
+    ],
+  });
+}
+
+async function renderSessionDocx(exportData) {
+  const {
+    title,
+    description,
+    sourceLanguage,
+    targetLanguage,
+    translationRoute,
+    status,
+    createdAt,
+    endedAt,
+    brainState,
+    lines,
+  } = exportData;
+
+  const entities = Array.isArray(brainState?.rollingEntities)
+    ? brainState.rollingEntities.filter(Boolean).join(', ')
+    : '';
+  const liveContextChildren = hasRollingBrainState(brainState)
+    ? [
+        labeledDocParagraph('Topic', brainState.rollingTopic || ''),
+        labeledDocParagraph('Intent', brainState.rollingIntent || ''),
+        labeledDocParagraph('Doctrinal theme', brainState.rollingDoctrinalTheme || ''),
+        labeledDocParagraph('Ritual context', brainState.rollingRitualContext || ''),
+        labeledDocParagraph('Guidance', brainState.rollingGuidance || ''),
+        labeledDocParagraph('Entities', entities),
+        labeledDocParagraph('Summary', brainState.rollingSummary || ''),
+      ]
+    : [docParagraph('No live context captured.')];
+
+  const transcriptChildren = lines.length
+    ? lines.flatMap((line, index) => {
+        const source = line.normalized_source || line.raw_source || '';
+        const rawSource = line.raw_source && line.raw_source !== source ? line.raw_source : '';
+        return [
+          docParagraph(`${index + 1}. ${formatExportDate(line.at)}`, {
+            heading: HeadingLevel.HEADING_3,
+          }),
+          labeledDocParagraph('Source', source || 'No source text recorded.'),
+          rawSource ? labeledDocParagraph('Raw source', rawSource) : null,
+          labeledDocParagraph('English', line.english || 'No English translation recorded.'),
+          docParagraph(''),
+        ].filter(Boolean);
+      })
+    : [docParagraph('No transcript lines were recorded for this session.')];
+
+  const doc = new Document({
+    sections: [
+      {
+        children: [
+          docParagraph(title, { heading: HeadingLevel.TITLE }),
+          description ? labeledDocParagraph('Description', description) : null,
+          labeledDocParagraph('Language', `${sourceLanguage} -> ${targetLanguage}`),
+          labeledDocParagraph('Route', translationRoute),
+          labeledDocParagraph('Status', status),
+          labeledDocParagraph('Created', formatExportDate(createdAt)),
+          labeledDocParagraph('Ended', formatExportDate(endedAt)),
+          docParagraph('Live Context', { heading: HeadingLevel.HEADING_1 }),
+          ...liveContextChildren,
+          docParagraph('Transcript', { heading: HeadingLevel.HEADING_1 }),
+          ...transcriptChildren,
+        ].filter(Boolean),
+      },
+    ],
+  });
+
+  return Packer.toBuffer(doc);
 }
 
 function deriveTranslationRoute(sourceLanguage = 'Mandarin', targetLanguage = 'English') {
@@ -2637,111 +2856,35 @@ app.delete('/api/session/:id', (req, res) => {
 app.get('/api/session/:id/export.md', async (req, res) => {
   const { id } = req.params;
 
-  if (!supabase) {
-    return res.status(503).type('text/plain').send('Supabase export storage is not configured.');
-  }
-
   try {
-    const { data: persistedSession, error: sessionError } = await supabase
-      .from('live_sessions')
-      .select('*')
-      .eq('session_id', id)
-      .maybeSingle();
-
-    if (sessionError) {
-      warnSupabaseFailure('live_sessions export fetch', sessionError);
-      return res.status(500).type('text/plain').send('Unable to export session.');
-    }
-
-    const memorySession = sessions.find((s) => s.id === id);
-    const session = persistedSession || (memorySession ? summarizeSession(memorySession) : null);
-
-    if (!session || session.deleted_at || session.deletedAt) {
-      return res.status(404).type('text/plain').send('Session not found.');
-    }
-
-    const { data: lines = [], error: linesError } = await supabase
-      .from('session_lines')
-      .select('*')
-      .eq('session_id', id)
-      .order('at', { ascending: true });
-
-    if (linesError) {
-      warnSupabaseFailure('session_lines export fetch', linesError);
-      return res.status(500).type('text/plain').send('Unable to export session lines.');
-    }
-
-    const { data: persistedBrainState, error: brainStateError } = await supabase
-      .from('session_brain_state')
-      .select('*')
-      .eq('session_id', id)
-      .maybeSingle();
-
-    if (brainStateError) {
-      warnSupabaseFailure('session_brain_state export fetch', brainStateError);
-    }
-
-    const brainState = persistedBrainState
-      ? normalizePersistedBrainState(persistedBrainState)
-      : memorySession?.brainState || null;
-
-    const title = session.title || session.sessionName || session.session_id || session.sessionId || id;
-    const description = session.description || session.event_mode || session.eventMode || '';
-    const sourceLanguage = session.source_language || session.sourceLanguage || 'Mandarin';
-    const targetLanguage = session.target_language || session.targetLanguage || 'English';
-    const translationRoute =
-      session.translation_route ||
-      session.translationRoute ||
-      deriveTranslationRoute(sourceLanguage, targetLanguage);
-    const status = session.status || 'idle';
-    const createdAt = session.created_at || session.createdAt;
-    const endedAt = session.ended_at || session.endedAt;
-
-    const markdown = [
-      `# ${escapeMarkdown(title)}`,
-      '',
-      description ? `**Description:** ${escapeMarkdown(description)}` : null,
-      `**Language:** ${escapeMarkdown(sourceLanguage)} -> ${escapeMarkdown(targetLanguage)}`,
-      `**Route:** ${escapeMarkdown(translationRoute)}`,
-      `**Status:** ${escapeMarkdown(status)}`,
-      `**Created:** ${escapeMarkdown(formatExportDate(createdAt))}`,
-      `**Ended:** ${escapeMarkdown(formatExportDate(endedAt))}`,
-      '',
-      ...summarizeBrainStateForExport(brainState),
-      '## Transcript',
-      '',
-      ...(lines.length
-        ? lines.flatMap((line, index) => {
-            const source = line.normalized_source || line.raw_source || '';
-            const rawSource =
-              line.raw_source && line.raw_source !== source ? line.raw_source : '';
-            return [
-              `### ${index + 1}. ${escapeMarkdown(formatExportDate(line.at))}`,
-              '',
-              '**Source**',
-              '',
-              source ? escapeMarkdown(source) : '_No source text recorded._',
-              rawSource ? '' : null,
-              rawSource ? `Raw source: ${escapeMarkdown(rawSource)}` : null,
-              '',
-              '**English**',
-              '',
-              line.english ? escapeMarkdown(line.english) : '_No English translation recorded._',
-              '',
-            ].filter((part) => part !== null);
-          })
-        : ['_No transcript lines were recorded for this session._', '']),
-    ]
-      .filter((part) => part !== null)
-      .join('\n');
-
-    const filename = `${safeExportFilename(title || id)}.md`;
+    const exportData = await getSessionExportData(id);
+    const markdown = renderSessionMarkdown(exportData);
+    const filename = `${safeExportFilename(exportData.title || id)}.md`;
     res.set('Content-Type', 'text/markdown; charset=utf-8');
     res.set('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(markdown);
   } catch (err) {
     warnSupabaseFailure('session export', err);
-    res.status(500).type('text/plain').send('Unable to export session.');
+    res.status(err.statusCode || 500).type('text/plain').send(err.message || 'Unable to export session.');
+  }
+});
+
+app.get('/api/session/:id/export.docx', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const exportData = await getSessionExportData(id);
+    const buffer = await renderSessionDocx(exportData);
+    const filename = `${safeExportFilename(exportData.title || id)}.docx`;
+    res.set(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+    res.set('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (err) {
+    warnSupabaseFailure('session docx export', err);
+    res.status(err.statusCode || 500).type('text/plain').send(err.message || 'Unable to export session.');
   }
 });
 const viewerClientsBySession = new Map();
