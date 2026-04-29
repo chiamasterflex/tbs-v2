@@ -1071,6 +1071,12 @@ const lastLiveSnapshotRef = useRef('');
   };
 
   const startAudio = async (mode = 'mic') => {
+  if (mode === 'system' && isMobileViewport) {
+    setStatus('system_audio_unavailable');
+    setActiveAudioMode(null);
+    return;
+  }
+
   let switchedMode = false;
 
   if (
@@ -1450,6 +1456,8 @@ const lastLiveSnapshotRef = useRef('');
         return 'Requesting microphone';
       case 'requesting_system':
         return 'Select a tab for audio';
+      case 'system_audio_unavailable':
+        return 'System Audio is available on desktop only.';
       case 'stopping':
         return 'Stopping';
       case 'stopped':
@@ -1470,6 +1478,7 @@ const lastLiveSnapshotRef = useRef('');
     status === 'ws_open' ||
     status === 'listening' ||
     status === 'reconnecting';
+  const showSystemAudioOption = !isMobileViewport;
 
   const getSessionId = (entry) => sanitizeSessionId(entry?.sessionId || entry?.id || '');
   const getSessionDisplayName = (entry) => {
@@ -2196,15 +2205,21 @@ const lastLiveSnapshotRef = useRef('');
                 Mic
               </button>
 
-              <button
-                onClick={() => (isSystemActive ? stopAudio() : startAudio('system'))}
-                style={{
-                  ...styles.audioModeButton,
-                  ...(isSystemActive ? styles.audioModeButtonActive : {}),
-                }}
-              >
-                System Audio
-              </button>
+              {showSystemAudioOption ? (
+                <button
+                  onClick={() => (isSystemActive ? stopAudio() : startAudio('system'))}
+                  style={{
+                    ...styles.audioModeButton,
+                    ...(isSystemActive ? styles.audioModeButtonActive : {}),
+                  }}
+                >
+                  System Audio
+                </button>
+              ) : (
+                <div style={styles.systemAudioMobileHint}>
+                  System Audio is available on desktop only.
+                </div>
+              )}
             </div>
           </div>
 
@@ -3258,6 +3273,14 @@ const styles = {
     height: '16px',
     objectFit: 'contain',
     display: 'block',
+  },
+  systemAudioMobileHint: {
+    maxWidth: '150px',
+    color: 'rgba(255,255,255,0.76)',
+    fontSize: '11px',
+    lineHeight: 1.25,
+    fontWeight: 800,
+    textAlign: 'left',
   },
   languageRow: {
     display: 'grid',
