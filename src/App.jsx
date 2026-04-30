@@ -2205,7 +2205,7 @@ const lastLiveSnapshotRef = useRef('');
                 Mic
               </button>
 
-              {showSystemAudioOption ? (
+              {showSystemAudioOption && (
                 <button
                   onClick={() => (isSystemActive ? stopAudio() : startAudio('system'))}
                   style={{
@@ -2215,10 +2215,6 @@ const lastLiveSnapshotRef = useRef('');
                 >
                   System Audio
                 </button>
-              ) : (
-                <div style={styles.systemAudioMobileHint}>
-                  System Audio is available on desktop only.
-                </div>
               )}
             </div>
           </div>
@@ -3273,14 +3269,6 @@ const styles = {
     height: '16px',
     objectFit: 'contain',
     display: 'block',
-  },
-  systemAudioMobileHint: {
-    maxWidth: '150px',
-    color: 'rgba(255,255,255,0.76)',
-    fontSize: '11px',
-    lineHeight: 1.25,
-    fontWeight: 800,
-    textAlign: 'left',
   },
   languageRow: {
     display: 'grid',
