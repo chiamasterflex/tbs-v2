@@ -397,6 +397,7 @@ async function hydrateSessionBrainState(session) {
         ...currentBrainState,
         ...persistedBrainState,
       };
+      repairStaleLastSummarySeq(session.brainState, session, session.id);
     }
 
     return session.brainState;
@@ -820,6 +821,32 @@ function addFinalLineToSession(session, line) {
   session.lines.unshift(line);
   session.lines = session.lines.slice(0, 100);
   session.updatedAt = line.at;
+}
+
+function repairStaleLastSummarySeq(brainState, session, sessionId = 'live-session') {
+  if (!brainState) return 0;
+
+  const totalFinalLinesSeen = getSessionTotalFinalLinesSeen(session);
+  const currentBufferLength = getSessionLineCount(session);
+  const previousLastSummarySeq =
+    Number(brainState.lastSummarySeq ?? brainState.lastSummaryLineCount ?? 0) || 0;
+
+  if (previousLastSummarySeq <= totalFinalLinesSeen) {
+    brainState.lastSummarySeq = Math.max(0, previousLastSummarySeq);
+    return brainState.lastSummarySeq;
+  }
+
+  const repairedLastSummarySeq = Math.max(0, totalFinalLinesSeen - currentBufferLength);
+  brainState.lastSummarySeq = repairedLastSummarySeq;
+
+  console.log('[RollingContext] repaired stale lastSummarySeq', {
+    sessionId,
+    previousLastSummarySeq,
+    repairedLastSummarySeq,
+    totalFinalLinesSeen,
+  });
+
+  return repairedLastSummarySeq;
 }
 
 function scoreTopicCandidate(entity = {}, normalizedCn = '', eventMode = 'Dharma Talk') {
@@ -3018,9 +3045,8 @@ wss.on('connection', async (browserWs, req) => {
     const now = Date.now();
     const totalFinalLinesSeen = getSessionTotalFinalLinesSeen(activeSession);
     const currentBufferLength = getSessionLineCount(activeSession);
-    const lastSummarySeq =
-      Number(brainState.lastSummarySeq ?? brainState.lastSummaryLineCount ?? 0) || 0;
-    const newLineDelta = totalFinalLinesSeen - lastSummarySeq;
+    const lastSummarySeq = repairStaleLastSummarySeq(brainState, activeSession, sessionId);
+    const newLineDelta = Math.max(0, totalFinalLinesSeen - lastSummarySeq);
     const lastUpdatedMs = brainState.rollingUpdatedAt
       ? Date.parse(brainState.rollingUpdatedAt)
       : 0;
