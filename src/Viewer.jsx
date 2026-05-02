@@ -100,7 +100,6 @@ export default function Viewer() {
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
-  const [autoScroll, setAutoScroll] = useState(true);
   const [socketState, setSocketState] = useState('Connecting…');
   const [liveInterim, setLiveInterim] = useState(null);
   const [rollingBrainState, setRollingBrainState] = useState(null);
@@ -322,30 +321,13 @@ export default function Viewer() {
   }, [session, liveInterim]);
 
   const visibleLines = useMemo(() => {
-    if (!lines.length) return [];
-    return lines.slice(Math.max(0, lines.length - visibleCount));
+    if (lines.length <= 1) return [];
+    const historyLines = lines.slice(0, -1);
+    return historyLines.slice(Math.max(0, historyLines.length - visibleCount));
   }, [lines, visibleCount]);
-
-  useEffect(() => {
-    if (!autoScroll) return;
-    if (!visibleLines.length) return;
-
-    const el = scrollRef.current;
-    if (!el) return;
-
-    requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
-    });
-  }, [visibleLines, autoScroll]);
 
   const handleScroll = useCallback((event) => {
     handlePremiumScroll(event);
-
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    setAutoScroll(nearBottom);
   }, [handlePremiumScroll]);
 
   const handleLoadMore = useCallback(() => {
@@ -353,7 +335,8 @@ export default function Viewer() {
   }, []);
 
   const latestLine = lines.length ? lines[lines.length - 1] : null;
-  const canLoadMore = visibleCount < Math.min(lines.length, MAX_VISIBLE_COUNT);
+  const historyLineCount = Math.max(0, lines.length - 1);
+  const canLoadMore = visibleCount < Math.min(historyLineCount, MAX_VISIBLE_COUNT);
   const totalLines = lines.length;
   const sessionStatus = String(session?.status || '').toLowerCase();
   const isSessionLive =
@@ -363,21 +346,28 @@ export default function Viewer() {
     sessionStatus === 'listening';
   const sessionStatusLabel = isSessionLive ? 'LIVE' : 'Idle';
 
+  const toFeedItem = useCallback((line) => {
+    const timestamp = line.at || line.createdAt || line.timestamp;
+    const cn = line.normalizedCn || line.rawCn || '';
+    const en = line.en || (line.isInterim ? 'Translating…' : '');
+
+    return {
+      id: line.id || `${timestamp}-${cn.slice(0, 12)}`,
+      at: timestamp,
+      time: line.isInterim ? 'Live' : formatTime(timestamp),
+      chinese: cn,
+      english: en,
+      isLive: Boolean(line.isInterim),
+    };
+  }, []);
+
+  const latestFeedItem = useMemo(() => {
+    return latestLine ? toFeedItem(latestLine) : null;
+  }, [latestLine, toFeedItem]);
+
   const feedItems = useMemo(() => {
-    return visibleLines.map((line) => {
-      const timestamp = line.at || line.createdAt || line.timestamp;
-      const cn = line.normalizedCn || line.rawCn || '';
-      const en = line.en || (line.isInterim ? 'Translating…' : '');
-      return {
-        id: line.id || `${timestamp}-${cn.slice(0, 12)}`,
-        at: timestamp,
-        time: line.isInterim ? 'Live' : formatTime(timestamp),
-        chinese: cn,
-        english: en,
-        isLive: Boolean(line.isInterim),
-      };
-    });
-  }, [visibleLines]);
+    return visibleLines.map(toFeedItem);
+  }, [visibleLines, toFeedItem]);
 
   const liveContextItems = useMemo(() => {
     if (brainStateHistory.length > 0) return brainStateHistory;
@@ -401,6 +391,37 @@ export default function Viewer() {
 
     return [];
   }, [brainStateHistory, rollingBrainState]);
+
+  const renderFeedRow = useCallback((item) => (
+    <div
+      key={item.id}
+      style={{
+        ...styles.feedRow,
+        ...(item.isLive ? styles.feedRowLive : {}),
+      }}
+    >
+      <div style={styles.feedMetaRow}>
+        <div style={styles.feedMetaLeft}>
+          <div style={styles.feedMeta}>{item.time}</div>
+          {!item.isLive && item.at ? (
+            <div style={styles.feedTimePill}>{formatTime(item.at)}</div>
+          ) : null}
+        </div>
+        {item.isLive ? <div style={styles.liveBadge}>Draft</div> : null}
+      </div>
+
+      <div style={styles.feedChinese}>{item.chinese || '…'}</div>
+
+      <div
+        style={{
+          ...styles.feedEnglish,
+          ...(item.isLive ? styles.feedEnglishDraft : {}),
+        }}
+      >
+        {item.english || (item.isLive ? 'Translating…' : '…')}
+      </div>
+    </div>
+  ), []);
 
   return (
     <div style={styles.page}>
@@ -434,11 +455,10 @@ export default function Viewer() {
                   const el = scrollRef.current;
                   if (!el) return;
                   el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-                  setAutoScroll(true);
                 }}
                 style={styles.secondaryButtonDark}
               >
-                Latest
+                History end
               </button>
             </div>
           </div>
@@ -482,34 +502,45 @@ export default function Viewer() {
         {error ? <div style={styles.errorBanner}>{error}</div> : null}
 
         <div style={styles.transcriptCard}>
-          {liveContextItems.length > 0 ? (
-            <div style={styles.brainStateScrollCard}>
-              <div style={styles.brainStateLabel}>Live context</div>
-              <div
-                className="scroll-premium"
-                onScroll={handlePremiumScroll}
-                style={styles.brainStateScrollFeed}
-              >
-                {liveContextItems.map((entry) => (
-                  <div key={entry.id} style={styles.brainStateScrollRow}>
-                    <div style={styles.brainStateScrollMeta}>
-                      {entry.rollingUpdatedAt ? formatTime(entry.rollingUpdatedAt) : '—'}
+          <div style={styles.nowSection}>
+            {liveContextItems.length > 0 ? (
+              <div style={styles.brainStateScrollCard}>
+                <div style={styles.brainStateLabel}>Live context</div>
+                <div
+                  className="scroll-premium"
+                  onScroll={handlePremiumScroll}
+                  style={styles.brainStateScrollFeed}
+                >
+                  {liveContextItems.map((entry) => (
+                    <div key={entry.id} style={styles.brainStateScrollRow}>
+                      <div style={styles.brainStateScrollMeta}>
+                        {entry.rollingUpdatedAt ? formatTime(entry.rollingUpdatedAt) : '—'}
+                      </div>
+                      <div style={styles.brainStateScrollText}>
+                        {entry.rollingTopic ? `${entry.rollingTopic}: ` : ''}
+                        {entry.rollingSummary || ''}
+                        {entry.rollingIntent ? ` (${entry.rollingIntent})` : ''}
+                      </div>
                     </div>
-                    <div style={styles.brainStateScrollText}>
-                      {entry.rollingTopic ? `${entry.rollingTopic}: ` : ''}
-                      {entry.rollingSummary || ''}
-                      {entry.rollingIntent ? ` (${entry.rollingIntent})` : ''}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+            ) : null}
+
+            <div style={styles.nowCard}>
+              <div style={styles.nowLabel}>Now</div>
+              {latestFeedItem ? (
+                renderFeedRow(latestFeedItem)
+              ) : (
+                <div style={styles.emptyState}>Waiting for speech…</div>
+              )}
             </div>
-          ) : null}
+          </div>
 
           <div style={styles.transcriptHeader}>
             <div>
-              <div style={styles.cardLabel}>Transcript</div>
-              <div style={styles.cardHint}>Draft line appears first, then settles into history.</div>
+              <div style={styles.cardLabel}>History</div>
+              <div style={styles.cardHint}>Earlier transcript lines appear below.</div>
             </div>
             <div style={styles.debugChip}>
               {latestLine?.at ? formatTime(latestLine.at) : status}
@@ -523,38 +554,9 @@ export default function Viewer() {
             style={styles.transcriptFeed}
           >
             {feedItems.length === 0 ? (
-              <div style={styles.emptyState}>Waiting for speech…</div>
+              <div style={styles.emptyState}>No earlier transcript lines yet.</div>
             ) : (
-              feedItems.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    ...styles.feedRow,
-                    ...(item.isLive ? styles.feedRowLive : {}),
-                  }}
-                >
-                  <div style={styles.feedMetaRow}>
-                    <div style={styles.feedMetaLeft}>
-                      <div style={styles.feedMeta}>{item.time}</div>
-                      {!item.isLive && item.at ? (
-                        <div style={styles.feedTimePill}>{formatTime(item.at)}</div>
-                      ) : null}
-                    </div>
-                    {item.isLive ? <div style={styles.liveBadge}>Draft</div> : null}
-                  </div>
-
-                  <div style={styles.feedChinese}>{item.chinese || '…'}</div>
-
-                  <div
-                    style={{
-                      ...styles.feedEnglish,
-                      ...(item.isLive ? styles.feedEnglishDraft : {}),
-                    }}
-                  >
-                    {item.english || (item.isLive ? 'Translating…' : '…')}
-                  </div>
-                </div>
-              ))
+              feedItems.map(renderFeedRow)
             )}
           </div>
         </div>
@@ -741,12 +743,32 @@ const styles = {
     textAlign: 'left',
     boxShadow: '0 24px 60px rgba(0,0,0,0.22)',
   },
+  nowSection: {
+    display: 'grid',
+    gap: '10px',
+    marginBottom: '12px',
+  },
+  nowCard: {
+    background: '#fff8f2',
+    border: '1px solid rgba(17,17,17,0.08)',
+    borderRadius: '18px',
+    overflow: 'hidden',
+    textAlign: 'left',
+  },
+  nowLabel: {
+    padding: '12px 16px 0',
+    fontSize: '11px',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: '#6a4130',
+    textAlign: 'left',
+  },
   brainStateScrollCard: {
     background: 'rgba(255,255,255,0.72)',
     border: '1px solid rgba(17,17,17,0.08)',
     borderRadius: '18px',
     padding: '14px 16px',
-    marginBottom: '14px',
     textAlign: 'left',
   },
   brainStateLabel: {
