@@ -771,6 +771,7 @@ const reconnectTimerRef = useRef(null);
 const shouldReconnectRef = useRef(false);
 const manualStopRef = useRef(false);
 const brainStateBySessionRef = useRef(new Map());
+const brainStateHistoryBySessionRef = useRef(new Map());
 const audioRunIdRef = useRef(0);
 const pendingReconnectModeRef = useRef(null);
 const liveConfigRef = useRef({
@@ -889,6 +890,7 @@ const lastLiveSnapshotRef = useRef('');
   const applySessionBrainState = useCallback((sessionId, brainState, { allowEmpty = false } = {}) => {
     const sanitized = sanitizeSessionId(sessionId) || FIXED_SESSION_ID;
     const cachedBrainState = brainStateBySessionRef.current.get(sanitized) || null;
+    const cachedHistory = brainStateHistoryBySessionRef.current.get(sanitized) || [];
     const nextBrainState = hasRollingBrainState(brainState)
       ? brainState
       : hasRollingBrainState(cachedBrainState)
@@ -899,14 +901,29 @@ const lastLiveSnapshotRef = useRef('');
       brainStateBySessionRef.current.set(sanitized, nextBrainState);
       setRollingBrainState(nextBrainState);
       const brainStateEntry = buildBrainStateHistoryEntry(nextBrainState);
-      setBrainStateHistory(brainStateEntry ? [brainStateEntry] : []);
+      const restoredHistory = cachedHistory.length
+        ? cachedHistory
+        : brainStateEntry
+        ? [brainStateEntry]
+        : [];
+      brainStateHistoryBySessionRef.current.set(sanitized, restoredHistory);
+      setBrainStateHistory(restoredHistory);
+      console.log('[LiveContext] restored context history', {
+        sessionId: sanitized,
+        count: restoredHistory.length,
+      });
       return;
     }
 
     if (allowEmpty) {
       brainStateBySessionRef.current.delete(sanitized);
+      brainStateHistoryBySessionRef.current.delete(sanitized);
       setRollingBrainState(null);
       setBrainStateHistory([]);
+      console.log('[LiveContext] restored context history', {
+        sessionId: sanitized,
+        count: 0,
+      });
     }
   }, []);
 
@@ -1313,7 +1330,13 @@ const lastLiveSnapshotRef = useRef('');
               const entry = buildBrainStateHistoryEntry(nextBrainState);
               if (!entry || prev[0]?.id === entry.id) return prev;
 
-              return [entry, ...prev].slice(0, 24);
+              const nextHistory = [entry, ...prev].slice(0, 24);
+              brainStateHistoryBySessionRef.current.set(messageSessionId, nextHistory);
+              console.log('[LiveContext] cached context history', {
+                sessionId: messageSessionId,
+                count: nextHistory.length,
+              });
+              return nextHistory;
             });
           }
 
@@ -1473,6 +1496,7 @@ const lastLiveSnapshotRef = useRef('');
         setLiveChinese('');
         setLiveEnglish('');
         brainStateBySessionRef.current.delete(sanitized);
+        brainStateHistoryBySessionRef.current.delete(sanitized);
         setRollingBrainState(null);
         setBrainStateHistory([]);
         lastTranslatedChineseRef.current = '';
@@ -1689,6 +1713,8 @@ const lastLiveSnapshotRef = useRef('');
         setHistoryLines([]);
         setLiveChinese('');
         setLiveEnglish('');
+        brainStateBySessionRef.current.delete(sanitized);
+        brainStateHistoryBySessionRef.current.delete(sanitized);
         setRollingBrainState(null);
         setBrainStateHistory([]);
         lastTranslatedChineseRef.current = '';
