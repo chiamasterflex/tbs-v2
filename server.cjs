@@ -356,6 +356,7 @@ function normalizePersistedBrainState(row = {}) {
       : [],
     rollingUpdatedAt: jsonState.rollingUpdatedAt || row.updated_at || null,
     lastSummaryLineCount: jsonState.lastSummaryLineCount || 0,
+    lastSummarySeq: jsonState.lastSummarySeq || jsonState.lastSummaryLineCount || 0,
   };
 }
 
@@ -722,6 +723,7 @@ function getOrCreateSession(id = 'live-session', metadata = {}) {
       endedAt: null,
       deletedAt: null,
       createdByEmail: null,
+      totalFinalLinesSeen: 0,
       lines: [],
       brainState: {
         activeTopic: null,
@@ -739,6 +741,7 @@ function getOrCreateSession(id = 'live-session', metadata = {}) {
         rollingEntities: [],
         rollingUpdatedAt: null,
         lastSummaryLineCount: 0,
+        lastSummarySeq: 0,
       },
     };
     sessions.unshift(session);
@@ -791,6 +794,7 @@ function ensureSessionBrainState(session) {
       rollingEntities: [],
       rollingUpdatedAt: null,
       lastSummaryLineCount: 0,
+      lastSummarySeq: 0,
     };
   }
 
@@ -799,6 +803,23 @@ function ensureSessionBrainState(session) {
 
 function getSessionLineCount(session) {
   return Array.isArray(session?.lines) ? session.lines.length : 0;
+}
+
+function getSessionTotalFinalLinesSeen(session) {
+  if (!session) return 0;
+  if (!Number.isFinite(Number(session.totalFinalLinesSeen))) {
+    session.totalFinalLinesSeen = getSessionLineCount(session);
+  }
+  return Number(session.totalFinalLinesSeen) || 0;
+}
+
+function addFinalLineToSession(session, line) {
+  if (!session || !line) return;
+  session.totalFinalLinesSeen = getSessionTotalFinalLinesSeen(session) + 1;
+  line.seq = session.totalFinalLinesSeen;
+  session.lines.unshift(line);
+  session.lines = session.lines.slice(0, 100);
+  session.updatedAt = line.at;
 }
 
 function scoreTopicCandidate(entity = {}, normalizedCn = '', eventMode = 'Dharma Talk') {
@@ -845,7 +866,7 @@ function updateSessionTopic(session, normalizedCn, retrieval = {}, eventMode = '
   candidates.sort((a, b) => b.confidence - a.confidence);
   const best = candidates[0] || null;
 
-  const lineCount = getSessionLineCount(session);
+  const lineCount = getSessionTotalFinalLinesSeen(session);
   const lockActive = brainState.lockedUntilLineCount > lineCount;
 
   if (best && best.confidence >= 8) {
@@ -2630,9 +2651,7 @@ app.post('/api/session/:id/line', async (req, res) => {
     correctionHits: prepared.correctionHits,
     translationMeta,
   });
-  session.lines.unshift(line);
-  session.lines = session.lines.slice(0, 100);
-  session.updatedAt = line.at;
+  addFinalLineToSession(session, line);
   persistLiveSession(session);
   persistSessionLine(session, line, routeKey, retrieval);
 
@@ -2997,7 +3016,11 @@ wss.on('connection', async (browserWs, req) => {
   async function maybeBroadcastRollingContext() {
     const brainState = ensureSessionBrainState(activeSession);
     const now = Date.now();
-    const lineCount = getSessionLineCount(activeSession);
+    const totalFinalLinesSeen = getSessionTotalFinalLinesSeen(activeSession);
+    const currentBufferLength = getSessionLineCount(activeSession);
+    const lastSummarySeq =
+      Number(brainState.lastSummarySeq ?? brainState.lastSummaryLineCount ?? 0) || 0;
+    const newLineDelta = totalFinalLinesSeen - lastSummarySeq;
     const lastUpdatedMs = brainState.rollingUpdatedAt
       ? Date.parse(brainState.rollingUpdatedAt)
       : 0;
@@ -3005,21 +3028,33 @@ wss.on('connection', async (browserWs, req) => {
     const rollingMode = chooseRollingContextMode(activeSession);
     const enoughTimePassed =
       !lastUpdatedMs || now - lastUpdatedMs >= rollingMode.cooldownMs;
-    const enoughNewLines =
-      lineCount - (brainState.lastSummaryLineCount || 0) >= rollingMode.minNewLines;
+    const enoughNewLines = newLineDelta >= rollingMode.minNewLines;
 
     console.log('[RollingContext] trigger check', {
+      sessionId,
       routeKey,
       mode: rollingMode.mode,
-      lineCount,
-      lastSummaryLineCount: brainState.lastSummaryLineCount || 0,
+      totalFinalLinesSeen,
+      lastSummarySeq,
+      delta: newLineDelta,
+      currentBufferLength,
       enoughTimePassed,
       enoughNewLines,
       cooldownMs: rollingMode.cooldownMs,
       minNewLines: rollingMode.minNewLines,
     });
 
-    if (!enoughTimePassed || !enoughNewLines) return;
+    if (!enoughTimePassed || !enoughNewLines) {
+      console.log('[RollingContext] skip', {
+        sessionId,
+        totalFinalLinesSeen,
+        lastSummarySeq,
+        delta: newLineDelta,
+        currentBufferLength,
+        reason: !enoughTimePassed ? 'cooldown' : 'not_enough_new_lines',
+      });
+      return;
+    }
 
     const recentLines = getRecentFinalWindow(activeSession, {
       maxLines: rollingMode.maxLines,
@@ -3027,16 +3062,24 @@ wss.on('connection', async (browserWs, req) => {
     });
 
     console.log('[RollingContext] recent window', {
+      sessionId,
       routeKey,
       mode: rollingMode.mode,
       recentLineCount: recentLines.length,
-      latestSource:
-        recentLines[recentLines.length - 1]?.normalizedCn ||
-        recentLines[recentLines.length - 1]?.rawCn ||
-        '',
+      currentBufferLength,
     });
 
-    if (recentLines.length < rollingMode.minRecentLines) return;
+    if (recentLines.length < rollingMode.minRecentLines) {
+      console.log('[RollingContext] skip', {
+        sessionId,
+        totalFinalLinesSeen,
+        lastSummarySeq,
+        delta: newLineDelta,
+        currentBufferLength,
+        reason: 'not_enough_recent_lines',
+      });
+      return;
+    }
 
     const rolling = await summarizeRollingContext(
       recentLines,
@@ -3045,14 +3088,25 @@ wss.on('connection', async (browserWs, req) => {
     );
 
     console.log('[RollingContext] result', {
+      sessionId,
       routeKey,
-      summary: rolling.summary,
-      intent: rolling.intent,
-      topic: rolling.topic,
+      hasSummary: Boolean(rolling.summary),
+      hasIntent: Boolean(rolling.intent),
+      hasTopic: Boolean(rolling.topic),
       confidence: rolling.confidence,
     });
 
-    if (!rolling.summary && !rolling.intent && !rolling.topic) return;
+    if (!rolling.summary && !rolling.intent && !rolling.topic) {
+      console.log('[RollingContext] skip', {
+        sessionId,
+        totalFinalLinesSeen,
+        lastSummarySeq,
+        delta: newLineDelta,
+        currentBufferLength,
+        reason: 'empty_summary',
+      });
+      return;
+    }
 
     if (rollingMode.mode === 'short_burst' && brainState.rollingSummary) {
       const previousSummary = String(brainState.rollingSummary || '').trim();
@@ -3067,11 +3121,16 @@ wss.on('connection', async (browserWs, req) => {
 
       if (isTooThin && hasWeakerConfidence && hasNoNewTopic) {
         console.log('[RollingContext] short-burst kept previous summary', {
+          sessionId,
           routeKey,
-          previousTopic,
-          nextTopic,
+          hasPreviousTopic: Boolean(previousTopic),
+          hasNextTopic: Boolean(nextTopic),
           nextConfidence,
-          nextSummary,
+          nextSummaryLength: nextSummary.length,
+          totalFinalLinesSeen,
+          lastSummarySeq,
+          delta: newLineDelta,
+          currentBufferLength,
         });
         return;
       }
@@ -3085,7 +3144,8 @@ wss.on('connection', async (browserWs, req) => {
     brainState.rollingRitualContext = rolling.ritual_context || '';
     brainState.rollingGuidance = rolling.guidance || '';
     brainState.rollingUpdatedAt = new Date().toISOString();
-    brainState.lastSummaryLineCount = lineCount;
+    brainState.lastSummarySeq = totalFinalLinesSeen;
+    brainState.lastSummaryLineCount = currentBufferLength;
 
     const payload = {
       type: 'brain_state',
@@ -3106,10 +3166,12 @@ wss.on('connection', async (browserWs, req) => {
     };
 
     console.log('[RollingContext] broadcast', {
+      sessionId,
       routeKey,
-      rollingTopic: brainState.rollingTopic,
-      rollingIntent: brainState.rollingIntent,
-      rollingSummary: brainState.rollingSummary,
+      totalFinalLinesSeen,
+      lastSummarySeq: brainState.lastSummarySeq,
+      delta: newLineDelta,
+      currentBufferLength,
     });
 
     persistSessionBrainState(activeSession);
@@ -3254,9 +3316,7 @@ wss.on('connection', async (browserWs, req) => {
             translationMeta,
           });
 
-          activeSession.lines.unshift(line);
-          activeSession.lines = activeSession.lines.slice(0, 100);
-          activeSession.updatedAt = line.at;
+          addFinalLineToSession(activeSession, line);
           persistLiveSession(activeSession);
           persistSessionLine(activeSession, line, routeKey, retrieval);
 
