@@ -143,6 +143,18 @@ function buildBrainStateHistoryEntry(brainState) {
   };
 }
 
+function hasRollingBrainState(brainState) {
+  return Boolean(
+    brainState?.rollingSummary ||
+      brainState?.rollingIntent ||
+      brainState?.rollingTopic ||
+      brainState?.rollingDoctrinalTheme ||
+      brainState?.rollingRitualContext ||
+      brainState?.rollingGuidance ||
+      (Array.isArray(brainState?.rollingEntities) && brainState.rollingEntities.length)
+  );
+}
+
 function getInitials(email) {
   const name = String(email || '').split('@')[0] || 'A';
   return (
@@ -758,6 +770,7 @@ const interimTimerRef = useRef(null);
 const reconnectTimerRef = useRef(null);
 const shouldReconnectRef = useRef(false);
 const manualStopRef = useRef(false);
+const brainStateBySessionRef = useRef(new Map());
 const audioRunIdRef = useRef(0);
 const pendingReconnectModeRef = useRef(null);
 const liveConfigRef = useRef({
@@ -873,6 +886,30 @@ const lastLiveSnapshotRef = useRef('');
     fetchSessionList();
   }, [fetchSessionList, isAdminAuthorized, isLiveMode]);
 
+  const applySessionBrainState = useCallback((sessionId, brainState, { allowEmpty = false } = {}) => {
+    const sanitized = sanitizeSessionId(sessionId) || FIXED_SESSION_ID;
+    const cachedBrainState = brainStateBySessionRef.current.get(sanitized) || null;
+    const nextBrainState = hasRollingBrainState(brainState)
+      ? brainState
+      : hasRollingBrainState(cachedBrainState)
+      ? cachedBrainState
+      : null;
+
+    if (nextBrainState) {
+      brainStateBySessionRef.current.set(sanitized, nextBrainState);
+      setRollingBrainState(nextBrainState);
+      const brainStateEntry = buildBrainStateHistoryEntry(nextBrainState);
+      setBrainStateHistory(brainStateEntry ? [brainStateEntry] : []);
+      return;
+    }
+
+    if (allowEmpty) {
+      brainStateBySessionRef.current.delete(sanitized);
+      setRollingBrainState(null);
+      setBrainStateHistory([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAdminAuthorized || !isLiveMode) return;
 
@@ -882,8 +919,6 @@ const lastLiveSnapshotRef = useRef('');
         setHistoryLines([]);
         setLiveChinese('');
         setLiveEnglish('');
-        setRollingBrainState(null);
-        setBrainStateHistory([]);
         lastTranslatedChineseRef.current = '';
         lastLiveSnapshotRef.current = '';
 
@@ -892,9 +927,7 @@ const lastLiveSnapshotRef = useRef('');
           const data = await existing.json();
           setSession(data);
           setHistoryLines(data.lines || []);
-          setRollingBrainState(data.brainState || null);
-          const brainStateEntry = buildBrainStateHistoryEntry(data.brainState);
-          setBrainStateHistory(brainStateEntry ? [brainStateEntry] : []);
+          applySessionBrainState(activeSessionId, data.brainState || null, { allowEmpty: true });
           fetchSessionList();
           if (data.sourceLanguage) setSourceLanguage(data.sourceLanguage);
           if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
@@ -917,9 +950,7 @@ const lastLiveSnapshotRef = useRef('');
         const created = await create.json();
         setSession(created);
         setHistoryLines(created.lines || []);
-        setRollingBrainState(created.brainState || null);
-        const brainStateEntry = buildBrainStateHistoryEntry(created.brainState);
-        setBrainStateHistory(brainStateEntry ? [brainStateEntry] : []);
+        applySessionBrainState(activeSessionId, created.brainState || null, { allowEmpty: true });
         fetchSessionList();
         if (created.sourceLanguage) setSourceLanguage(created.sourceLanguage);
         if (created.targetLanguage) setTargetLanguage(created.targetLanguage);
@@ -929,7 +960,7 @@ const lastLiveSnapshotRef = useRef('');
     };
 
     init();
-  }, [activeSessionId, fetchSessionList, isAdminAuthorized, isLiveMode]);
+  }, [activeSessionId, applySessionBrainState, fetchSessionList, isAdminAuthorized, isLiveMode]);
 
   useEffect(() => {
     if (!isAdminAuthorized || !isLiveMode) return;
@@ -1266,6 +1297,11 @@ const lastLiveSnapshotRef = useRef('');
 
         if (msg.type === 'brain_state') {
           const nextBrainState = msg.brainState || null;
+          const messageSessionId = sanitizeSessionId(msg.sessionId || activeSessionId) || FIXED_SESSION_ID;
+          if (messageSessionId !== activeSessionId) return;
+          if (hasRollingBrainState(nextBrainState)) {
+            brainStateBySessionRef.current.set(messageSessionId, nextBrainState);
+          }
           setRollingBrainState(nextBrainState);
 
           if (
@@ -1436,6 +1472,7 @@ const lastLiveSnapshotRef = useRef('');
         setHistoryLines([]);
         setLiveChinese('');
         setLiveEnglish('');
+        brainStateBySessionRef.current.delete(sanitized);
         setRollingBrainState(null);
         setBrainStateHistory([]);
         lastTranslatedChineseRef.current = '';

@@ -28,6 +28,10 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DEEPGRAM_MODEL = process.env.DEEPGRAM_MODEL || 'nova-3';
 const DEEPSEEK_CHAT_COMPLETIONS_URL = 'https://api.deepseek.com/chat/completions';
+const ROLLING_CONTEXT_MIN_NEW_LINES = 8;
+const ROLLING_CONTEXT_COOLDOWN_MS = 20000;
+const ROLLING_CONTEXT_SLOW_FALLBACK_MS = 30000;
+const ROLLING_CONTEXT_SLOW_FALLBACK_MIN_LINES = 5;
 
 if (!DEEPGRAM_API_KEY) {
   console.error('Missing DEEPGRAM_API_KEY in environment variables');
@@ -370,6 +374,23 @@ function hasRollingBrainState(brainState = {}) {
       brainState.rollingGuidance ||
       (Array.isArray(brainState.rollingEntities) && brainState.rollingEntities.length)
   );
+}
+
+function exposeRollingBrainState(session) {
+  const brainState = session?.brainState || {};
+  return {
+    ...session,
+    brainState,
+    rollingSummary: brainState.rollingSummary || '',
+    rollingIntent: brainState.rollingIntent || '',
+    rollingTopic: brainState.rollingTopic || '',
+    rollingDoctrinalTheme: brainState.rollingDoctrinalTheme || '',
+    rollingRitualContext: brainState.rollingRitualContext || '',
+    rollingGuidance: brainState.rollingGuidance || '',
+    rollingEntities: Array.isArray(brainState.rollingEntities)
+      ? brainState.rollingEntities
+      : [],
+  };
 }
 
 async function hydrateSessionBrainState(session) {
@@ -2245,34 +2266,15 @@ function getRecentFinalWindow(session, { maxLines = 8, maxAgeMs = 30000 } = {}) 
 }
 
 function chooseRollingContextMode(session) {
-  const lines = Array.isArray(session?.lines) ? session.lines : [];
-  const recent = lines.slice(0, 8);
-
-  const shortLineCount = recent.filter((line) => {
-    const src = normalizeSpaces(line?.normalizedCn || line?.rawCn || '');
-    return src && src.length <= 12;
-  }).length;
-
-  const shortRatio = recent.length > 0 ? shortLineCount / recent.length : 0;
-
-  if (recent.length >= 4 && shortRatio >= 0.5) {
-    return {
-      mode: 'short_burst',
-      cooldownMs: 6000,
-      minNewLines: 1,
-      maxLines: 5,
-      maxAgeMs: 15000,
-      minRecentLines: 1,
-    };
-  }
-
   return {
     mode: 'standard',
-    cooldownMs: 25000,
-    minNewLines: 2,
-    maxLines: 8,
-    maxAgeMs: 40000,
-    minRecentLines: 2,
+    cooldownMs: ROLLING_CONTEXT_COOLDOWN_MS,
+    minNewLines: ROLLING_CONTEXT_MIN_NEW_LINES,
+    slowFallbackMs: ROLLING_CONTEXT_SLOW_FALLBACK_MS,
+    slowFallbackMinLines: ROLLING_CONTEXT_SLOW_FALLBACK_MIN_LINES,
+    maxLines: 24,
+    maxAgeMs: 90000,
+    minRecentLines: 5,
   };
 }
 
@@ -2560,7 +2562,7 @@ function appendMishearLog(entry) {
 app.get('/api/session/:id', async (req, res) => {
   const session = getOrCreateSession(req.params.id);
   await hydrateSessionBrainState(session);
-  res.json(session);
+  res.json(exposeRollingBrainState(session));
 });
 
 app.get('/api/sessions', (req, res) => {
@@ -2847,8 +2849,36 @@ app.post('/api/session/:id/clear', (req, res) => {
   }
 
   session.lines = [];
+  session.brainState = {
+    activeTopic: null,
+    activeTopicEn: null,
+    activeTopicType: null,
+    activeTopicConfidence: 0,
+    lockedUntilLineCount: 0,
+    lastTopics: [],
+    rollingSummary: '',
+    rollingIntent: '',
+    rollingTopic: '',
+    rollingDoctrinalTheme: '',
+    rollingRitualContext: '',
+    rollingGuidance: '',
+    rollingEntities: [],
+    rollingUpdatedAt: null,
+    lastSummaryLineCount: 0,
+    lastSummarySeq: getSessionTotalFinalLinesSeen(session),
+  };
   session.updatedAt = new Date().toISOString();
   persistLiveSession(session);
+  if (supabase) {
+    supabase
+      .from('session_brain_state')
+      .delete()
+      .eq('session_id', id)
+      .then(({ error }) => {
+        if (error) warnSupabaseFailure('session_brain_state clear', error);
+      })
+      .catch((err) => warnSupabaseFailure('session_brain_state clear', err));
+  }
 
   res.json({ ok: true });
 });
@@ -3052,9 +3082,13 @@ wss.on('connection', async (browserWs, req) => {
       : 0;
 
     const rollingMode = chooseRollingContextMode(activeSession);
-    const enoughTimePassed =
-      !lastUpdatedMs || now - lastUpdatedMs >= rollingMode.cooldownMs;
+    const timeSinceLastUpdate = lastUpdatedMs ? now - lastUpdatedMs : Number.POSITIVE_INFINITY;
+    const enoughTimePassed = timeSinceLastUpdate >= rollingMode.cooldownMs;
     const enoughNewLines = newLineDelta >= rollingMode.minNewLines;
+    const slowSpeechFallback =
+      timeSinceLastUpdate >= rollingMode.slowFallbackMs &&
+      newLineDelta >= rollingMode.slowFallbackMinLines;
+    const shouldRun = (enoughTimePassed && enoughNewLines) || slowSpeechFallback;
 
     console.log('[RollingContext] trigger check', {
       sessionId,
@@ -3062,22 +3096,34 @@ wss.on('connection', async (browserWs, req) => {
       mode: rollingMode.mode,
       totalFinalLinesSeen,
       lastSummarySeq,
-      delta: newLineDelta,
+      newLineDelta,
       currentBufferLength,
+      timeSinceLastUpdate: Number.isFinite(timeSinceLastUpdate) ? timeSinceLastUpdate : null,
       enoughTimePassed,
       enoughNewLines,
+      slowSpeechFallback,
+      decision: shouldRun ? 'run' : 'skip',
       cooldownMs: rollingMode.cooldownMs,
       minNewLines: rollingMode.minNewLines,
     });
 
-    if (!enoughTimePassed || !enoughNewLines) {
+    if (!shouldRun) {
+      const reason = !enoughTimePassed
+        ? 'cooldown'
+        : !enoughNewLines
+        ? 'not_enough_new_lines'
+        : 'not_ready';
       console.log('[RollingContext] skip', {
         sessionId,
         totalFinalLinesSeen,
         lastSummarySeq,
-        delta: newLineDelta,
+        newLineDelta,
         currentBufferLength,
-        reason: !enoughTimePassed ? 'cooldown' : 'not_enough_new_lines',
+        timeSinceLastUpdate: Number.isFinite(timeSinceLastUpdate) ? timeSinceLastUpdate : null,
+        enoughTimePassed,
+        enoughNewLines,
+        decision: 'skip',
+        reason,
       });
       return;
     }
@@ -3100,8 +3146,12 @@ wss.on('connection', async (browserWs, req) => {
         sessionId,
         totalFinalLinesSeen,
         lastSummarySeq,
-        delta: newLineDelta,
+        newLineDelta,
         currentBufferLength,
+        timeSinceLastUpdate: Number.isFinite(timeSinceLastUpdate) ? timeSinceLastUpdate : null,
+        enoughTimePassed,
+        enoughNewLines,
+        decision: 'skip',
         reason: 'not_enough_recent_lines',
       });
       return;
@@ -3127,8 +3177,12 @@ wss.on('connection', async (browserWs, req) => {
         sessionId,
         totalFinalLinesSeen,
         lastSummarySeq,
-        delta: newLineDelta,
+        newLineDelta,
         currentBufferLength,
+        timeSinceLastUpdate: Number.isFinite(timeSinceLastUpdate) ? timeSinceLastUpdate : null,
+        enoughTimePassed,
+        enoughNewLines,
+        decision: 'skip',
         reason: 'empty_summary',
       });
       return;
@@ -3155,7 +3209,7 @@ wss.on('connection', async (browserWs, req) => {
           nextSummaryLength: nextSummary.length,
           totalFinalLinesSeen,
           lastSummarySeq,
-          delta: newLineDelta,
+          newLineDelta,
           currentBufferLength,
         });
         return;
@@ -3196,8 +3250,10 @@ wss.on('connection', async (browserWs, req) => {
       routeKey,
       totalFinalLinesSeen,
       lastSummarySeq: brainState.lastSummarySeq,
-      delta: newLineDelta,
+      newLineDelta,
       currentBufferLength,
+      timeSinceLastUpdate: Number.isFinite(timeSinceLastUpdate) ? timeSinceLastUpdate : null,
+      decision: 'run',
     });
 
     persistSessionBrainState(activeSession);
