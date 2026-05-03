@@ -2081,7 +2081,9 @@ const lastLiveSnapshotRef = useRef('');
                         onClick={() => setSessionRouteDropdownOpen((value) => !value)}
                         style={styles.createRouteTrigger}
                       >
-                        <span>{selectedSessionRouteLabel}</span>
+                        <span style={styles.createRouteTriggerLabel}>
+                          {selectedSessionRouteLabel}
+                        </span>
                         <span style={styles.createRouteChevron}>
                           {sessionRouteDropdownOpen ? '▲' : '▼'}
                         </span>
@@ -3064,6 +3066,9 @@ const styles = {
     alignItems: 'stretch',
     gap: '8px',
     flexWrap: 'wrap',
+    width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
   },
   createSessionToggle: {
     marginTop: '12px',
@@ -3080,11 +3085,15 @@ const styles = {
     display: 'flex',
     gap: '8px',
     flex: '1 1 160px',
+    minWidth: 0,
+    flexWrap: 'wrap',
   },
   createRouteDropdown: {
     position: 'relative',
     flex: '1 1 280px',
-    minWidth: '180px',
+    minWidth: 0,
+    maxWidth: '100%',
+    boxSizing: 'border-box',
   },
   createRouteTrigger: {
     width: '100%',
@@ -3103,8 +3112,16 @@ const styles = {
     cursor: 'pointer',
     boxSizing: 'border-box',
     textAlign: 'left',
+    minWidth: 0,
+  },
+  createRouteTriggerLabel: {
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   createRouteChevron: {
+    flex: '0 0 auto',
     color: '#ff8a5b',
     fontSize: '10px',
     lineHeight: 1,
@@ -3124,6 +3141,7 @@ const styles = {
     boxShadow: '0 18px 48px rgba(0,0,0,0.34), 0 0 24px rgba(255,107,53,0.08)',
     boxSizing: 'border-box',
     maxWidth: '100%',
+    overflowX: 'hidden',
   },
   createRouteMenuOption: {
     width: '100%',
@@ -3154,9 +3172,12 @@ const styles = {
   fullWidthControl: {
     width: '100%',
     flex: '1 1 100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
   },
   flexButton: {
-    flex: 1,
+    flex: '1 1 120px',
+    minWidth: 0,
   },
   sessionRows: {
     marginTop: '12px',

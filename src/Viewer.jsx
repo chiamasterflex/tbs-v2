@@ -69,6 +69,25 @@ function buildBrainStateHistoryEntry(brainState) {
   };
 }
 
+function normalizeBrainStateHistory(history = []) {
+  const seen = new Set();
+
+  return (Array.isArray(history) ? history : [])
+    .filter((entry) => entry && typeof entry === 'object')
+    .sort((a, b) => {
+      const bTime = b.rollingUpdatedAt ? Date.parse(b.rollingUpdatedAt) : 0;
+      const aTime = a.rollingUpdatedAt ? Date.parse(a.rollingUpdatedAt) : 0;
+      return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+    })
+    .filter((entry) => {
+      const key = entry.id || `${entry.rollingUpdatedAt || ''}-${entry.rollingTopic || ''}-${entry.rollingIntent || ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 24);
+}
+
 function getSessionDisplayName(session, sessionId) {
   const title = String(session?.title || '').trim();
   if (title && title !== 'TBS Live Session') return title;
@@ -152,9 +171,9 @@ export default function Viewer() {
       setSession(data);
       setRollingBrainState(data.brainState || null);
       const brainStateEntry = buildBrainStateHistoryEntry(data.brainState);
-      const persistedHistory = Array.isArray(data.brainStateHistory || data.brain_state_history)
-        ? (data.brainStateHistory || data.brain_state_history).filter(Boolean).slice(0, 24)
-        : [];
+      const persistedHistory = normalizeBrainStateHistory(
+        data.brainStateHistory || data.brain_state_history || []
+      );
       setBrainStateHistory(
         persistedHistory.length ? persistedHistory : brainStateEntry ? [brainStateEntry] : []
       );
@@ -237,9 +256,9 @@ export default function Viewer() {
 
         if (payload?.type === 'brain_state') {
           const nextBrainState = payload.brainState || null;
-          const persistedHistory = Array.isArray(payload.brainStateHistory || payload.brain_state_history)
-            ? (payload.brainStateHistory || payload.brain_state_history).filter(Boolean).slice(0, 24)
-            : [];
+          const persistedHistory = normalizeBrainStateHistory(
+            payload.brainStateHistory || payload.brain_state_history || []
+          );
           setRollingBrainState(nextBrainState);
 
           if (persistedHistory.length) {
@@ -256,7 +275,7 @@ export default function Viewer() {
               const entry = buildBrainStateHistoryEntry(nextBrainState);
               if (!entry || prev[0]?.id === entry.id) return prev;
 
-              return [entry, ...prev].slice(0, 24);
+              return normalizeBrainStateHistory([entry, ...prev]);
             });
           }
 
@@ -774,6 +793,7 @@ const styles = {
     paddingRight: '4px',
   },
   brainStateScrollRow: {
+    position: 'static',
     display: 'grid',
     gridTemplateColumns: '84px 1fr',
     gap: '10px',
