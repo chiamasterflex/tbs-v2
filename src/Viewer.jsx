@@ -152,7 +152,12 @@ export default function Viewer() {
       setSession(data);
       setRollingBrainState(data.brainState || null);
       const brainStateEntry = buildBrainStateHistoryEntry(data.brainState);
-      setBrainStateHistory(brainStateEntry ? [brainStateEntry] : []);
+      const persistedHistory = Array.isArray(data.brainStateHistory || data.brain_state_history)
+        ? (data.brainStateHistory || data.brain_state_history).filter(Boolean).slice(0, 24)
+        : [];
+      setBrainStateHistory(
+        persistedHistory.length ? persistedHistory : brainStateEntry ? [brainStateEntry] : []
+      );
       setStatus((prev) => (prev === 'Live via WebSocket' ? prev : 'Live'));
       setError('');
       setLastUpdated(new Date().toISOString());
@@ -232,7 +237,15 @@ export default function Viewer() {
 
         if (payload?.type === 'brain_state') {
           const nextBrainState = payload.brainState || null;
+          const persistedHistory = Array.isArray(payload.brainStateHistory || payload.brain_state_history)
+            ? (payload.brainStateHistory || payload.brain_state_history).filter(Boolean).slice(0, 24)
+            : [];
           setRollingBrainState(nextBrainState);
+
+          if (persistedHistory.length) {
+            setBrainStateHistory(persistedHistory);
+            return;
+          }
 
           if (
             nextBrainState?.rollingSummary ||
@@ -754,8 +767,10 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
-    maxHeight: '180px',
+    maxHeight: 'clamp(140px, 28vh, 240px)',
     overflowY: 'auto',
+    overscrollBehavior: 'contain',
+    WebkitOverflowScrolling: 'touch',
     paddingRight: '4px',
   },
   brainStateScrollRow: {

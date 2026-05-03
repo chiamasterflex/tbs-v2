@@ -887,10 +887,11 @@ const lastLiveSnapshotRef = useRef('');
     fetchSessionList();
   }, [fetchSessionList, isAdminAuthorized, isLiveMode]);
 
-  const applySessionBrainState = useCallback((sessionId, brainState, { allowEmpty = false } = {}) => {
+  const applySessionBrainState = useCallback((sessionId, brainState, { allowEmpty = false, history = null } = {}) => {
     const sanitized = sanitizeSessionId(sessionId) || FIXED_SESSION_ID;
     const cachedBrainState = brainStateBySessionRef.current.get(sanitized) || null;
     const cachedHistory = brainStateHistoryBySessionRef.current.get(sanitized) || [];
+    const persistedHistory = Array.isArray(history) ? history.filter(Boolean).slice(0, 24) : [];
     const nextBrainState = hasRollingBrainState(brainState)
       ? brainState
       : hasRollingBrainState(cachedBrainState)
@@ -901,7 +902,9 @@ const lastLiveSnapshotRef = useRef('');
       brainStateBySessionRef.current.set(sanitized, nextBrainState);
       setRollingBrainState(nextBrainState);
       const brainStateEntry = buildBrainStateHistoryEntry(nextBrainState);
-      const restoredHistory = cachedHistory.length
+      const restoredHistory = persistedHistory.length
+        ? persistedHistory
+        : cachedHistory.length
         ? cachedHistory
         : brainStateEntry
         ? [brainStateEntry]
@@ -944,7 +947,10 @@ const lastLiveSnapshotRef = useRef('');
           const data = await existing.json();
           setSession(data);
           setHistoryLines(data.lines || []);
-          applySessionBrainState(activeSessionId, data.brainState || null, { allowEmpty: true });
+          applySessionBrainState(activeSessionId, data.brainState || null, {
+            allowEmpty: true,
+            history: data.brainStateHistory || data.brain_state_history || [],
+          });
           fetchSessionList();
           if (data.sourceLanguage) setSourceLanguage(data.sourceLanguage);
           if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
@@ -967,7 +973,10 @@ const lastLiveSnapshotRef = useRef('');
         const created = await create.json();
         setSession(created);
         setHistoryLines(created.lines || []);
-        applySessionBrainState(activeSessionId, created.brainState || null, { allowEmpty: true });
+        applySessionBrainState(activeSessionId, created.brainState || null, {
+          allowEmpty: true,
+          history: created.brainStateHistory || created.brain_state_history || [],
+        });
         fetchSessionList();
         if (created.sourceLanguage) setSourceLanguage(created.sourceLanguage);
         if (created.targetLanguage) setTargetLanguage(created.targetLanguage);
@@ -1316,10 +1325,23 @@ const lastLiveSnapshotRef = useRef('');
           const nextBrainState = msg.brainState || null;
           const messageSessionId = sanitizeSessionId(msg.sessionId || activeSessionId) || FIXED_SESSION_ID;
           if (messageSessionId !== activeSessionId) return;
+          const persistedHistory = Array.isArray(msg.brainStateHistory || msg.brain_state_history)
+            ? (msg.brainStateHistory || msg.brain_state_history).filter(Boolean).slice(0, 24)
+            : [];
           if (hasRollingBrainState(nextBrainState)) {
             brainStateBySessionRef.current.set(messageSessionId, nextBrainState);
           }
           setRollingBrainState(nextBrainState);
+
+          if (persistedHistory.length) {
+            brainStateHistoryBySessionRef.current.set(messageSessionId, persistedHistory);
+            setBrainStateHistory(persistedHistory);
+            console.log('[LiveContext] cached context history', {
+              sessionId: messageSessionId,
+              count: persistedHistory.length,
+            });
+            return;
+          }
 
           if (
             nextBrainState?.rollingSummary ||

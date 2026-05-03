@@ -313,9 +313,13 @@ function persistSessionBrainState(session) {
   if (!supabase || !session?.id) return;
 
   const brainState = ensureSessionBrainState(session);
+  const brainStateHistory = Array.isArray(session.brainStateHistory)
+    ? session.brainStateHistory.slice(0, 24)
+    : [];
   const row = {
     session_id: session.id,
     brain_state: brainState,
+    brain_state_history: brainStateHistory,
     rolling_summary: brainState.rollingSummary || '',
     rolling_intent: brainState.rollingIntent || '',
     rolling_topic: brainState.rollingTopic || '',
@@ -364,6 +368,56 @@ function normalizePersistedBrainState(row = {}) {
   };
 }
 
+function normalizePersistedBrainStateHistory(row = {}) {
+  const history = Array.isArray(row.brain_state_history) ? row.brain_state_history : [];
+
+  return history
+    .filter((entry) => entry && typeof entry === 'object')
+    .map((entry) => ({
+      id: String(entry.id || `${entry.rollingUpdatedAt || Date.now()}-${entry.rollingTopic || ''}-${entry.rollingIntent || ''}`),
+      rollingSummary: entry.rollingSummary || '',
+      rollingIntent: entry.rollingIntent || '',
+      rollingTopic: entry.rollingTopic || '',
+      rollingDoctrinalTheme: entry.rollingDoctrinalTheme || '',
+      rollingRitualContext: entry.rollingRitualContext || '',
+      rollingGuidance: entry.rollingGuidance || '',
+      rollingEntities: Array.isArray(entry.rollingEntities) ? entry.rollingEntities : [],
+      rollingUpdatedAt: entry.rollingUpdatedAt || new Date().toISOString(),
+      confidence: entry.confidence,
+    }))
+    .slice(0, 24);
+}
+
+function buildBrainStateHistoryEntry(brainState = {}, confidence) {
+  if (!hasRollingBrainState(brainState)) return null;
+
+  return {
+    id: `${brainState.rollingUpdatedAt || Date.now()}-${brainState.rollingTopic || ''}-${brainState.rollingIntent || ''}`,
+    rollingSummary: brainState.rollingSummary || '',
+    rollingIntent: brainState.rollingIntent || '',
+    rollingTopic: brainState.rollingTopic || '',
+    rollingDoctrinalTheme: brainState.rollingDoctrinalTheme || '',
+    rollingRitualContext: brainState.rollingRitualContext || '',
+    rollingGuidance: brainState.rollingGuidance || '',
+    rollingEntities: Array.isArray(brainState.rollingEntities) ? brainState.rollingEntities : [],
+    rollingUpdatedAt: brainState.rollingUpdatedAt || new Date().toISOString(),
+    confidence,
+  };
+}
+
+function addBrainStateHistoryEntry(session, brainState, confidence) {
+  if (!session) return [];
+
+  const entry = buildBrainStateHistoryEntry(brainState, confidence);
+  if (!entry) return Array.isArray(session.brainStateHistory) ? session.brainStateHistory : [];
+
+  const current = Array.isArray(session.brainStateHistory) ? session.brainStateHistory : [];
+  if (current[0]?.id === entry.id) return current;
+
+  session.brainStateHistory = [entry, ...current].slice(0, 24);
+  return session.brainStateHistory;
+}
+
 function hasRollingBrainState(brainState = {}) {
   return Boolean(
     brainState.rollingSummary ||
@@ -378,9 +432,14 @@ function hasRollingBrainState(brainState = {}) {
 
 function exposeRollingBrainState(session) {
   const brainState = session?.brainState || {};
+  const brainStateHistory = Array.isArray(session?.brainStateHistory)
+    ? session.brainStateHistory
+    : [];
   return {
     ...session,
     brainState,
+    brainStateHistory,
+    brain_state_history: brainStateHistory,
     rollingSummary: brainState.rollingSummary || '',
     rollingIntent: brainState.rollingIntent || '',
     rollingTopic: brainState.rollingTopic || '',
@@ -419,6 +478,13 @@ async function hydrateSessionBrainState(session) {
         ...persistedBrainState,
       };
       repairStaleLastSummarySeq(session.brainState, session, session.id);
+    }
+
+    const persistedBrainStateHistory = normalizePersistedBrainStateHistory(data);
+    if (persistedBrainStateHistory.length) {
+      session.brainStateHistory = persistedBrainStateHistory;
+    } else if (!Array.isArray(session.brainStateHistory)) {
+      session.brainStateHistory = [];
     }
 
     return session.brainState;
@@ -747,6 +813,7 @@ function getOrCreateSession(id = 'live-session', metadata = {}) {
       createdByEmail: null,
       totalFinalLinesSeen: 0,
       lines: [],
+      brainStateHistory: [],
       brainState: {
         activeTopic: null,
         activeTopicEn: null,
@@ -818,6 +885,10 @@ function ensureSessionBrainState(session) {
       lastSummaryLineCount: 0,
       lastSummarySeq: 0,
     };
+  }
+
+  if (!Array.isArray(session.brainStateHistory)) {
+    session.brainStateHistory = [];
   }
 
   return session.brainState;
@@ -2849,6 +2920,7 @@ app.post('/api/session/:id/clear', (req, res) => {
   }
 
   session.lines = [];
+  session.brainStateHistory = [];
   session.brainState = {
     activeTopic: null,
     activeTopicEn: null,
@@ -3226,6 +3298,11 @@ wss.on('connection', async (browserWs, req) => {
     brainState.rollingUpdatedAt = new Date().toISOString();
     brainState.lastSummarySeq = totalFinalLinesSeen;
     brainState.lastSummaryLineCount = currentBufferLength;
+    const brainStateHistory = addBrainStateHistoryEntry(
+      activeSession,
+      brainState,
+      rolling.confidence
+    );
 
     const payload = {
       type: 'brain_state',
@@ -3243,6 +3320,8 @@ wss.on('connection', async (browserWs, req) => {
         rollingUpdatedAt: brainState.rollingUpdatedAt,
         confidence: rolling.confidence,
       },
+      brainStateHistory,
+      brain_state_history: brainStateHistory,
     };
 
     console.log('[RollingContext] broadcast', {
