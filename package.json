@@ -9,7 +9,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "node server.cjs"
+    "start": "node server.cjs",
+    "ingest:tbsn": "node scripts/ingest-tbsn-corpus.cjs"
   },
   "dependencies": {
     "@deepgram/sdk": "^5.0.0",

@@ -32,6 +32,8 @@ const ROLLING_CONTEXT_MIN_NEW_LINES = 8;
 const ROLLING_CONTEXT_COOLDOWN_MS = 20000;
 const ROLLING_CONTEXT_SLOW_FALLBACK_MS = 30000;
 const ROLLING_CONTEXT_SLOW_FALLBACK_MIN_LINES = 5;
+const TBS_KNOWLEDGE_MAX_CHUNKS = 3;
+const TBS_KNOWLEDGE_MAX_CONTEXT_CHARS = 1500;
 
 if (!DEEPGRAM_API_KEY) {
   console.error('Missing DEEPGRAM_API_KEY in environment variables');
@@ -1842,6 +1844,273 @@ function retrieveSacredEntities(text, eventMode = 'Dharma Talk') {
     .slice(0, retrievalConfig.top_sacred_entities || 8);
 }
 
+function cleanTbsKnowledgeText(text = '', maxChars = 520) {
+  const cleaned = normalizeSpaces(
+    String(text || '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\[[^\]]{0,80}\]\([^)]{0,200}\)/g, ' ')
+      .replace(/https?:\/\/\S+/gi, ' ')
+  );
+
+  if (!cleaned || cleaned.length < 80) return '';
+  if ((cleaned.match(/[<>]/g) || []).length > 3) return '';
+
+  return cleaned.length > maxChars ? `${cleaned.slice(0, maxChars).trim()}...` : cleaned;
+}
+
+function extractRollingContextText(rollingContext = null) {
+  if (!rollingContext) return '';
+
+  const entities = Array.isArray(rollingContext.rollingEntities || rollingContext.entities)
+    ? (rollingContext.rollingEntities || rollingContext.entities).join(' ')
+    : '';
+
+  return [
+    rollingContext.rollingSummary,
+    rollingContext.summary,
+    rollingContext.rollingTopic,
+    rollingContext.topic,
+    rollingContext.rollingDoctrinalTheme,
+    rollingContext.doctrinal_theme,
+    rollingContext.rollingRitualContext,
+    rollingContext.ritual_context,
+    rollingContext.rollingGuidance,
+    rollingContext.guidance,
+    entities,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function buildTbsKnowledgeCandidateTerms({ sourceText = '', rollingContext = null } = {}) {
+  const combined = normalizeSpaces(`${sourceText || ''} ${extractRollingContextText(rollingContext)}`);
+  if (!combined) return [];
+
+  const scored = new Map();
+  const addTerm = (term, score = 1) => {
+    const clean = normalizeSpaces(term);
+    if (!clean || clean.length < 2 || clean.length > 80) return;
+    if (/^\d+$/.test(clean)) return;
+    scored.set(clean, Math.max(scored.get(clean) || 0, score));
+  };
+
+  const prioritizedRows = [
+    ...sacredEntities,
+    ...generatedDeities,
+    ...generatedSacredNames,
+    ...generatedTbsTerms,
+  ];
+
+  for (const row of prioritizedRows) {
+    const terms = []
+      .concat(row?.cn || [])
+      .concat(row?.en || [])
+      .concat(row?.aliases || [])
+      .concat(row?.variants || [])
+      .filter(Boolean);
+
+    for (const term of terms) {
+      const clean = normalizeSpaces(term);
+      if (clean && combined.toLowerCase().includes(clean.toLowerCase())) {
+        addTerm(clean, 80 + clean.length);
+      }
+    }
+  }
+
+  for (const term of PROTECTED_ENGLISH_TERMS) {
+    if (combined.toLowerCase().includes(term.toLowerCase())) {
+      addTerm(term, 60 + term.length);
+    }
+  }
+
+  const englishTerms = combined.match(/\b[A-Z][A-Za-z][A-Za-z'’-]*(?:\s+[A-Z][A-Za-z][A-Za-z'’-]*){0,4}\b/g) || [];
+  for (const term of englishTerms) {
+    if (/^(The|This|That|These|Those|Then|When|Where|Why|How|And|But)$/i.test(term)) continue;
+    addTerm(term, 35 + term.length);
+  }
+
+  const chineseTerms = combined.match(/[\u3400-\u9fff]{2,8}/g) || [];
+  for (const term of chineseTerms) {
+    addTerm(term, 40 + term.length);
+  }
+
+  const doctrinalKeywords = [
+    'Buddha',
+    'Bodhisattva',
+    'Tara',
+    'Vajra',
+    'Guru',
+    'mantra',
+    'mudra',
+    'homa',
+    'empowerment',
+    'refuge',
+    'lineage',
+    'True Buddha School',
+    'Living Buddha Lian Sheng',
+  ];
+
+  for (const term of doctrinalKeywords) {
+    if (combined.toLowerCase().includes(term.toLowerCase())) {
+      addTerm(term, 45 + term.length);
+    }
+  }
+
+  return [...scored.entries()]
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .slice(0, 8)
+    .map(([term]) => term);
+}
+
+function escapePostgrestLikeTerm(term = '') {
+  return normalizeSpaces(term)
+    .replace(/[,%()]/g, ' ')
+    .replace(/[^\p{L}\p{N}\u3400-\u9fff _-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .slice(0, 80);
+}
+
+function scoreTbsKnowledgeRow(row = {}, terms = []) {
+  const title = String(row.source_title || row.title || '').toLowerCase();
+  const sourceKey = String(row.metadata?.source_key || row.source_key || '').toLowerCase();
+  const chunk = String(row.chunk_text || '').toLowerCase();
+  let score = Number(row.priority || 0);
+
+  for (const term of terms) {
+    const t = String(term || '').toLowerCase();
+    if (!t) continue;
+    if (title.includes(t)) score += 80 + t.length;
+    if (sourceKey.includes(t)) score += 60 + t.length;
+    if (chunk.includes(t)) score += 20 + Math.min(40, t.length);
+  }
+
+  return score;
+}
+
+function normalizeTbsKnowledgeRow(row = {}, terms = []) {
+  const excerpt = cleanTbsKnowledgeText(row.chunk_text);
+  if (!excerpt) return null;
+
+  return {
+    sourceTitle: normalizeSpaces(row.source_title || row.title || 'Official TBSN source'),
+    sourceUrl: row.source_url || row.url || '',
+    sourceKey: row.metadata?.source_key || row.source_key || '',
+    excerpt,
+    _score: scoreTbsKnowledgeRow(row, terms),
+  };
+}
+
+async function retrieveTbsKnowledgeContext({ sourceText = '', rollingContext = null, routeKey = 'zh_en' } = {}) {
+  if (!supabase) return [];
+
+  const candidateTerms = buildTbsKnowledgeCandidateTerms({ sourceText, rollingContext });
+  if (!candidateTerms.length) return [];
+
+  const rows = [];
+  const seenChunkKeys = new Set();
+  const searchedTerms = candidateTerms.slice(0, 5);
+
+  try {
+    for (const term of searchedTerms) {
+      const safeTerm = escapePostgrestLikeTerm(term);
+      if (!safeTerm || safeTerm.length < 2) continue;
+
+      const pattern = `%${safeTerm}%`;
+      const { data: chunkRows = [], error: chunkError } = await supabase
+        .from('tbs_knowledge_chunks')
+        .select('chunk_key, chunk_text, source_title, source_url, category, priority, trust_level, metadata')
+        .or(`chunk_text.ilike.${pattern},source_title.ilike.${pattern}`)
+        .limit(6);
+
+      if (chunkError) {
+        warnSupabaseFailure('tbs_knowledge_chunks retrieval', chunkError);
+        continue;
+      }
+
+      for (const row of chunkRows || []) {
+        const key = row.chunk_key || `${row.source_url}|${row.chunk_text?.slice(0, 80)}`;
+        if (!key || seenChunkKeys.has(key)) continue;
+        seenChunkKeys.add(key);
+        rows.push(row);
+      }
+
+      const { data: sourceRows = [], error: sourceError } = await supabase
+        .from('tbs_sources')
+        .select('id, source_key, title, url, priority')
+        .or(`source_key.ilike.${pattern},title.ilike.${pattern}`)
+        .limit(4);
+
+      if (sourceError) {
+        warnSupabaseFailure('tbs_sources retrieval', sourceError);
+        continue;
+      }
+
+      const sourceIds = (sourceRows || []).map((row) => row.id).filter(Boolean);
+      if (sourceIds.length > 0) {
+        const { data: sourceChunkRows = [], error: sourceChunkError } = await supabase
+          .from('tbs_knowledge_chunks')
+          .select('chunk_key, chunk_text, source_title, source_url, category, priority, trust_level, metadata')
+          .in('source_id', sourceIds)
+          .order('chunk_index', { ascending: true })
+          .limit(6);
+
+        if (sourceChunkError) {
+          warnSupabaseFailure('tbs_knowledge_chunks source retrieval', sourceChunkError);
+          continue;
+        }
+
+        for (const row of sourceChunkRows || []) {
+          const key = row.chunk_key || `${row.source_url}|${row.chunk_text?.slice(0, 80)}`;
+          if (!key || seenChunkKeys.has(key)) continue;
+          seenChunkKeys.add(key);
+          rows.push(row);
+        }
+      }
+    }
+
+    const topRows = rows
+      .map((row) => normalizeTbsKnowledgeRow(row, candidateTerms))
+      .filter(Boolean)
+      .sort((a, b) => b._score - a._score)
+      .slice(0, TBS_KNOWLEDGE_MAX_CHUNKS);
+
+    console.log('[TBSKnowledge] retrieval', {
+      routeKey,
+      candidateTerms,
+      chunksFound: topRows.length,
+      sourceTitles: topRows.map((row) => row.sourceTitle).filter(Boolean),
+    });
+
+    return topRows;
+  } catch (err) {
+    console.warn('[TBSKnowledge] retrieval failed', err.message);
+    return [];
+  }
+}
+
+function formatTbsKnowledgeContextBlock(rows = []) {
+  if (!Array.isArray(rows) || rows.length === 0) return '';
+
+  const lines = [];
+  let usedChars = 0;
+
+  for (const row of rows) {
+    const title = normalizeSpaces(row.sourceTitle || 'Official TBSN source');
+    const excerptBudget = Math.max(160, Math.min(520, TBS_KNOWLEDGE_MAX_CONTEXT_CHARS - usedChars - title.length - 20));
+    const excerpt = cleanTbsKnowledgeText(row.excerpt, excerptBudget);
+    if (!excerpt) continue;
+
+    const block = `- Source: ${title}\n  ${excerpt}`;
+    if (usedChars + block.length > TBS_KNOWLEDGE_MAX_CONTEXT_CHARS && lines.length > 0) break;
+    lines.push(block);
+    usedChars += block.length;
+  }
+
+  if (!lines.length) return '';
+
+  return `Relevant TBS knowledge context:\n${lines.join('\n')}\nUse only for context. Do not translate this context text.`;
+}
+
 function retrievePhraseMemory(text, eventMode = 'Dharma Talk') {
   const pools = [...phraseMemory, ...generatedPhrases];
   const results = [];
@@ -2151,6 +2420,10 @@ Rolling context (next 30–60s; subtle guidance, don’t overfit):
           .join('\n')
       : 'No correction memory hits';
 
+  const tbsKnowledgeBlock = formatTbsKnowledgeContextBlock(
+    retrieval.tbsKnowledgeContext || retrieval.tbsKnowledgeChunks || []
+  );
+
   const contextBlock =
     contextWindow.length > 0
       ? contextWindow.map((x, i) => `${i + 1}. CN: ${x.cn} || EN: ${x.en}`).join('\n')
@@ -2232,6 +2505,8 @@ ${phraseBlock}
 
 Correction memory matches:
 ${correctionBlock}
+
+${tbsKnowledgeBlock}
 `.trim();
 
     return { systemPrompt: systemPromptWithRolling, userPrompt };
@@ -2305,6 +2580,8 @@ ${ceremonyBlock}
 
 Correction memory matches:
 ${correctionBlock}
+
+${tbsKnowledgeBlock}
 `.trim();
 
   return { systemPrompt: systemPromptWithRolling, userPrompt };
@@ -2519,11 +2796,28 @@ async function translateWithDeepSeek(
       : literalFallbackTranslate(text, hits);
   }
 
+  let enrichedRetrieval = retrieval || {};
+  if (mode !== 'interim' && !(enrichedRetrieval.tbsKnowledgeContext || []).length) {
+    const tbsKnowledgeContext = await retrieveTbsKnowledgeContext({
+      sourceText: text,
+      rollingContext,
+      routeKey,
+    });
+
+    if (tbsKnowledgeContext.length > 0) {
+      retrieval.tbsKnowledgeContext = tbsKnowledgeContext;
+      enrichedRetrieval = {
+        ...enrichedRetrieval,
+        tbsKnowledgeContext,
+      };
+    }
+  }
+
   let { systemPrompt, userPrompt } = buildDeepSeekPrompts({
     text,
     hits,
     mode,
-    retrieval,
+    retrieval: enrichedRetrieval,
     eventMode,
     contextWindow,
     inputMode,
@@ -2565,7 +2859,7 @@ async function translateWithDeepSeek(
         text,
         hits,
         mode,
-        retrieval,
+        retrieval: enrichedRetrieval,
         eventMode,
         contextWindow,
         inputMode,
