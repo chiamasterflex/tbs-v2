@@ -1091,6 +1091,19 @@ const MANTRA_REQUIRED_TRIGGERS = new Set([
   'vajrini',
   'dhari',
   'phat',
+  'vajrapani',
+  'bo',
+  'ru',
+  'lan',
+  'zhe',
+  'li',
+  'boru',
+  'lanzheli',
+  'baru',
+  'bolu',
+  'prelancri',
+  'prelanci',
+  'berilansri',
 ]);
 
 const MANTRA_CONTEXT_TRIGGERS = new Set([
@@ -1138,6 +1151,19 @@ const MANTRA_CONTEXT_TRIGGERS = new Set([
   'vajrini',
   'dhari',
   'phat',
+  'vajrapani',
+  'bo',
+  'ru',
+  'lan',
+  'zhe',
+  'li',
+  'boru',
+  'lanzheli',
+  'baru',
+  'bolu',
+  'prelancri',
+  'prelanci',
+  'berilansri',
 ]);
 
 const MANTRA_SYLLABLE_KEYTERMS = [
@@ -1249,6 +1275,8 @@ function getMantraAliases(mantra = {}) {
     ...(mantra.aliases || []),
     ...(mantra.asr_variants || []),
     ...(mantra.asrVariants || []),
+    ...(mantra.chinese || []),
+    ...(mantra.pinyin || []),
   ].filter(Boolean);
 
   const expanded = [];
@@ -1264,9 +1292,9 @@ function getMantraAliases(mantra = {}) {
   return [...new Set(expanded)];
 }
 
-function findBestMantraMatch(text = '') {
+function findBestMantraMatch(text = '', { allowContextCarry = false } = {}) {
   const candidate = normalizeMantraCandidate(text);
-  if (!candidate || !hasMantraTrigger(candidate)) return null;
+  if (!candidate || (!hasMantraTrigger(candidate) && !allowContextCarry)) return null;
 
   let best = null;
 
@@ -1289,8 +1317,54 @@ function findBestMantraMatch(text = '') {
 
   if (!best) return null;
   const threshold = getMantraTokens(candidate).includes('om') ? 0.78 : 0.84;
+  if (allowContextCarry && best.confidence >= 0.9) return best;
   if (best.confidence < threshold || !hasStrongMantraTrigger(candidate)) return null;
   return best;
+}
+
+function normalizeRepeatedMantraText(original = '', { routeKey = 'zh_en', mode = 'final' } = {}) {
+  const trimmed = normalizeSpaces(original);
+  if (!/[，,;；]/.test(trimmed)) return null;
+
+  const rawSegments = trimmed
+    .split(/([，,;；]+)/)
+    .filter((segment) => segment && !/^[，,;；]+$/.test(segment))
+    .map((segment) => normalizeSpaces(segment));
+
+  if (rawSegments.length < 2 || rawSegments.length > 7) return null;
+
+  const matches = [];
+  let canonical = '';
+
+  for (let idx = 0; idx < rawSegments.length; idx += 1) {
+    const match = findBestMantraMatch(rawSegments[idx], {
+      allowContextCarry: idx > 0 && Boolean(canonical),
+    });
+
+    if (!match) return null;
+    if (!canonical) canonical = match.canonical;
+    if (match.canonical !== canonical) return null;
+    matches.push({ ...match, pure: true, repeated: true });
+  }
+
+  if (!matches.length || !canonical) return null;
+
+  const output = `${matches.map(() => canonical).join(', ')}.`;
+  const bestConfidence = Math.min(...matches.map((match) => match.confidence || 0));
+
+  console.log('[MantraMatch] detected', {
+    id: matches[0].id,
+    canonical,
+    confidence: Number(bestConfidence.toFixed(3)),
+    routeKey,
+    mode,
+  });
+
+  return {
+    text: output,
+    matches,
+    pureMantra: true,
+  };
 }
 
 function findBestMantraSegment(text = '') {
@@ -1319,6 +1393,9 @@ function normalizeMantraText(text = '', { routeKey = 'zh_en', mode = 'final' } =
   if (!original) {
     return { text: original, matches: [], pureMantra: false };
   }
+
+  const repeatedMantra = normalizeRepeatedMantraText(original, { routeKey, mode });
+  if (repeatedMantra) return repeatedMantra;
 
   const wholeMatch = findBestMantraMatch(original);
   const originalTokens = getMantraTokens(original);

@@ -320,6 +320,57 @@
     "notes": "Canonical is a conservative common transliteration. Verify exact TBS romanization before broadening aliases."
   },
   {
+    "id": "vajrapani-protection-mantra",
+    "canonical": "Om Bo Ru Lan Zhe Li",
+    "display": "Om Bo Ru Lan Zhe Li",
+    "deity": "Vajrapani Bodhisattva / Vajrapani",
+    "category": "Protection mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Bo Ru Lan Zhe Li",
+      "Om Boru Lanzheli",
+      "Om Baru Lan Zhe Li",
+      "Om Bolu Lan Zhe Li",
+      "Om Bo Ru Lan Zher Li"
+    ],
+    "chinese": [
+      "嗡。波汝藍者利。",
+      "嗡 波汝藍者利",
+      "波汝藍者利"
+    ],
+    "pinyin": [
+      "ong bo ru lan zhe li",
+      "weng bo ru lan zhe li",
+      "bō rǔ lán zhě lì"
+    ],
+    "asr_variants": [
+      "om prelancri",
+      "om prelanc ri",
+      "om prelanci",
+      "om berilansri",
+      "berilansri",
+      "prelancri",
+      "prelanci",
+      "om bō rǔ lán zhě lì",
+      "om bo ru lan zhe li",
+      "om boru lanzheli",
+      "om baru lan zhe li",
+      "om bolu lan zhe li"
+    ],
+    "associated_terms": [
+      "Vajrapani",
+      "Bodhisattva Vajrapani",
+      "Trishula Mudra",
+      "protection",
+      "Simabandhana Diri",
+      "護身"
+    ],
+    "prompt_instruction": "Preserve this mantra exactly as “Om Bo Ru Lan Zhe Li”. Do not translate it literally.",
+    "notes": "Often recited 7 times in this sadhana context."
+  },
+  {
     "id": "mahabala-vajra-mantra-placeholder",
     "canonical": "Mahabala Vajra mantra canonical wording pending TBS verification",
     "display": "Mahabala Vajra mantra canonical wording pending TBS verification",
