@@ -753,8 +753,10 @@ function getDeepgramVocabularyOptions(routeConfig) {
     ? routeConfig.hotwords.filter(Boolean)
     : [];
   const mantraKeyterms = getMantraDeepgramKeyterms();
-  const combinedHotwords = [...new Set([...hotwords, ...mantraKeyterms])];
+  const combinedHotwords = sanitizeDeepgramKeyterms([...hotwords, ...mantraKeyterms]);
   if (!combinedHotwords.length) return {};
+
+  console.log('[Deepgram] keyterms count=' + combinedHotwords.length);
 
   const model = String(DEEPGRAM_MODEL || '').toLowerCase();
 
@@ -1143,27 +1145,33 @@ const MANTRA_SYLLABLE_KEYTERMS = [
   'Ah',
   'Hom',
   'Hum',
-  'Hung',
-  'Hong',
   'Guru',
   'Lian Sheng',
   'Siddhi',
-  'Om Ah Hom',
-  'Om Guru Lian Sheng Siddhi Hom',
-  'Om Mani Padme Hum',
-  'Om Cale Cule Cundi Svaha',
-  'Om Ami Dewa Hrih',
-  'Tayata Om Bekandze Bekandze Maha Bekandze Radza Samudgate Soha',
+  'Padme',
+  'Cundi',
+  'Amitabha',
 ];
 
 function getMantraDeepgramKeyterms() {
-  const terms = [...MANTRA_SYLLABLE_KEYTERMS];
-  for (const mantra of Array.isArray(mantraResources) ? mantraResources : []) {
-    if (mantra?.placeholder) continue;
-    if (mantra?.canonical) terms.push(mantra.canonical);
-    for (const alias of mantra?.aliases || []) terms.push(alias);
+  return MANTRA_SYLLABLE_KEYTERMS;
+}
+
+function sanitizeDeepgramKeyterms(terms = []) {
+  const seen = new Set();
+  const out = [];
+
+  for (const term of terms) {
+    const clean = normalizeSpaces(term);
+    if (!clean || clean.length > 40) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(clean);
+    if (out.length >= 20) break;
   }
-  return [...new Set(terms.map((term) => normalizeSpaces(term)).filter(Boolean))].slice(0, 60);
+
+  return out;
 }
 
 function normalizeMantraCandidate(text = '') {
@@ -4019,8 +4027,8 @@ wss.on('connection', async (browserWs, req) => {
     }
   }
 
-  try {
-    dg = await deepgram.listen.v1.connect({
+  function buildDeepgramOptions(includeVocabulary = true) {
+    return {
       model: DEEPGRAM_MODEL,
       language: routeConfig.asrLanguage,
       interim_results: true,
@@ -4029,8 +4037,22 @@ wss.on('connection', async (browserWs, req) => {
       encoding: 'linear16',
       sample_rate: 16000,
       channels: 1,
-      ...getDeepgramVocabularyOptions(routeConfig),
-    });
+      ...(includeVocabulary ? getDeepgramVocabularyOptions(routeConfig) : {}),
+    };
+  }
+
+  try {
+    try {
+      dg = await deepgram.listen.v1.connect(buildDeepgramOptions(true));
+    } catch (err) {
+      const message = String(err?.message || err || '');
+      if (!message.includes('400') && !message.toLowerCase().includes('unexpected server response')) {
+        throw err;
+      }
+
+      console.warn('[Deepgram] keyterms rejected, retrying without keyterms');
+      dg = await deepgram.listen.v1.connect(buildDeepgramOptions(false));
+    }
 
     dg.on('open', () => {
       if (shuttingDown) return;
