@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node server.cjs",
-    "ingest:tbsn": "node scripts/ingest-tbsn-corpus.cjs"
+    "ingest:tbsn": "node scripts/ingest-tbsn-corpus.cjs",
+    "extract:mantras": "node scripts/extract-mantras-from-corpus.cjs"
   },
   "dependencies": {
     "@deepgram/sdk": "^5.0.0",
