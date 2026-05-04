@@ -81,6 +81,14 @@
       "Om Ah Hung",
       "Om Ah Hong"
     ],
+    "chinese": [
+      "嗡 阿 吽",
+      "嗡。阿。吽。"
+    ],
+    "pinyin": [
+      "ong a hong",
+      "weng a hong"
+    ],
     "asr_variants": [
       "om ah home",
       "om ah hum",
@@ -100,5 +108,268 @@
       "Hong"
     ],
     "prompt_instruction": "When these seed syllables are detected in mantra context, preserve the canonical form exactly. Do not translate Om, Ah, or Hom."
+  },
+  {
+    "id": "avalokitesvara-six-syllable-mantra",
+    "canonical": "Om Mani Padme Hum",
+    "display": "Om Mani Padme Hum",
+    "deity": "Avalokitesvara / Guanyin Bodhisattva",
+    "category": "Bodhisattva mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Mani Padme Hum",
+      "Om Mani Padme Hung",
+      "Om Mani Padme Hom",
+      "Om Mani Padme Hong",
+      "Om Mani Peme Hum"
+    ],
+    "chinese": [
+      "嗡嘛呢唄咪吽",
+      "嗡 嘛呢 唄咪 吽",
+      "六字大明咒"
+    ],
+    "pinyin": [
+      "ong ma ni bei mi hong",
+      "weng ma ni bei mi hong"
+    ],
+    "asr_variants": [
+      "om money padme hum",
+      "om mani padme home",
+      "om mani padme hong",
+      "om mani pad me hum",
+      "om money pad me hum"
+    ],
+    "associated_terms": [
+      "Avalokitesvara",
+      "Guanyin",
+      "Chenrezig",
+      "Six-Syllable Mantra",
+      "六字大明咒",
+      "觀世音菩薩",
+      "觀音"
+    ],
+    "prompt_instruction": "When this mantra or a close ASR variant is detected, preserve the canonical form exactly as: Om Mani Padme Hum. Do not translate, paraphrase, or explain it."
+  },
+  {
+    "id": "cundi-buddha-mother-mantra",
+    "canonical": "Om Cale Cule Cundi Svaha",
+    "display": "Om Cale Cule Cundi Svaha",
+    "deity": "Cundi Buddha Mother",
+    "category": "Buddha Mother mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Cale Cule Cundi Svaha",
+      "Om Chale Chule Chundi Svaha",
+      "Om Zale Zule Zundi Svaha",
+      "Om Zhe Li Zhu Li Zhun Ti Svaha",
+      "Om Zhe Li Zhu Li Zhun Ti Soha"
+    ],
+    "chinese": [
+      "準提佛母心咒",
+      "準提咒",
+      "嗡 折戾 主戾 準提 娑哈"
+    ],
+    "pinyin": [
+      "ong zhe li zhu li zhun ti suo ha",
+      "weng zhe li zhu li zhun ti suo ha"
+    ],
+    "asr_variants": [
+      "om chale chule cundi svaha",
+      "om chale chule chundi soha",
+      "om chally chooley cundi soha",
+      "om jolly julie zundi soha",
+      "om zhe li zhu li zhun ti soha"
+    ],
+    "associated_terms": [
+      "Cundi",
+      "Cundi Buddha Mother",
+      "準提佛母",
+      "準提",
+      "Svaha",
+      "Soha"
+    ],
+    "prompt_instruction": "When this mantra or a close ASR variant is detected, preserve the canonical form exactly as: Om Cale Cule Cundi Svaha. Do not translate, paraphrase, or explain it.",
+    "notes": "Canonical is a common Sanskrit transliteration. Verify exact TBS liturgy romanization before adding broader aliases."
+  },
+  {
+    "id": "amitabha-buddha-mantra",
+    "canonical": "Om Ami Dewa Hrih",
+    "display": "Om Ami Dewa Hrih",
+    "deity": "Amitabha Buddha",
+    "category": "Buddha mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Ami Dewa Hrih",
+      "Om Ami Deva Hrih",
+      "Om Amitabha Hrih",
+      "Om A Mi De Wa Hrih"
+    ],
+    "chinese": [
+      "阿彌陀佛心咒",
+      "嗡 阿彌 爹哇 舍",
+      "嗡 阿彌 德瓦 舍"
+    ],
+    "pinyin": [
+      "ong a mi de wa she",
+      "weng a mi de wa she"
+    ],
+    "asr_variants": [
+      "om ami dewa hrih",
+      "om ami deva hri",
+      "om amidewa hree",
+      "om a mi day wa hrih",
+      "om amitaba hrih"
+    ],
+    "associated_terms": [
+      "Amitabha",
+      "Amitabha Buddha",
+      "Amitayus",
+      "阿彌陀佛",
+      "無量光佛",
+      "Pure Land"
+    ],
+    "prompt_instruction": "When this mantra or a close ASR variant is detected, preserve the canonical form exactly as: Om Ami Dewa Hrih. Do not translate, paraphrase, or explain it.",
+    "notes": "Canonical follows common Vajrayana Amitabha usage. Confirm exact TBS event romanization before expanding noisy variants."
+  },
+  {
+    "id": "medicine-buddha-mantra",
+    "canonical": "Tayata Om Bekandze Bekandze Maha Bekandze Radza Samudgate Soha",
+    "display": "Tayata Om Bekandze Bekandze Maha Bekandze Radza Samudgate Soha",
+    "deity": "Medicine Buddha",
+    "category": "Buddha mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Tayata Om Bekandze Bekandze Maha Bekandze Radza Samudgate Soha",
+      "Tadyatha Om Bekandze Bekandze Maha Bekandze Radza Samudgate Soha",
+      "Tayatha Om Bekandze Bekandze Maha Bekandze Radza Samudgate Svaha",
+      "Tayata Om Bhekandze Bhekandze Maha Bhekandze Radza Samudgate Soha"
+    ],
+    "chinese": [
+      "藥師佛心咒",
+      "藥師咒"
+    ],
+    "pinyin": [
+      "yao shi fo xin zhou",
+      "yao shi zhou"
+    ],
+    "asr_variants": [
+      "tayata om bekandze bekandze maha bekandze radza samudgate soha",
+      "tayata om beganze beganze maha beganze radza samudgate soha",
+      "tayata om bekanze bekanze maha bekanze radza samudgate soha",
+      "tayatha om bekandze bekandze maha bekandze radza samudgate soha",
+      "tayata om bekanjay bekanjay maha bekanjay radza samudgate soha"
+    ],
+    "associated_terms": [
+      "Medicine Buddha",
+      "Bhaisajyaguru",
+      "藥師佛",
+      "藥師琉璃光如來",
+      "healing",
+      "Radza",
+      "Samudgate"
+    ],
+    "prompt_instruction": "When this mantra or a close ASR variant is detected, preserve the canonical form exactly as: Tayata Om Bekandze Bekandze Maha Bekandze Radza Samudgate Soha. Do not translate, paraphrase, or explain it.",
+    "notes": "Canonical is common Vajrayana Medicine Buddha transliteration; TBS pages may vary between Soha and Svaha."
+  },
+  {
+    "id": "mahapratisara-bodhisattva-mantra",
+    "canonical": "Om Mani Dhari Vajrini Maha Pratisare Hum Hum Phat Svaha",
+    "display": "Om Mani Dhari Vajrini Maha Pratisare Hum Hum Phat Svaha",
+    "deity": "Mahapratisara Bodhisattva",
+    "category": "Bodhisattva mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Mani Dhari Vajrini Maha Pratisare Hum Hum Phat Svaha",
+      "Om Mani Dhari Vajrini Maha Pratisare Hum Hum Phat Soha",
+      "Om Mani Dhari Vajrini Maha Pratisara Hum Hum Phat Svaha"
+    ],
+    "chinese": [
+      "大隨求菩薩心咒",
+      "大隨求咒"
+    ],
+    "pinyin": [
+      "da sui qiu pu sa xin zhou",
+      "da sui qiu zhou"
+    ],
+    "asr_variants": [
+      "om mani dhari vajrini maha pratisare hum hum phat svaha",
+      "om mani dari vajrini maha pratisare hum hum phat soha",
+      "om money dhari vajrini maha pratisare hum hum phat soha",
+      "om mani dhari vajrini maha prati sare hum hum phat svaha"
+    ],
+    "associated_terms": [
+      "Mahapratisara",
+      "Mahapratisara Bodhisattva",
+      "大隨求菩薩",
+      "大隨求",
+      "Vajrini",
+      "Phat",
+      "Svaha"
+    ],
+    "prompt_instruction": "When this mantra or a close ASR variant is detected, preserve the canonical form exactly as: Om Mani Dhari Vajrini Maha Pratisare Hum Hum Phat Svaha. Do not translate, paraphrase, or explain it.",
+    "notes": "Canonical is a conservative common transliteration. Verify exact TBS romanization before broadening aliases."
+  },
+  {
+    "id": "mahabala-vajra-mantra-placeholder",
+    "canonical": "Mahabala Vajra mantra canonical wording pending TBS verification",
+    "display": "Mahabala Vajra mantra canonical wording pending TBS verification",
+    "deity": "Mahabala / Mahabala Vajra",
+    "category": "Vajra mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "placeholder": true,
+    "aliases": [],
+    "chinese": [
+      "大力金剛心咒"
+    ],
+    "pinyin": [
+      "da li jin gang xin zhou"
+    ],
+    "asr_variants": [],
+    "associated_terms": [
+      "Mahabala",
+      "Mahabala Vajra",
+      "大力金剛"
+    ],
+    "prompt_instruction": "Placeholder only. Do not normalize Mahabala mantra until exact TBS canonical wording is verified.",
+    "notes": "Local resources identify Mahabala as a TBS deity, but the exact mantra wording was not verified in the current repo resources."
+  },
+  {
+    "id": "padmakumara-mantra-placeholder",
+    "canonical": "Padmakumara mantra canonical wording pending TBS verification",
+    "display": "Padmakumara mantra canonical wording pending TBS verification",
+    "deity": "Padmakumara / White Maha Padmakumara",
+    "category": "Guru-related mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "placeholder": true,
+    "aliases": [],
+    "chinese": [
+      "蓮花童子心咒"
+    ],
+    "pinyin": [
+      "lian hua tong zi xin zhou"
+    ],
+    "asr_variants": [],
+    "associated_terms": [
+      "Padmakumara",
+      "White Maha Padmakumara",
+      "蓮花童子",
+      "大白蓮花童子"
+    ],
+    "prompt_instruction": "Placeholder only. Do not normalize Padmakumara mantra until exact TBS canonical wording is verified.",
+    "notes": "Guru Lian Sheng Heart Mantra is already active. This placeholder records a future Padmakumara expansion point without overclaiming exact wording."
   }
 ]

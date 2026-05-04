@@ -1057,6 +1057,38 @@ const MANTRA_REQUIRED_TRIGGERS = new Set([
   'hum',
   'hung',
   'hong',
+  'mani',
+  'padme',
+  'peme',
+  'cundi',
+  'chundi',
+  'cale',
+  'cule',
+  'chale',
+  'chule',
+  'svaha',
+  'soha',
+  'amitabha',
+  'amitaba',
+  'ami',
+  'dewa',
+  'deva',
+  'hrih',
+  'hri',
+  'tayata',
+  'tayatha',
+  'tadyatha',
+  'bekandze',
+  'bekanze',
+  'bhekandze',
+  'radza',
+  'samudgate',
+  'mahapratisara',
+  'pratisare',
+  'pratisara',
+  'vajrini',
+  'dhari',
+  'phat',
 ]);
 
 const MANTRA_CONTEXT_TRIGGERS = new Set([
@@ -1072,6 +1104,38 @@ const MANTRA_CONTEXT_TRIGGERS = new Set([
   'hum',
   'hung',
   'hong',
+  'mani',
+  'padme',
+  'peme',
+  'cundi',
+  'chundi',
+  'cale',
+  'cule',
+  'chale',
+  'chule',
+  'svaha',
+  'soha',
+  'amitabha',
+  'amitaba',
+  'ami',
+  'dewa',
+  'deva',
+  'hrih',
+  'hri',
+  'tayata',
+  'tayatha',
+  'tadyatha',
+  'bekandze',
+  'bekanze',
+  'bhekandze',
+  'radza',
+  'samudgate',
+  'mahapratisara',
+  'pratisare',
+  'pratisara',
+  'vajrini',
+  'dhari',
+  'phat',
 ]);
 
 const MANTRA_SYLLABLE_KEYTERMS = [
@@ -1086,11 +1150,16 @@ const MANTRA_SYLLABLE_KEYTERMS = [
   'Siddhi',
   'Om Ah Hom',
   'Om Guru Lian Sheng Siddhi Hom',
+  'Om Mani Padme Hum',
+  'Om Cale Cule Cundi Svaha',
+  'Om Ami Dewa Hrih',
+  'Tayata Om Bekandze Bekandze Maha Bekandze Radza Samudgate Soha',
 ];
 
 function getMantraDeepgramKeyterms() {
   const terms = [...MANTRA_SYLLABLE_KEYTERMS];
   for (const mantra of Array.isArray(mantraResources) ? mantraResources : []) {
+    if (mantra?.placeholder) continue;
     if (mantra?.canonical) terms.push(mantra.canonical);
     for (const alias of mantra?.aliases || []) terms.push(alias);
   }
@@ -1194,6 +1263,7 @@ function findBestMantraMatch(text = '') {
   let best = null;
 
   for (const mantra of Array.isArray(mantraResources) ? mantraResources : []) {
+    if (mantra?.placeholder) continue;
     if (!mantra?.canonical || mantra.preserve === false) continue;
     for (const alias of getMantraAliases(mantra)) {
       const confidence = mantraSimilarity(candidate, alias);
