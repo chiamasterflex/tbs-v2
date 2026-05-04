@@ -163,6 +163,7 @@ const generatedCeremonyPhrases = readJson(
   path.join(resourcesDir, 'ceremony_phrases.generated.json'),
   []
 );
+const mantraResources = readJson(path.join(resourcesDir, 'mantras.json'), []);
 
 const sacredEntities = readJson(path.join(resourcesDir, 'sacred_entities.json'), []);
 const phraseMemory = readJson(path.join(resourcesDir, 'phrase_memory.json'), []);
@@ -191,7 +192,7 @@ const retrievalConfig = readJson(path.join(resourcesDir, 'retrieval_config.json'
 });
 
 console.log(
-  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} sacredEntities=${sacredEntities.length} phraseMemory=${phraseMemory.length} ceremonyMemory=${ceremonyMemory.length} correctionMemory=${correctionMemory.length} idGlossary=${Object.keys(glossaryIdEn).length} idPhraseMemory=${phraseMemoryId.length} idCorrectionMemory=${correctionMemoryId.length} idHotwords=${hotwordsId.length}`
+  `[Resources] glossary=${generatedGlossary.length} corrections=${generatedCorrections.length} phrases=${generatedPhrases.length} deities=${generatedDeities.length} phonetic=${generatedPhoneticCorrections.length} tbsTerms=${generatedTbsTerms.length} sacredNames=${generatedSacredNames.length} ceremonyPhrases=${generatedCeremonyPhrases.length} mantras=${mantraResources.length} sacredEntities=${sacredEntities.length} phraseMemory=${phraseMemory.length} ceremonyMemory=${ceremonyMemory.length} correctionMemory=${correctionMemory.length} idGlossary=${Object.keys(glossaryIdEn).length} idPhraseMemory=${phraseMemoryId.length} idCorrectionMemory=${correctionMemoryId.length} idHotwords=${hotwordsId.length}`
 );
 
 
@@ -751,16 +752,18 @@ function getDeepgramVocabularyOptions(routeConfig) {
   const hotwords = Array.isArray(routeConfig?.hotwords)
     ? routeConfig.hotwords.filter(Boolean)
     : [];
-  if (!hotwords.length) return {};
+  const mantraKeyterms = getMantraDeepgramKeyterms();
+  const combinedHotwords = [...new Set([...hotwords, ...mantraKeyterms])];
+  if (!combinedHotwords.length) return {};
 
   const model = String(DEEPGRAM_MODEL || '').toLowerCase();
 
   // Nova-3 uses keyterm prompting instead of keywords.
   if (model.startsWith('nova-3')) {
-    return { keyterm: hotwords };
+    return { keyterm: combinedHotwords };
   }
 
-  return { keywords: hotwords };
+  return { keywords: combinedHotwords };
 }
 
 
@@ -1037,6 +1040,263 @@ getOrCreateSession('live-session');
 
 function normalizeSpaces(text) {
   return (text || '').replace(/\s+/g, ' ').trim();
+}
+
+const MANTRA_REQUIRED_TRIGGERS = new Set([
+  'om',
+  'ah',
+  'guru',
+  'lian',
+  'liansheng',
+  'sheng',
+  'seng',
+  'siddhi',
+  'siti',
+  'city',
+  'hom',
+  'hum',
+  'hung',
+  'hong',
+]);
+
+const MANTRA_CONTEXT_TRIGGERS = new Set([
+  'guru',
+  'lian',
+  'liansheng',
+  'sheng',
+  'seng',
+  'siddhi',
+  'siti',
+  'city',
+  'hom',
+  'hum',
+  'hung',
+  'hong',
+]);
+
+const MANTRA_SYLLABLE_KEYTERMS = [
+  'Om',
+  'Ah',
+  'Hom',
+  'Hum',
+  'Hung',
+  'Hong',
+  'Guru',
+  'Lian Sheng',
+  'Siddhi',
+  'Om Ah Hom',
+  'Om Guru Lian Sheng Siddhi Hom',
+];
+
+function getMantraDeepgramKeyterms() {
+  const terms = [...MANTRA_SYLLABLE_KEYTERMS];
+  for (const mantra of Array.isArray(mantraResources) ? mantraResources : []) {
+    if (mantra?.canonical) terms.push(mantra.canonical);
+    for (const alias of mantra?.aliases || []) terms.push(alias);
+  }
+  return [...new Set(terms.map((term) => normalizeSpaces(term)).filter(Boolean))].slice(0, 60);
+}
+
+function normalizeMantraCandidate(text = '') {
+  return normalizeSpaces(
+    String(text || '')
+      .toLowerCase()
+      .replace(/[’']/g, '')
+      .replace(/[^a-z0-9\u3400-\u9fff]+/g, ' ')
+  );
+}
+
+function getMantraTokens(text = '') {
+  return normalizeMantraCandidate(text).split(' ').filter(Boolean);
+}
+
+function hasMantraTrigger(text = '') {
+  const tokens = getMantraTokens(text);
+  if (!tokens.length) return false;
+  const hasOm = tokens.includes('om');
+  const contextualHits = tokens.filter((token) => MANTRA_CONTEXT_TRIGGERS.has(token)).length;
+  return hasOm || contextualHits >= 2;
+}
+
+function hasStrongMantraTrigger(text = '') {
+  const tokens = getMantraTokens(text);
+  if (!tokens.length) return false;
+  const hasOm = tokens.includes('om');
+  const contextualHits = tokens.filter((token) => MANTRA_CONTEXT_TRIGGERS.has(token)).length;
+  return hasOm ? contextualHits >= 1 : contextualHits >= 3;
+}
+
+function levenshteinDistance(a = '', b = '') {
+  const aa = String(a || '');
+  const bb = String(b || '');
+  if (aa === bb) return 0;
+  if (!aa) return bb.length;
+  if (!bb) return aa.length;
+
+  const prev = Array.from({ length: bb.length + 1 }, (_, idx) => idx);
+  const curr = new Array(bb.length + 1);
+
+  for (let i = 1; i <= aa.length; i += 1) {
+    curr[0] = i;
+    for (let j = 1; j <= bb.length; j += 1) {
+      const cost = aa[i - 1] === bb[j - 1] ? 0 : 1;
+      curr[j] = Math.min(
+        curr[j - 1] + 1,
+        prev[j] + 1,
+        prev[j - 1] + cost
+      );
+    }
+    for (let j = 0; j <= bb.length; j += 1) prev[j] = curr[j];
+  }
+
+  return prev[bb.length];
+}
+
+function mantraSimilarity(a = '', b = '') {
+  const aa = normalizeMantraCandidate(a);
+  const bb = normalizeMantraCandidate(b);
+  if (!aa || !bb) return 0;
+  if (aa === bb) return 1;
+  if (aa.includes(bb) || bb.includes(aa)) {
+    const ratio = Math.min(aa.length, bb.length) / Math.max(aa.length, bb.length);
+    return Math.max(0.88, ratio);
+  }
+  const maxLen = Math.max(aa.length, bb.length);
+  return maxLen ? 1 - levenshteinDistance(aa, bb) / maxLen : 0;
+}
+
+function getMantraAliases(mantra = {}) {
+  const aliases = [
+    mantra.canonical,
+    mantra.display,
+    ...(mantra.aliases || []),
+    ...(mantra.asr_variants || []),
+    ...(mantra.asrVariants || []),
+  ].filter(Boolean);
+
+  const expanded = [];
+  for (const alias of aliases) {
+    const normalized = normalizeMantraCandidate(alias);
+    if (!normalized) continue;
+    expanded.push(normalized);
+    if (normalized.startsWith('om ')) {
+      expanded.push(normalized.replace(/^om\s+/, ''));
+    }
+  }
+
+  return [...new Set(expanded)];
+}
+
+function findBestMantraMatch(text = '') {
+  const candidate = normalizeMantraCandidate(text);
+  if (!candidate || !hasMantraTrigger(candidate)) return null;
+
+  let best = null;
+
+  for (const mantra of Array.isArray(mantraResources) ? mantraResources : []) {
+    if (!mantra?.canonical || mantra.preserve === false) continue;
+    for (const alias of getMantraAliases(mantra)) {
+      const confidence = mantraSimilarity(candidate, alias);
+      if (!best || confidence > best.confidence) {
+        best = {
+          id: mantra.id || mantra.canonical,
+          canonical: mantra.canonical,
+          deity: mantra.deity || '',
+          confidence,
+          matchedText: text,
+        };
+      }
+    }
+  }
+
+  if (!best) return null;
+  const threshold = getMantraTokens(candidate).includes('om') ? 0.78 : 0.84;
+  if (best.confidence < threshold || !hasStrongMantraTrigger(candidate)) return null;
+  return best;
+}
+
+function findBestMantraSegment(text = '') {
+  const tokens = getMantraTokens(text);
+  if (tokens.length < 2) return null;
+
+  let best = null;
+  const maxWindow = Math.min(8, tokens.length);
+
+  for (let start = 0; start < tokens.length; start += 1) {
+    for (let end = start + 2; end <= Math.min(tokens.length, start + maxWindow); end += 1) {
+      const segment = tokens.slice(start, end).join(' ');
+      if (!hasMantraTrigger(segment)) continue;
+      const match = findBestMantraMatch(segment);
+      if (match && (!best || match.confidence > best.confidence)) {
+        best = { ...match, tokenStart: start, tokenEnd: end, segment };
+      }
+    }
+  }
+
+  return best;
+}
+
+function normalizeMantraText(text = '', { routeKey = 'zh_en', mode = 'final' } = {}) {
+  const original = normalizeSpaces(text);
+  if (!original) {
+    return { text: original, matches: [], pureMantra: false };
+  }
+
+  const wholeMatch = findBestMantraMatch(original);
+  const originalTokens = getMantraTokens(original);
+  const canonicalTokens = wholeMatch ? getMantraTokens(wholeMatch.canonical) : [];
+  const pureMantra =
+    Boolean(wholeMatch) &&
+    originalTokens.length <= Math.max(8, canonicalTokens.length + 2) &&
+    wholeMatch.confidence >= 0.8;
+
+  if (pureMantra) {
+    console.log('[MantraMatch] detected', {
+      id: wholeMatch.id,
+      canonical: wholeMatch.canonical,
+      confidence: Number(wholeMatch.confidence.toFixed(3)),
+      routeKey,
+      mode,
+    });
+
+    return {
+      text: wholeMatch.canonical,
+      matches: [{ ...wholeMatch, pure: true }],
+      pureMantra: true,
+    };
+  }
+
+  const segmentMatch = findBestMantraSegment(original);
+  if (!segmentMatch || segmentMatch.confidence < 0.86) {
+    return { text: original, matches: [], pureMantra: false };
+  }
+
+  const tokens = original.split(/\s+/);
+  const normalizedTokens = getMantraTokens(original);
+  if (tokens.length !== normalizedTokens.length) {
+    return {
+      text: `${original} ${segmentMatch.canonical}`,
+      matches: [{ ...segmentMatch, pure: false }],
+      pureMantra: false,
+    };
+  }
+
+  tokens.splice(segmentMatch.tokenStart, segmentMatch.tokenEnd - segmentMatch.tokenStart, segmentMatch.canonical);
+  const nextText = normalizeSpaces(tokens.join(' '));
+
+  console.log('[MantraMatch] detected', {
+    id: segmentMatch.id,
+    canonical: segmentMatch.canonical,
+    confidence: Number(segmentMatch.confidence.toFixed(3)),
+    routeKey,
+    mode,
+  });
+
+  return {
+    text: nextText,
+    matches: [{ ...segmentMatch, pure: false }],
+    pureMantra: false,
+  };
 }
 
 function containsChinese(text) {
@@ -2239,6 +2499,7 @@ function buildTranslationMeta({
   const entityCount = (retrieval.sacredEntities || []).length;
   const phraseCount = (retrieval.phraseMatches || []).length;
   const ceremonyCount = (retrieval.ceremonyMatches || []).length;
+  const mantraCount = (retrieval.mantraMatches || []).length;
   const glossaryCount = hits.length;
 
   let score = 20;
@@ -2251,6 +2512,7 @@ function buildTranslationMeta({
   if (phraseCount > 0) score += Math.min(20, phraseCount * 5);
   if (ceremonyCount > 0) score += Math.min(12, ceremonyCount * 4);
   if (correctionCount > 0) score += Math.min(16, correctionCount * 4);
+  if (mantraCount > 0) score += Math.min(16, mantraCount * 8);
   if (phraseMatch?.en) score += 18;
   if (activeTopic?.cn) score += Math.min(12, 4 + Math.floor((activeTopic.confidence || 0) / 6));
   if (looksAbsurdOutput(en)) score -= 45;
@@ -2271,6 +2533,7 @@ function buildTranslationMeta({
     phraseCount,
     ceremonyCount,
     correctionCount,
+    mantraCount,
     shouldShowSourceProminently: band === 'low',
     recommendedDisplayMode: band === 'low' ? 'source_plus_translation' : 'translation_primary',
   };
@@ -2420,6 +2683,13 @@ Rolling context (next 30–60s; subtle guidance, don’t overfit):
           .join('\n')
       : 'No correction memory hits';
 
+  const mantraBlock =
+    (retrieval.mantraMatches || []).length > 0
+      ? retrieval.mantraMatches
+          .map((x) => `${x.canonical}${x.deity ? ` [${x.deity}]` : ''} => preserve exactly; do not translate.`)
+          .join('\n')
+      : 'No mantra matches';
+
   const tbsKnowledgeBlock = formatTbsKnowledgeContextBlock(
     retrieval.tbsKnowledgeContext || retrieval.tbsKnowledgeChunks || []
   );
@@ -2506,6 +2776,9 @@ ${phraseBlock}
 Correction memory matches:
 ${correctionBlock}
 
+Mantra matches:
+${mantraBlock}
+
 ${tbsKnowledgeBlock}
 `.trim();
 
@@ -2580,6 +2853,9 @@ ${ceremonyBlock}
 
 Correction memory matches:
 ${correctionBlock}
+
+Mantra matches:
+${mantraBlock}
 
 ${tbsKnowledgeBlock}
 `.trim();
@@ -2977,7 +3253,11 @@ app.post('/api/session/:id/line', async (req, res) => {
 
   const routeKey = req.body?.translationRoute || session.translationRoute || deriveTranslationRoute(session.sourceLanguage, session.targetLanguage);
   const prepared = runRouteNormalization(rawCn, session.eventMode, routeKey);
-  const normalizedCn = prepared.normalizedText;
+  const mantraNormalized = normalizeMantraText(prepared.normalizedText, {
+    routeKey,
+    mode: 'final',
+  });
+  const normalizedCn = mantraNormalized.text;
   const correctionOverride =
     routeKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, 'final');
   const canOverride = correctionOverride?.canOverride === true;
@@ -3006,6 +3286,7 @@ app.post('/api/session/:id/line', async (req, res) => {
           prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, session.eventMode)
         ),
       };
+  retrieval.mantraMatches = mantraNormalized.matches || [];
 
   const activeTopic = canOverride || routeKey === 'id_en'
     ? null
@@ -3015,7 +3296,9 @@ app.post('/api/session/:id/line', async (req, res) => {
 
   const rollingContext = ensureSessionBrainState(session);
 
-  const en = canOverride
+  const en = mantraNormalized.pureMantra
+    ? normalizedCn
+    : canOverride
     ? correctionOverride.correctedEnglish
     : await translateWithDeepSeek(
         normalizedCn,
@@ -3062,7 +3345,11 @@ app.post('/api/translate-interim', async (req, res) => {
   if (!rawCn) return res.json({ en: '', normalizedCn: '', hits: [] });
 
   const prepared = runRouteNormalization(rawCn, eventMode, routeKey);
-  const normalizedCn = prepared.normalizedText;
+  const mantraNormalized = normalizeMantraText(prepared.normalizedText, {
+    routeKey,
+    mode: 'interim',
+  });
+  const normalizedCn = mantraNormalized.text;
   const correctionOverride =
     routeKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, 'interim');
   const canOverride = correctionOverride?.canOverride === true;
@@ -3100,6 +3387,7 @@ app.post('/api/translate-interim', async (req, res) => {
           prepared.correctionHits || retrieveCorrectionMemory(normalizedCn, eventMode)
         ),
       };
+  retrieval.mantraMatches = mantraNormalized.matches || [];
 
   const activeTopic = canOverride || routeKey === 'id_en'
     ? null
@@ -3109,7 +3397,9 @@ app.post('/api/translate-interim', async (req, res) => {
 
   const rollingContext = ensureSessionBrainState(session);
 
-  const en = canOverride
+  const en = mantraNormalized.pureMantra
+    ? normalizedCn
+    : canOverride
     ? correctionOverride.correctedEnglish
     : await translateWithDeepSeek(
         normalizedCn,
@@ -3425,9 +3715,7 @@ wss.on('connection', async (browserWs, req) => {
     eventMode: activeSession.eventMode,
     deepgramModel: DEEPGRAM_MODEL,
     deepgramVocabMode:
-      routeKey === 'id_en'
-        ? (String(DEEPGRAM_MODEL || '').toLowerCase().startsWith('nova-3') ? 'keyterm' : 'keywords')
-        : 'none',
+      String(DEEPGRAM_MODEL || '').toLowerCase().startsWith('nova-3') ? 'keyterm' : 'keywords',
   });
 
   function sendToBrowser(obj) {
@@ -3671,7 +3959,7 @@ wss.on('connection', async (browserWs, req) => {
       encoding: 'linear16',
       sample_rate: 16000,
       channels: 1,
-      ...(routeKey === 'id_en' ? getDeepgramVocabularyOptions(routeConfig) : {}),
+      ...getDeepgramVocabularyOptions(routeConfig),
     });
 
     dg.on('open', () => {
@@ -3700,7 +3988,11 @@ wss.on('connection', async (browserWs, req) => {
         if (!rawText.trim()) return;
 
         const prepared = runRouteNormalization(rawText, activeSession.eventMode, routeKey);
-        const normalizedCn = prepared.normalizedText;
+        const mantraNormalized = normalizeMantraText(prepared.normalizedText, {
+          routeKey,
+          mode: 'final',
+        });
+        const normalizedCn = mantraNormalized.text;
         const correctionOverride =
           routeKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, 'final');
         const canOverride = correctionOverride?.canOverride === true;
@@ -3731,6 +4023,7 @@ wss.on('connection', async (browserWs, req) => {
                     retrieveCorrectionMemory(normalizedCn, activeSession.eventMode)
                 ),
               };
+          retrieval.mantraMatches = mantraNormalized.matches || [];
 
           const activeTopic = canOverride || routeKey === 'id_en'
             ? null
@@ -3740,7 +4033,9 @@ wss.on('connection', async (browserWs, req) => {
 
           const rollingContext = ensureSessionBrainState(activeSession);
 
-          const en = canOverride
+          const en = mantraNormalized.pureMantra
+            ? normalizedCn
+            : canOverride
             ? correctionOverride.correctedEnglish
             : await translateWithDeepSeek(
                 normalizedCn,

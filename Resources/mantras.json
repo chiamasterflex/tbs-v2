@@ -3,16 +3,21 @@
     "id": "guru-lian-sheng-heart-mantra",
     "canonical": "Om Guru Lian Sheng Siddhi Hom",
     "display": "Om Guru Lian Sheng Siddhi Hom",
-    "deity": "Grand Master Lu / Guru Lian Sheng",
+    "deity": "Grand Master Lu / Guru Lian Sheng / Padmakumara",
     "category": "Guru mantra",
     "tradition": "True Buddha School",
     "language": "Sanskrit transliteration",
     "preserve": true,
     "aliases": [
+      "Om Guru Lian Sheng Siddhi Hom",
       "Om Guru Lian Sheng Siddhi Hum",
+      "Om Guru Lian Sheng Siddhi Hung",
+      "Om Guru Lian Sheng Siti Hom",
+      "Om Guru Lian Sheng City Hong",
+      "Om Guru Lian Seng City Hong",
+      "Om Guru Liansheng Siddhi Hom",
       "Om Guru Lian-Sheng Siddhi Hom",
-      "Om Guru Lian-sheng Siddhi Hom",
-      "Om Guru Lian Sheng Siddhi Hung"
+      "Om Guru Lian-sheng Siddhi Hom"
     ],
     "chinese": [
       "嗡。古魯。蓮生。悉地。吽。",
@@ -26,12 +31,24 @@
     "asr_variants": [
       "om guru lian sheng siddhi home",
       "om guru lian sheng city home",
+      "om guru lian sheng city hong",
+      "om guru lian seng city hong",
       "om guru lian sheng siddhi hum",
+      "om guru lian sheng siddhi hung",
       "om guru lian shen siddhi hom",
       "om gu ru lian sheng siddhi hom",
       "ong guru lian sheng siddhi hom",
       "om guru lian sing siddhi hom",
-      "om guru lian sheng siddhi hong"
+      "om guru lian sheng siddhi hong",
+      "om keluar lention city hong",
+      "om keluar lention city hong om keluar lention city hong",
+      "om keluarung seng siti",
+      "om kalau lensen siti",
+      "om siti hong",
+      "guru lian sheng siti hong",
+      "guru lian seng city hong",
+      "guru lian sheng siddhi hum",
+      "guru lian sheng siddhi hong"
     ],
     "associated_terms": [
       "Root Guru",
@@ -48,5 +65,40 @@
       "吽"
     ],
     "prompt_instruction": "When this mantra or a close ASR variant is detected, preserve the canonical form exactly as: Om Guru Lian Sheng Siddhi Hom. Do not translate, paraphrase, or explain it."
+  },
+  {
+    "id": "tbs-seed-syllables-om-ah-hom",
+    "canonical": "Om Ah Hom",
+    "display": "Om Ah Hom",
+    "deity": "Seed syllables",
+    "category": "Seed syllables",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Ah Hom",
+      "Om Ah Hum",
+      "Om Ah Hung",
+      "Om Ah Hong"
+    ],
+    "asr_variants": [
+      "om ah home",
+      "om ah hum",
+      "om ah hung",
+      "om ah hong",
+      "ah hom",
+      "ah hum",
+      "ah hung",
+      "ah hong"
+    ],
+    "associated_terms": [
+      "Om",
+      "Ah",
+      "Hom",
+      "Hum",
+      "Hung",
+      "Hong"
+    ],
+    "prompt_instruction": "When these seed syllables are detected in mantra context, preserve the canonical form exactly. Do not translate Om, Ah, or Hom."
   }
 ]
