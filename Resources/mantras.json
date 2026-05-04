@@ -1,0 +1,52 @@
+[
+  {
+    "id": "guru-lian-sheng-heart-mantra",
+    "canonical": "Om Guru Lian Sheng Siddhi Hom",
+    "display": "Om Guru Lian Sheng Siddhi Hom",
+    "deity": "Grand Master Lu / Guru Lian Sheng",
+    "category": "Guru mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Guru Lian Sheng Siddhi Hum",
+      "Om Guru Lian-Sheng Siddhi Hom",
+      "Om Guru Lian-sheng Siddhi Hom",
+      "Om Guru Lian Sheng Siddhi Hung"
+    ],
+    "chinese": [
+      "嗡。古魯。蓮生。悉地。吽。",
+      "嗡 古魯 蓮生 悉地 吽",
+      "嗡。咕嚕。蓮生。悉地。吽。"
+    ],
+    "pinyin": [
+      "ong gu lu lian sheng xi di hong",
+      "weng gu lu lian sheng xi di hong"
+    ],
+    "asr_variants": [
+      "om guru lian sheng siddhi home",
+      "om guru lian sheng city home",
+      "om guru lian sheng siddhi hum",
+      "om guru lian shen siddhi hom",
+      "om gu ru lian sheng siddhi hom",
+      "ong guru lian sheng siddhi hom",
+      "om guru lian sing siddhi hom",
+      "om guru lian sheng siddhi hong"
+    ],
+    "associated_terms": [
+      "Root Guru",
+      "Grand Master Lu",
+      "Living Buddha Lian Sheng",
+      "Guru Lian Sheng",
+      "蓮生活佛",
+      "根本上師",
+      "師尊",
+      "咕嚕",
+      "古魯",
+      "蓮生",
+      "悉地",
+      "吽"
+    ],
+    "prompt_instruction": "When this mantra or a close ASR variant is detected, preserve the canonical form exactly as: Om Guru Lian Sheng Siddhi Hom. Do not translate, paraphrase, or explain it."
+  }
+]

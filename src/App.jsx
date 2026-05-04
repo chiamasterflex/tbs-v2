@@ -2190,7 +2190,12 @@ const lastLiveSnapshotRef = useRef('');
                           </div>
                         </div>
 
-                        <div style={styles.sessionRowActions}>
+                        <div
+                          style={{
+                            ...styles.sessionRowActions,
+                            ...(isMobileViewport ? styles.sessionRowActionsMobile : null),
+                          }}
+                        >
                           <button
                             type="button"
                             onClick={() => switchSession(rowSessionId)}
@@ -3260,6 +3265,10 @@ const styles = {
     minWidth: 0,
     maxWidth: '100%',
     boxSizing: 'border-box',
+  },
+  sessionRowActionsMobile: {
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
   emptySessionRow: {
     border: '1px dashed rgba(255,255,255,0.10)',
