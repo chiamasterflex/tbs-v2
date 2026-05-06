@@ -1504,30 +1504,53 @@ const lastLiveSnapshotRef = useRef('');
     }
   };
 
+  const resetLocalSessionState = (sessionId = activeSessionId) => {
+    const sanitized = sanitizeSessionId(sessionId);
+    if (!sanitized) return;
+
+    if (sanitized === activeSessionId) {
+      setHistoryLines([]);
+      setLiveChinese('');
+      setLiveEnglish('');
+      setRollingBrainState(null);
+      setBrainStateHistory([]);
+      if (interimTimerRef.current) {
+        clearTimeout(interimTimerRef.current);
+        interimTimerRef.current = null;
+      }
+      pcmQueueRef.current = [];
+      lastTranslatedChineseRef.current = '';
+      lastLiveSnapshotRef.current = '';
+    }
+
+    brainStateBySessionRef.current.delete(sanitized);
+    brainStateHistoryBySessionRef.current.delete(sanitized);
+  };
+
   const clearHistory = async (sessionId = activeSessionId) => {
     const sanitized = sanitizeSessionId(sessionId);
     if (!sanitized) return;
 
+    const isCurrentSession = sanitized === activeSessionId;
+    if (!window.confirm(isCurrentSession ? 'Clear current live session?' : 'Clear this session?')) {
+      return;
+    }
+
+    resetLocalSessionState(sanitized);
+
     try {
-      await fetch(`${API}/api/session/${encodeURIComponent(sanitized)}/clear`, {
+      const res = await fetch(`${API}/api/session/${encodeURIComponent(sanitized)}/clear`, {
         method: 'POST',
       });
 
-      if (sanitized === activeSessionId) {
-        setHistoryLines([]);
-        setLiveChinese('');
-        setLiveEnglish('');
-        brainStateBySessionRef.current.delete(sanitized);
-        brainStateHistoryBySessionRef.current.delete(sanitized);
-        setRollingBrainState(null);
-        setBrainStateHistory([]);
-        lastTranslatedChineseRef.current = '';
-        lastLiveSnapshotRef.current = '';
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`Clear session failed with status ${res.status}`);
       }
 
       await fetchSessionList();
     } catch (err) {
       console.error('clear history failed', err);
+      window.alert('Local session was cleared, but the shared session could not be reset.');
     }
   };
 

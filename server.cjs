@@ -3882,6 +3882,7 @@ app.post('/api/session/:id/clear', (req, res) => {
   }
 
   session.lines = [];
+  session.totalFinalLinesSeen = 0;
   session.brainStateHistory = [];
   session.brainState = {
     activeTopic: null,
@@ -3899,7 +3900,7 @@ app.post('/api/session/:id/clear', (req, res) => {
     rollingEntities: [],
     rollingUpdatedAt: null,
     lastSummaryLineCount: 0,
-    lastSummarySeq: getSessionTotalFinalLinesSeen(session),
+    lastSummarySeq: 0,
   };
   session.updatedAt = new Date().toISOString();
   persistLiveSession(session);
@@ -3914,7 +3915,14 @@ app.post('/api/session/:id/clear', (req, res) => {
       .catch((err) => warnSupabaseFailure('session_brain_state clear', err));
   }
 
-  res.json({ ok: true });
+  const exposedSession = exposeRollingBrainState(session);
+  broadcastToViewers(id, {
+    type: 'session_cleared',
+    sessionId: id,
+    session: exposedSession,
+  });
+
+  res.json({ ok: true, session: exposedSession });
 });
 
 app.post('/api/session/:id/end', (req, res) => {

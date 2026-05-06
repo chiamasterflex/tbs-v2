@@ -254,6 +254,25 @@ export default function Viewer() {
           return;
         }
 
+        if (payload?.type === 'session_cleared') {
+          setLiveInterim(null);
+          setRollingBrainState(null);
+          setBrainStateHistory([]);
+          setSession((prev) => ({
+            ...(payload.session || prev || {}),
+            id: payload.session?.id || prev?.id || sessionId,
+            lines: [],
+            brainState: null,
+            brainStateHistory: [],
+            brain_state_history: [],
+          }));
+          setStatus('Session cleared');
+          setSocketState('Live');
+          setLastUpdated(new Date().toISOString());
+          setError('');
+          return;
+        }
+
         if (payload?.type === 'brain_state') {
           const nextBrainState = payload.brainState || null;
           const persistedHistory = normalizeBrainStateHistory(
