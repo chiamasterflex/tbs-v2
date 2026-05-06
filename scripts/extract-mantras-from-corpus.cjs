@@ -12,13 +12,19 @@ const MAX_SCAN_CHUNKS = Number.parseInt(process.env.MAX_MANTRA_SCAN_CHUNKS || '5
 const OUT_DIR = path.join(__dirname, '..', 'brain-school', 'outputs');
 const CANDIDATES_PATH = path.join(OUT_DIR, 'mantra-candidates.json');
 const SUMMARY_PATH = path.join(OUT_DIR, 'mantra-candidates-summary.txt');
+const REVIEW_PATH = path.join(OUT_DIR, 'mantra-review.md');
 
 const INDICATORS = [
   'mantra',
   'heart mantra',
   'dharani',
   'recite',
+  'Mantra Persembahan',
+  'Mantra Catur Sarana',
+  'Na Mo',
+  'Namo',
   'Om',
+  'Oṃ',
   'Hom',
   'Hum',
   'Hung',
@@ -34,10 +40,15 @@ const INDICATORS = [
 ];
 
 const ENDING_TOKENS = /\b(?:hom|hum|hung|hong|svaha|soha|phat)\b/i;
-const LABEL_PATTERN = /\b(?:heart\s+mantra|mantra|dharani)\s*[:：-]\s*([^.\n\r。]{2,240})/gi;
-const ROMANIZED_OM_PATTERN = /\bOm\b[\sA-Za-z'’-]{2,220}?\b(?:Hom|Hum|Hung|Hong|Svaha|Soha|Phat)\b/gi;
-const ROMANIZED_ENDING_PATTERN = /\b[A-Z][A-Za-z'’-]*(?:\s+[A-Za-z'’-]+){1,24}\s+(?:Hom|Hum|Hung|Hong|Svaha|Soha|Phat)\b/g;
-const CHINESE_MANTRA_PATTERN = /[「“]?[^「」“”\n\r。]{0,80}嗡[^「」“”\n\r]{0,180}?(?:吽|娑哈|梭哈)[^「」“”\n\r。]{0,40}[」”]?/g;
+const LABEL_PATTERN =
+  /\b(?:heart\s+mantra|mantra\s+persembahan|mantra\s+catur\s+sarana|mantra|dharani)\b\s*[:：-]\s*([^.\n\r。]{2,240})/gi;
+const RECITATION_LABEL_PATTERN =
+  /\b(?:mantra\s+to\s+be\s+recited\s+is|mantra\s+is|recite(?:s)?\s+(?:the\s+)?mantra)\s*[:：-]?\s*['"“”「]?\s*([^.\n\r。]{2,240})/gi;
+const ROMANIZED_OM_PATTERN = /\b(?:Om|Oṃ)\b[\sA-Za-z,'’.\-]{2,220}?\b(?:Hom|Hum|Hung|Hong|Svaha|Soha|Phat)\b/gi;
+const ROMANIZED_ENDING_PATTERN = /\b[A-Z][A-Za-z'’.\-]*(?:\s+[A-Za-z'’.\-]+){1,24}\s+(?:Hom|Hum|Hung|Hong|Svaha|Soha|Phat)\b/g;
+const NAMO_REFUGE_PATTERN =
+  /\b(?:Na\s*Mo|Namo|Nan\s*Mo)\b[\sA-Za-z,'’.\-]{2,220}?\b(?:Bei|Bu\s*Da\s*Ye|Buda\s*Ye|Budaye|Da\s*Mo\s*Ye|Damo\s*Ye|Damoye|Seng\s*Jia\s*Ye|Sengjiaye)\b/gi;
+const CHINESE_MANTRA_PATTERN = /[「“]?[^「」“”\n\r。]{0,80}(?:嗡|咒|心咒|陀羅尼)[^「」“”\n\r]{0,180}?(?:吽|娑哈|梭哈|咒|心咒|陀羅尼)[^「」“”\n\r。]{0,40}[」”]?/g;
 
 function normalizeSpaces(text = '') {
   return String(text || '').replace(/\s+/g, ' ').trim();
@@ -46,6 +57,7 @@ function normalizeSpaces(text = '') {
 function cleanCandidateText(text = '') {
   return normalizeSpaces(
     String(text || '')
+      .replace(/\b(?:mantra|heart mantra|dharani|mantra persembahan|mantra catur sarana)\b\s*(?:to\s+be\s+recited\s+is|is)?\s*[:：-]?\s*/i, '')
       .replace(/^[「“"'：:\-\s]+/, '')
       .replace(/[」”"'\s]+$/, '')
       .replace(/\s+([,.;:!?])/g, '$1')
@@ -69,6 +81,9 @@ function looksTooLargeOrBroken(text = '') {
   if (clean.length < 3 || clean.length > 240) return true;
   if ((clean.match(/[<>]/g) || []).length > 2) return true;
   if (clean.split(/\s+/).length > 36) return true;
+  if (/^(?:namo|na mo|om|hum|hom|hung|hong)$/i.test(clean)) return true;
+  if (/\b(?:sacred meaning|can be found|please refer|chapter|appendix|copyright)\b/i.test(clean)) return true;
+  if (/https?:\/\//i.test(clean)) return true;
   return false;
 }
 
@@ -77,7 +92,8 @@ function getLikelyDeity(row = {}) {
   if (!title) return '';
 
   return title
-    .replace(/[-–|].*$/, '')
+    .replace(/\s*[-–]\s*真佛宗TBSN\s*$/i, '')
+    .replace(/\s*\|\s*.*$/, '')
     .replace(/\b(?:Practice|Mantra|Dharani|Sadhana|Ritual)\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -135,14 +151,19 @@ function scoreCandidate({ rawText = '', context = '', row = {}, source = '' } = 
     signals.push('source_title_deity');
   }
 
-  if (/\b(?:heart\s+mantra|mantra|dharani)\b|心咒|陀羅尼|咒/i.test(context)) {
+  if (/\b(?:heart\s+mantra|mantra\s+persembahan|mantra\s+catur\s+sarana|mantra|dharani)\b|心咒|陀羅尼|咒/i.test(context)) {
     score += 0.25;
     signals.push('near_mantra_label');
   }
 
-  if (/^\s*Om\b/i.test(raw) || /^\s*嗡/.test(raw)) {
+  if (/^\s*(?:Om|Oṃ)\b/i.test(raw) || /^\s*嗡/.test(raw)) {
     score += 0.2;
     signals.push('starts_with_om');
+  }
+
+  if (/\b(?:Na\s*Mo|Namo|Nan\s*Mo)\b/i.test(raw) && /\b(?:Bu\s*Da\s*Ye|Buda\s*Ye|Budaye|Da\s*Mo\s*Ye|Damo\s*Ye|Damoye|Seng\s*Jia\s*Ye|Sengjiaye)\b/i.test(raw)) {
+    score += 0.2;
+    signals.push('refuge_pattern');
   }
 
   if (ENDING_TOKENS.test(raw) || /(?:吽|娑哈|梭哈)/.test(raw)) {
@@ -166,6 +187,12 @@ function scoreCandidate({ rawText = '', context = '', row = {}, source = '' } = 
   };
 }
 
+function getConfidenceLabel(score = 0) {
+  if (score >= 0.8) return 'high';
+  if (score >= 0.55) return 'medium';
+  return 'low';
+}
+
 function addCandidate(candidates, seen, row, rawText, source) {
   const clean = cleanCandidateText(rawText);
   if (looksTooLargeOrBroken(clean)) return;
@@ -187,9 +214,31 @@ function addCandidate(candidates, seen, row, rawText, source) {
     suggestedCanonical: suggestCanonical(clean),
     surroundingContext: context,
     confidence: scored.confidence,
+    confidenceLabel: getConfidenceLabel(scored.confidence),
     signals: scored.signals,
     reviewStatus: 'pending',
   });
+}
+
+function extractLineCandidates(candidates, seen, row, chunkText) {
+  const lines = String(chunkText || '')
+    .split(/\n+/)
+    .map(cleanCandidateText)
+    .filter(Boolean);
+
+  for (const line of lines) {
+    if (/^\s*(?:Om|Oṃ)\b/i.test(line) || /^\s*嗡/.test(line)) {
+      addCandidate(candidates, seen, row, line, 'mantra_line');
+    }
+
+    if (/\b(?:Na\s*Mo|Namo|Nan\s*Mo)\b/i.test(line) && /\b(?:Bu\s*Da\s*Ye|Buda\s*Ye|Budaye|Da\s*Mo\s*Ye|Damo\s*Ye|Damoye|Seng\s*Jia\s*Ye|Sengjiaye)\b/i.test(line)) {
+      addCandidate(candidates, seen, row, line, 'refuge_line');
+    }
+
+    if (/(?:嗡|吽|娑哈|梭哈|咒|心咒|陀羅尼)/.test(line)) {
+      addCandidate(candidates, seen, row, line, 'chinese_mantra_line');
+    }
+  }
 }
 
 function extractCandidatesFromRow(row = {}) {
@@ -203,6 +252,10 @@ function extractCandidatesFromRow(row = {}) {
     addCandidate(candidates, seen, row, match[1], 'label_match');
   }
 
+  for (const match of chunkText.matchAll(RECITATION_LABEL_PATTERN)) {
+    addCandidate(candidates, seen, row, match[1], 'recitation_label_match');
+  }
+
   for (const match of chunkText.matchAll(ROMANIZED_OM_PATTERN)) {
     addCandidate(candidates, seen, row, match[0], 'starts_with_om_pattern');
   }
@@ -211,11 +264,62 @@ function extractCandidatesFromRow(row = {}) {
     addCandidate(candidates, seen, row, match[0], 'ending_token_pattern');
   }
 
+  for (const match of chunkText.matchAll(NAMO_REFUGE_PATTERN)) {
+    addCandidate(candidates, seen, row, match[0], 'refuge_pattern');
+  }
+
   for (const match of chunkText.matchAll(CHINESE_MANTRA_PATTERN)) {
     addCandidate(candidates, seen, row, match[0], 'chinese_mantra_pattern');
   }
 
+  extractLineCandidates(candidates, seen, row, chunkText);
+
   return candidates;
+}
+
+function normalizeGroupText(text = '') {
+  return normalizeSpaces(
+    String(text || '')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\u3400-\u9fff]+/g, ' ')
+  );
+}
+
+function buildGroupKey(candidate = {}) {
+  return [
+    normalizeGroupText(candidate.sourceTitle),
+    normalizeGroupText(candidate.likelyDeity),
+    normalizeGroupText(candidate.rawMantraText),
+  ].join('|');
+}
+
+function groupCandidates(candidates = []) {
+  const groups = new Map();
+
+  for (const candidate of candidates) {
+    const groupKey = buildGroupKey(candidate);
+    const group = groups.get(groupKey) || [];
+    group.push(candidate);
+    groups.set(groupKey, group);
+  }
+
+  return [...groups.entries()].map(([groupKey, items], index) => {
+    const sorted = [...items].sort((a, b) => b.confidence - a.confidence);
+    const best = sorted[0];
+    const sourceUrls = [...new Set(items.map((item) => item.sourceUrl).filter(Boolean))];
+    const chunkCount = items.length;
+
+    return {
+      ...best,
+      groupId: `mantra-candidate-${String(index + 1).padStart(3, '0')}`,
+      groupKey,
+      similarCount: chunkCount,
+      sourceUrls,
+      confidenceLabel: getConfidenceLabel(best.confidence),
+    };
+  });
 }
 
 function createSupabaseClient() {
@@ -238,7 +342,12 @@ async function fetchCandidateRows(supabase) {
     'chunk_text.ilike.%heart mantra%',
     'chunk_text.ilike.%dharani%',
     'chunk_text.ilike.%recite%',
+    'chunk_text.ilike.%Mantra Persembahan%',
+    'chunk_text.ilike.%Mantra Catur Sarana%',
+    'chunk_text.ilike.%Na Mo%',
+    'chunk_text.ilike.%Namo%',
     'chunk_text.ilike.%Om%',
+    'chunk_text.ilike.%Oṃ%',
     'chunk_text.ilike.%Hom%',
     'chunk_text.ilike.%Hum%',
     'chunk_text.ilike.%Hung%',
@@ -295,17 +404,54 @@ function writeOutputs(candidates = []) {
     'Highest confidence candidates:',
     ...candidates
       .slice(0, 25)
-      .map((candidate) => `- ${candidate.confidence.toFixed(2)} ${candidate.sourceTitle}: ${candidate.rawMantraText}`),
+      .map((candidate) => `- ${candidate.confidenceLabel} ${candidate.confidence.toFixed(2)} ${candidate.sourceTitle}: ${candidate.rawMantraText}`),
   ];
 
   fs.writeFileSync(SUMMARY_PATH, `${lines.join('\n')}\n`, 'utf8');
+  writeReviewMarkdown(candidates);
+}
+
+function writeReviewMarkdown(candidates = []) {
+  const lines = [
+    '# Mantra Candidate Review',
+    '',
+    `Generated: ${new Date().toISOString()}`,
+    `Candidates: ${candidates.length}`,
+    '',
+    'Review workflow: approve only candidates whose source context clearly identifies the mantra and deity. Approved items can later be promoted into `Resources/mantras.json`.',
+    '',
+  ];
+
+  for (const candidate of candidates) {
+    lines.push(`## ${candidate.rawMantraText}`);
+    lines.push('');
+    lines.push(`- Status: ${candidate.reviewStatus}`);
+    lines.push(`- Confidence: ${candidate.confidenceLabel} (${candidate.confidence.toFixed(2)})`);
+    lines.push(`- Source: ${candidate.sourceTitle}`);
+    if (candidate.sourceUrl) lines.push(`- URL: ${candidate.sourceUrl}`);
+    if (candidate.likelyDeity) lines.push(`- Likely deity: ${candidate.likelyDeity}`);
+    if (candidate.suggestedCanonical) lines.push(`- Suggested canonical: ${candidate.suggestedCanonical}`);
+    if (candidate.chineseText) lines.push(`- Chinese text: ${candidate.chineseText}`);
+    lines.push(`- Similar hits: ${candidate.similarCount || 1}`);
+    lines.push(`- Signals: ${(candidate.signals || []).join(', ') || 'none'}`);
+    lines.push('');
+    lines.push('Context:');
+    lines.push('');
+    lines.push('```text');
+    lines.push((candidate.surroundingContext || '').slice(0, 700));
+    lines.push('```');
+    lines.push('');
+  }
+
+  fs.writeFileSync(REVIEW_PATH, `${lines.join('\n')}\n`, 'utf8');
 }
 
 async function main() {
   const supabase = createSupabaseClient();
   const rows = await fetchCandidateRows(supabase);
-  const candidates = rows
+  const candidates = groupCandidates(rows
     .flatMap(extractCandidatesFromRow)
+    .sort((a, b) => b.confidence - a.confidence || a.sourceTitle.localeCompare(b.sourceTitle)))
     .sort((a, b) => b.confidence - a.confidence || a.sourceTitle.localeCompare(b.sourceTitle));
 
   writeOutputs(candidates);
@@ -314,6 +460,7 @@ async function main() {
   console.log(`[MantraExtract] candidates=${candidates.length}`);
   console.log(`[MantraExtract] wrote ${path.relative(process.cwd(), CANDIDATES_PATH)}`);
   console.log(`[MantraExtract] wrote ${path.relative(process.cwd(), SUMMARY_PATH)}`);
+  console.log(`[MantraExtract] wrote ${path.relative(process.cwd(), REVIEW_PATH)}`);
 }
 
 main().catch((err) => {

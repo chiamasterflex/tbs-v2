@@ -756,7 +756,9 @@ function getDeepgramVocabularyOptions(routeConfig) {
   const combinedHotwords = sanitizeDeepgramKeyterms([...hotwords, ...mantraKeyterms]);
   if (!combinedHotwords.length) return {};
 
-  console.log('[Deepgram] keyterms count=' + combinedHotwords.length);
+  console.log('[Deepgram] keyterms count=' + combinedHotwords.length, {
+    routeKey: routeConfig?.key || 'unknown',
+  });
 
   const model = String(DEEPGRAM_MODEL || '').toLowerCase();
 
@@ -1104,6 +1106,21 @@ const MANTRA_REQUIRED_TRIGGERS = new Set([
   'prelancri',
   'prelanci',
   'berilansri',
+  'namo',
+  'gulu',
+  'bei',
+  'buda',
+  'budaye',
+  'damo',
+  'damoye',
+  'sengjia',
+  'sengjiaye',
+  'sharwa',
+  'sarwa',
+  'yidamu',
+  'zhala',
+  'niliye',
+  'dayemi',
 ]);
 
 const MANTRA_CONTEXT_TRIGGERS = new Set([
@@ -1164,6 +1181,21 @@ const MANTRA_CONTEXT_TRIGGERS = new Set([
   'prelancri',
   'prelanci',
   'berilansri',
+  'namo',
+  'gulu',
+  'bei',
+  'buda',
+  'budaye',
+  'damo',
+  'damoye',
+  'sengjia',
+  'sengjiaye',
+  'sharwa',
+  'sarwa',
+  'yidamu',
+  'zhala',
+  'niliye',
+  'dayemi',
 ]);
 
 const MANTRA_SYLLABLE_KEYTERMS = [
@@ -1177,7 +1209,26 @@ const MANTRA_SYLLABLE_KEYTERMS = [
   'Padme',
   'Cundi',
   'Amitabha',
+  'Bo Ru Lan Zhe Li',
+  'Vajrapani',
 ];
+
+const MANDARIN_ROUTE_MANTRA_FALLBACK_TRIGGERS = new Set([
+  'om',
+  'ah',
+  'hom',
+  'hum',
+  'guru',
+  'lian',
+  'sheng',
+  'siddhi',
+  'prelancri',
+  'prelanci',
+  'berilansri',
+  'boru',
+  'lanzheli',
+  'vajrapani',
+]);
 
 function getMantraDeepgramKeyterms() {
   return MANTRA_SYLLABLE_KEYTERMS;
@@ -1217,16 +1268,26 @@ function hasMantraTrigger(text = '') {
   const tokens = getMantraTokens(text);
   if (!tokens.length) return false;
   const hasOm = tokens.includes('om');
+  const hasChineseSeedSyllable = /(?:嗡|唵|吽)/.test(text);
   const contextualHits = tokens.filter((token) => MANTRA_CONTEXT_TRIGGERS.has(token)).length;
-  return hasOm || contextualHits >= 2;
+  return hasOm || hasChineseSeedSyllable || contextualHits >= 2;
 }
 
 function hasStrongMantraTrigger(text = '') {
   const tokens = getMantraTokens(text);
   if (!tokens.length) return false;
   const hasOm = tokens.includes('om');
+  const hasChineseSeedSyllable = /(?:嗡|唵|吽)/.test(text);
   const contextualHits = tokens.filter((token) => MANTRA_CONTEXT_TRIGGERS.has(token)).length;
+  if (hasChineseSeedSyllable) return true;
   return hasOm ? contextualHits >= 1 : contextualHits >= 3;
+}
+
+function hasMandarinRouteMantraFallbackTrigger(text = '') {
+  const tokens = getMantraTokens(text);
+  if (tokens.length === 0 || tokens.length > 8) return false;
+  const hits = tokens.filter((token) => MANDARIN_ROUTE_MANTRA_FALLBACK_TRIGGERS.has(token)).length;
+  return tokens.includes('om') ? hits >= 1 : hits >= 2;
 }
 
 function levenshteinDistance(a = '', b = '') {
@@ -1292,9 +1353,13 @@ function getMantraAliases(mantra = {}) {
   return [...new Set(expanded)];
 }
 
-function findBestMantraMatch(text = '', { allowContextCarry = false } = {}) {
+function findBestMantraMatch(text = '', { allowContextCarry = false, routeKey = 'zh_en' } = {}) {
   const candidate = normalizeMantraCandidate(text);
-  if (!candidate || (!hasMantraTrigger(candidate) && !allowContextCarry)) return null;
+  const allowMandarinFallback =
+    routeKey === 'zh_en' && hasMandarinRouteMantraFallbackTrigger(candidate);
+  if (!candidate || (!hasMantraTrigger(candidate) && !allowContextCarry && !allowMandarinFallback)) {
+    return null;
+  }
 
   let best = null;
 
@@ -1317,8 +1382,10 @@ function findBestMantraMatch(text = '', { allowContextCarry = false } = {}) {
 
   if (!best) return null;
   const threshold = getMantraTokens(candidate).includes('om') ? 0.78 : 0.84;
+  const effectiveThreshold = allowMandarinFallback ? Math.min(threshold, 0.72) : threshold;
   if (allowContextCarry && best.confidence >= 0.9) return best;
-  if (best.confidence < threshold || !hasStrongMantraTrigger(candidate)) return null;
+  if (allowMandarinFallback && best.confidence >= effectiveThreshold) return best;
+  if (best.confidence < effectiveThreshold || !hasStrongMantraTrigger(candidate)) return null;
   return best;
 }
 
@@ -1339,6 +1406,7 @@ function normalizeRepeatedMantraText(original = '', { routeKey = 'zh_en', mode =
   for (let idx = 0; idx < rawSegments.length; idx += 1) {
     const match = findBestMantraMatch(rawSegments[idx], {
       allowContextCarry: idx > 0 && Boolean(canonical),
+      routeKey,
     });
 
     if (!match) return null;
@@ -1367,7 +1435,7 @@ function normalizeRepeatedMantraText(original = '', { routeKey = 'zh_en', mode =
   };
 }
 
-function findBestMantraSegment(text = '') {
+function findBestMantraSegment(text = '', { routeKey = 'zh_en' } = {}) {
   const tokens = getMantraTokens(text);
   if (tokens.length < 2) return null;
 
@@ -1378,7 +1446,7 @@ function findBestMantraSegment(text = '') {
     for (let end = start + 2; end <= Math.min(tokens.length, start + maxWindow); end += 1) {
       const segment = tokens.slice(start, end).join(' ');
       if (!hasMantraTrigger(segment)) continue;
-      const match = findBestMantraMatch(segment);
+      const match = findBestMantraMatch(segment, { routeKey });
       if (match && (!best || match.confidence > best.confidence)) {
         best = { ...match, tokenStart: start, tokenEnd: end, segment };
       }
@@ -1397,7 +1465,7 @@ function normalizeMantraText(text = '', { routeKey = 'zh_en', mode = 'final' } =
   const repeatedMantra = normalizeRepeatedMantraText(original, { routeKey, mode });
   if (repeatedMantra) return repeatedMantra;
 
-  const wholeMatch = findBestMantraMatch(original);
+  const wholeMatch = findBestMantraMatch(original, { routeKey });
   const originalTokens = getMantraTokens(original);
   const canonicalTokens = wholeMatch ? getMantraTokens(wholeMatch.canonical) : [];
   const pureMantra =
@@ -1421,8 +1489,15 @@ function normalizeMantraText(text = '', { routeKey = 'zh_en', mode = 'final' } =
     };
   }
 
-  const segmentMatch = findBestMantraSegment(original);
+  const segmentMatch = findBestMantraSegment(original, { routeKey });
   if (!segmentMatch || segmentMatch.confidence < 0.86) {
+    if (routeKey === 'zh_en' && hasMandarinRouteMantraFallbackTrigger(original)) {
+      console.log('[MantraMatch] no match', {
+        routeKey,
+        mode,
+        tokenCount: getMantraTokens(original).length,
+      });
+    }
     return { text: original, matches: [], pureMantra: false };
   }
 
@@ -1452,6 +1527,64 @@ function normalizeMantraText(text = '', { routeKey = 'zh_en', mode = 'final' } =
     matches: [{ ...segmentMatch, pure: false }],
     pureMantra: false,
   };
+}
+
+function titleCaseMantraCategory(category = '') {
+  return normalizeSpaces(category)
+    .split(/\s+/)
+    .map((word) => {
+      if (!word) return '';
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}
+
+function buildMantraLabelEnglish(mantra = {}) {
+  const category = titleCaseMantraCategory(mantra.category || 'Mantra');
+  const deity = normalizeSpaces(mantra.deity || '');
+  if (!deity) return category || '';
+
+  const deityPrimary = deity.split('/')[0].trim();
+  if (!category || category.toLowerCase() === 'mantra') {
+    return `${deityPrimary} Mantra`;
+  }
+
+  const categoryLower = category.toLowerCase();
+  if (categoryLower.includes(deityPrimary.toLowerCase())) return category;
+  if (/^(four refuge|offering|mantra of light|seed syllables)/i.test(category)) return category;
+  return `${deityPrimary} ${category}`;
+}
+
+function findMantraLabelTranslation(text = '') {
+  const normalized = normalizeSpaces(text);
+  if (!normalized || !/[\u3400-\u9fff]/.test(normalized)) return null;
+  if (!/(咒|心咒|陀羅尼|真言)$/.test(normalized)) return null;
+
+  for (const mantra of Array.isArray(mantraResources) ? mantraResources : []) {
+    if (!mantra || mantra.placeholder || mantra.preserve === false) continue;
+    const chineseTerms = []
+      .concat(mantra.chinese || [])
+      .concat(mantra.associated_terms || [])
+      .concat(mantra.associatedTerms || [])
+      .filter((term) => /[\u3400-\u9fff]/.test(String(term || '')))
+      .map((term) => normalizeSpaces(term));
+
+    for (const term of chineseTerms) {
+      if (!term) continue;
+      if (normalized === term || normalized === `${term}咒` || normalized === `${term}心咒`) {
+        const english = buildMantraLabelEnglish(mantra);
+        if (english) {
+          return {
+            id: mantra.id || '',
+            canonical: mantra.canonical || '',
+            english,
+          };
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 function containsChinese(text) {
@@ -3186,19 +3319,48 @@ async function translateWithDeepSeek(
   inputMode = 'chinese',
   activeTopic = null,
   routeKey = 'zh_en',
-  rollingContext = null
+  rollingContext = null,
+  debugState = null
 ) {
   if (!text || !text.trim()) return '';
 
+  const mantraLabel = findMantraLabelTranslation(text);
+  if (mantraLabel?.english) {
+    if (debugState) {
+      debugState.mantraMatchId = mantraLabel.id || null;
+      debugState.deepSeekResponseExists = false;
+      debugState.parsedTranslationExists = true;
+      debugState.shortcut = 'mantra_label';
+    }
+    return mantraLabel.english;
+  }
+
   const generatedCorrection = findGeneratedTranslationCorrection(text, mode);
   if (generatedCorrection?.canOverride && generatedCorrection?.correctedEnglish) {
+    if (debugState) {
+      debugState.deepSeekResponseExists = false;
+      debugState.parsedTranslationExists = true;
+      debugState.shortcut = 'correction_override';
+    }
     return generatedCorrection.correctedEnglish;
   }
 
   const phraseMatch = findPhraseMatch(text, mode);
-  if (phraseMatch?.en) return phraseMatch.en;
+  if (phraseMatch?.en) {
+    if (debugState) {
+      debugState.deepSeekResponseExists = false;
+      debugState.parsedTranslationExists = true;
+      debugState.shortcut = 'phrase_match';
+    }
+    return phraseMatch.en;
+  }
 
   if (routeKey !== 'id_en' && inputMode === 'english') {
+    if (debugState) {
+      debugState.deepSeekResponseExists = false;
+      debugState.parsedTranslationExists = true;
+      debugState.shortcut = 'english_passthrough';
+    }
     return text.trim();
   }
   if (inputMode === 'mixed') {
@@ -3217,14 +3379,26 @@ async function translateWithDeepSeek(
 
   if (mode === 'interim') {
     if (!DEEPSEEK_API_KEY || isShortFragment(text)) {
-      return conservativeInterimTranslate(text, hits);
+      const fallback = conservativeInterimTranslate(text, hits);
+      if (debugState) {
+        debugState.deepSeekResponseExists = false;
+        debugState.parsedTranslationExists = Boolean(fallback);
+        debugState.shortcut = 'interim_fallback';
+      }
+      return fallback;
     }
   }
 
   if (!DEEPSEEK_API_KEY) {
-    return mode === 'interim'
+    const fallback = mode === 'interim'
       ? conservativeInterimTranslate(text, hits)
       : literalFallbackTranslate(text, hits);
+    if (debugState) {
+      debugState.deepSeekResponseExists = false;
+      debugState.parsedTranslationExists = Boolean(fallback);
+      debugState.shortcut = 'missing_deepseek_key_fallback';
+    }
+    return fallback;
   }
 
   let enrichedRetrieval = retrieval || {};
@@ -3272,15 +3446,25 @@ async function translateWithDeepSeek(
         { timeoutMs: mode === 'interim' ? 12000 : 20000, maxAttempts: 2 }
       );
 
-      return data?.choices?.[0]?.message?.content?.trim() || '';
+      const output = data?.choices?.[0]?.message?.content?.trim() || '';
+      if (debugState) {
+        debugState.deepSeekResponseExists = Boolean(data?.choices?.[0]?.message);
+        debugState.parsedTranslationExists = Boolean(output);
+      }
+      return output;
     }
 
     let out = await requestOnce(systemPrompt, userPrompt);
 
     if (!out) {
-      return mode === 'interim'
+      const fallback = mode === 'interim'
         ? conservativeInterimTranslate(text, hits)
         : literalFallbackTranslate(text, hits);
+      if (debugState) {
+        debugState.parsedTranslationExists = Boolean(fallback);
+        debugState.shortcut = 'empty_deepseek_fallback';
+      }
+      return fallback;
     }
 
     if (mode !== 'interim' && looksAbsurdOutput(out)) {
@@ -3309,9 +3493,15 @@ async function translateWithDeepSeek(
     return out;
   } catch (err) {
     console.error('[DeepSeek] request failed', err.message);
-    return mode === 'interim'
+    const fallback = mode === 'interim'
       ? conservativeInterimTranslate(text, hits)
       : literalFallbackTranslate(text, hits);
+    if (debugState) {
+      debugState.deepSeekResponseExists = false;
+      debugState.parsedTranslationExists = Boolean(fallback);
+      debugState.shortcut = 'deepseek_error_fallback';
+    }
+    return fallback;
   }
 }
 
@@ -3496,27 +3686,45 @@ app.post('/api/translate-interim', async (req, res) => {
   const sessionId = req.body?.sessionId || 'live-session';
   const session = getOrCreateSession(sessionId);
   const routeKey = req.body?.translationRoute || session.translationRoute || deriveTranslationRoute(req.body?.sourceLanguage, req.body?.targetLanguage);
+  const requestMode = req.body?.mode || req.body?.requestMode || (req.body?.text ? 'study' : 'interim');
+  const translationMode = requestMode === 'study' ? 'final' : 'interim';
+  const studyDebug = requestMode === 'study'
+    ? {
+        incomingTextLength: rawCn.length,
+        normalizedTextLength: 0,
+        mantraMatchId: null,
+        retrievalChunkCount: 0,
+        deepSeekResponseExists: false,
+        parsedTranslationExists: false,
+        finalPayloadHasTranslation: false,
+      }
+    : null;
 
   if (!rawCn) return res.json({ en: '', normalizedCn: '', hits: [] });
 
   const prepared = runRouteNormalization(rawCn, eventMode, routeKey);
   const mantraNormalized = normalizeMantraText(prepared.normalizedText, {
     routeKey,
-    mode: 'interim',
+    mode: translationMode,
   });
   const normalizedCn = mantraNormalized.text;
+  if (studyDebug) {
+    studyDebug.normalizedTextLength = normalizedCn.length;
+    studyDebug.mantraMatchId = mantraNormalized.matches?.[0]?.id || null;
+  }
   const correctionOverride =
-    routeKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, 'interim');
+    routeKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, translationMode);
   const canOverride = correctionOverride?.canOverride === true;
   const hits = canOverride ? [] : applyRouteGlossary(normalizedCn, routeKey);
 
-  if (!canOverride && !isStableEnoughForInterim(normalizedCn)) {
-    return res.json({
+  if (requestMode !== 'study' && !canOverride && !isStableEnoughForInterim(normalizedCn)) {
+    const payload = {
       en: prepared.inputMode === 'english' ? normalizedCn : '',
       normalizedCn,
       hits,
       inputMode: prepared.inputMode,
-    });
+    };
+    return res.json(payload);
   }
 
   const retrieval = canOverride
@@ -3543,6 +3751,9 @@ app.post('/api/translate-interim', async (req, res) => {
         ),
       };
   retrieval.mantraMatches = mantraNormalized.matches || [];
+  if (studyDebug) {
+    studyDebug.mantraMatchId = retrieval.mantraMatches?.[0]?.id || studyDebug.mantraMatchId;
+  }
 
   const activeTopic = canOverride || routeKey === 'id_en'
     ? null
@@ -3559,15 +3770,27 @@ app.post('/api/translate-interim', async (req, res) => {
     : await translateWithDeepSeek(
         normalizedCn,
         hits,
-        'interim',
+        translationMode,
         retrieval,
         eventMode,
         getContextWindow(session),
         prepared.inputMode,
         activeTopic,
         routeKey,
-        rollingContext
+        rollingContext,
+        studyDebug
       );
+
+  if (studyDebug) {
+    studyDebug.retrievalChunkCount = (retrieval.tbsKnowledgeContext || retrieval.tbsKnowledgeChunks || []).length;
+    if (mantraNormalized.pureMantra || canOverride) {
+      studyDebug.deepSeekResponseExists = false;
+      studyDebug.parsedTranslationExists = Boolean(en);
+      studyDebug.shortcut = mantraNormalized.pureMantra ? 'pure_mantra' : 'correction_override';
+    }
+    studyDebug.finalPayloadHasTranslation = Boolean(en);
+    console.log('[StudyTranslate]', studyDebug);
+  }
 
   const translationMeta = buildTranslationMeta({
     normalizedCn,
@@ -3576,7 +3799,7 @@ app.post('/api/translate-interim', async (req, res) => {
     retrieval,
     inputMode: prepared.inputMode,
     activeTopic,
-    mode: 'interim',
+    mode: translationMode,
   });
 
   res.json({
