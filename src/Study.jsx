@@ -1,15 +1,91 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ToolTabs from './ToolTabs';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+const STUDY_STORAGE_KEY = 'tbs.study.state';
+
+function readPersistedStudyState() {
+  try {
+    const raw = window.localStorage.getItem(STUDY_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      input: String(parsed.input || ''),
+      normalized: String(parsed.normalized || ''),
+      translation: String(parsed.translation || ''),
+      lastUpdatedAt: String(parsed.lastUpdatedAt || ''),
+    };
+  } catch (err) {
+    console.warn('[Study] failed to restore state', err.message);
+    return null;
+  }
+}
+
+function persistStudyState(nextState) {
+  try {
+    window.localStorage.setItem(STUDY_STORAGE_KEY, JSON.stringify(nextState));
+  } catch (err) {
+    console.warn('[Study] failed to persist state', err.message);
+  }
+}
+
+function clearPersistedStudyState() {
+  try {
+    window.localStorage.removeItem(STUDY_STORAGE_KEY);
+  } catch (err) {
+    console.warn('[Study] failed to clear persisted state', err.message);
+  }
+}
+
+function splitStudyParagraphs(text = '') {
+  return String(text || '')
+    .trim()
+    .split(/\n\s*\n+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
 
 export default function Study() {
-  const [input, setInput] = useState('');
-  const [output, setOutput] = useState('');
-  const [normalizedCn, setNormalizedCn] = useState('');
+  const persistedStateRef = useRef(null);
+  if (persistedStateRef.current === null) {
+    persistedStateRef.current = readPersistedStudyState() || {
+      input: '',
+      normalized: '',
+      translation: '',
+      lastUpdatedAt: '',
+    };
+  }
+
+  const [input, setInput] = useState(persistedStateRef.current.input);
+  const [output, setOutput] = useState(persistedStateRef.current.translation);
+  const [normalizedCn, setNormalizedCn] = useState(persistedStateRef.current.normalized);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(persistedStateRef.current.lastUpdatedAt);
   const [loading, setLoading] = useState(false);
 
   const requestRef = useRef(null);
+
+  useEffect(() => {
+    if (!input && !normalizedCn && !output && !lastUpdatedAt) {
+      clearPersistedStudyState();
+      return;
+    }
+
+    persistStudyState({
+      input,
+      normalized: normalizedCn,
+      translation: output,
+      lastUpdatedAt,
+    });
+  }, [input, normalizedCn, output, lastUpdatedAt]);
+
+  useEffect(() => {
+    return () => {
+      if (requestRef.current) {
+        requestRef.current.abort();
+        requestRef.current = null;
+      }
+    };
+  }, []);
 
   const translate = async () => {
     const text = input.trim();
@@ -27,31 +103,42 @@ export default function Study() {
     setNormalizedCn('');
 
     try {
-      const res = await fetch(`${API}/api/translate-interim`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          rawCn: text,
-          text,
-          routeKey: 'zh_en',
-          translationRoute: 'zh_en',
-          eventMode: 'Dharma Talk',
-        }),
-      });
+      const paragraphs = splitStudyParagraphs(text);
+      const normalizedParts = [];
+      const outputParts = [];
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || 'Translation failed');
+      for (const paragraph of paragraphs) {
+        const res = await fetch(`${API}/api/translate-interim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            rawCn: paragraph,
+            text: paragraph,
+            routeKey: 'zh_en',
+            translationRoute: 'zh_en',
+            eventMode: 'Dharma Talk',
+          }),
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText || 'Translation failed');
+        }
+
+        const data = await res.json();
+        normalizedParts.push(data.normalizedCn || data.cn || paragraph);
+        outputParts.push(data.en || data.translation || 'No translation returned');
       }
 
-      const data = await res.json();
-      setOutput(data.en || data.translation || 'No translation returned');
-      setNormalizedCn(data.normalizedCn || data.cn || text);
+      setOutput(outputParts.join('\n\n'));
+      setNormalizedCn(normalizedParts.join('\n\n'));
+      setLastUpdatedAt(new Date().toISOString());
     } catch (err) {
       if (err.name === 'AbortError') return;
       console.error(err);
       setOutput('Error translating');
+      setLastUpdatedAt(new Date().toISOString());
     } finally {
       if (requestRef.current === controller) {
         requestRef.current = null;
@@ -104,7 +191,7 @@ export default function Study() {
           />
 
           <div style={styles.buttonRow}>
-            <button style={styles.primaryButton} onClick={translate}>
+            <button style={styles.primaryButton} onClick={translate} disabled={loading}>
               {loading ? 'Translating…' : 'Translate'}
             </button>
 
@@ -118,15 +205,23 @@ export default function Study() {
                 setInput('');
                 setOutput('');
                 setNormalizedCn('');
+                setLastUpdatedAt('');
                 setLoading(false);
+                clearPersistedStudyState();
               }}
             >
-              Clear
+              Clear Study
             </button>
           </div>
 
           {(output || normalizedCn) && (
             <div style={styles.resultsWrap}>
+              {lastUpdatedAt ? (
+                <div style={styles.updatedAt}>
+                  Saved {new Date(lastUpdatedAt).toLocaleString()}
+                </div>
+              ) : null}
+
               {normalizedCn ? (
                 <div style={styles.resultCard}>
                   <div style={styles.resultLabel}>Normalised Chinese</div>
@@ -186,6 +281,8 @@ const styles = {
     position: 'relative',
     zIndex: 1,
     maxWidth: '980px',
+    width: '100%',
+    minWidth: 0,
     margin: '0 auto',
   },
   heroCard: {
@@ -255,6 +352,9 @@ const styles = {
     padding: '22px',
     color: '#111',
     boxShadow: '0 24px 60px rgba(0,0,0,0.22)',
+    boxSizing: 'border-box',
+    maxWidth: '100%',
+    minWidth: 0,
   },
   sectionHeader: {
     display: 'flex',
@@ -295,6 +395,7 @@ const styles = {
     textAlign: 'left',
     lineHeight: 1.6,
     marginBottom: '16px',
+    whiteSpace: 'pre-wrap',
   },
   buttonRow: {
     display: 'flex',
@@ -312,6 +413,8 @@ const styles = {
     fontWeight: 800,
     cursor: 'pointer',
     boxShadow: '0 10px 24px rgba(255,107,53,0.22)',
+    flex: '1 1 150px',
+    minWidth: 0,
   },
   secondaryButton: {
     border: '1px solid rgba(17,17,17,0.10)',
@@ -322,17 +425,27 @@ const styles = {
     fontSize: '15px',
     fontWeight: 800,
     cursor: 'pointer',
+    flex: '1 1 150px',
+    minWidth: 0,
   },
   resultsWrap: {
     display: 'flex',
     flexDirection: 'column',
     gap: '14px',
   },
+  updatedAt: {
+    fontSize: '12px',
+    lineHeight: 1.4,
+    color: '#777',
+    textAlign: 'left',
+  },
   resultCard: {
     background: '#fff',
     borderRadius: '20px',
     padding: '18px',
     border: '1px solid rgba(17,17,17,0.06)',
+    minWidth: 0,
+    overflowWrap: 'anywhere',
   },
   resultLabel: {
     fontSize: '12px',
@@ -344,21 +457,23 @@ const styles = {
     textAlign: 'left',
   },
   resultTextChinese: {
-    fontSize: '24px',
-    lineHeight: 1.45,
+    fontSize: '22px',
+    lineHeight: 1.75,
     color: '#111',
-    fontWeight: 700,
+    fontWeight: 650,
     textAlign: 'left',
     whiteSpace: 'pre-wrap',
+    overflowWrap: 'anywhere',
     wordBreak: 'break-word',
   },
   resultText: {
-    fontSize: '21px',
-    lineHeight: 1.6,
+    fontSize: '19px',
+    lineHeight: 1.85,
     color: '#2450d8',
-    fontWeight: 700,
+    fontWeight: 650,
     textAlign: 'left',
     whiteSpace: 'pre-wrap',
+    overflowWrap: 'anywhere',
     wordBreak: 'break-word',
   },
 };
