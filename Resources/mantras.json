@@ -371,6 +371,327 @@
     "notes": "Often recited 7 times in this sadhana context."
   },
   {
+    "id": "offering-mantra",
+    "canonical": "Om Sha Er Wa Da Ta Jia Da Yi Da Mu Gu Lu La Na Mian Zha La Kan Ni Li Ye Da Ye Mi",
+    "display": "Om Sha Er Wa Da Ta Jia Da Yi Da Mu Gu Lu La Na Mian Zha La Kan Ni Li Ye Da Ye Mi",
+    "deity": "Offering Mantra",
+    "category": "Offering mantra",
+    "tradition": "True Buddha School",
+    "language": "Chinese/Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Sha Er Wa Da Ta Jia Da Yi Da Mu Gu Lu La Na Mian Zha La Kan Ni Li Ye Da Ye Mi",
+      "Om Sha Er Wa Data Jada Yida Mu Guru Lana Mian Zhala Kan Niliye Dayemi",
+      "Om Sharwa Data Jada Yidamu Guru Lana Mian Jala Kan Niliye Dayemi",
+      "Om Sarwa Data Jada Yidamu Guru Lana Mian Jala Kan Niliye Dayemi"
+    ],
+    "chinese": [
+      "嗡。沙爾娃。打他架打。衣打木。古魯拉那。面渣拉。襟。尼里耶。打耶咪。",
+      "唸供養咒",
+      "供養咒"
+    ],
+    "pinyin": [
+      "ōm shā ěr wá dǎ tā jià dǎ yī dǎ mù gǔ lǔ lā nà miàn zhā lā kān ní lǐ ye dǎ yē mi",
+      "om sha er wa da ta jia da yi da mu gu lu la na mian zha la kan ni li ye da ye mi"
+    ],
+    "asr_variants": [
+      "om sha er wa da ta jia da yi da mu guru la na mian zha la kan ni li ye da ye mi",
+      "om sha er wa data jada yida mu guru lana mian zhala kan niliye dayemi",
+      "om sharwa data jada yidamu guru lana mian jala kan niliye dayemi",
+      "om sarwa data jada yidamu guru lana mian jala kan niliye dayemi"
+    ],
+    "associated_terms": [
+      "Offering Mantra",
+      "Mantra Persembahan",
+      "唸供養咒",
+      "供養咒",
+      "offering",
+      "persembahan"
+    ],
+    "prompt_instruction": "Preserve this offering mantra exactly as “Om Sha Er Wa Da Ta Jia Da Yi Da Mu Gu Lu La Na Mian Zha La Kan Ni Li Ye Da Ye Mi”. Do not translate it literally."
+  },
+  {
+    "id": "four-refuge-mantra",
+    "canonical": "Na Mo Gu Lu Bei. Na Mo Bu Da Ye. Na Mo Da Mo Ye. Na Mo Seng Jia Ye.",
+    "display": "Na Mo Gu Lu Bei. Na Mo Bu Da Ye. Na Mo Da Mo Ye. Na Mo Seng Jia Ye.",
+    "deity": "Guru, Buddha, Dharma, Sangha",
+    "category": "Four Refuge mantra",
+    "tradition": "True Buddha School",
+    "language": "Chinese transliteration",
+    "preserve": true,
+    "aliases": [
+      "Na Mo Gu Lu Bei. Na Mo Bu Da Ye. Na Mo Da Mo Ye. Na Mo Seng Jia Ye.",
+      "Na Mo Gu Lu Bei Na Mo Bu Da Ye Na Mo Da Mo Ye Na Mo Seng Jia Ye",
+      "Namo Guru Bei Namo Budaya Namo Damoye Namo Sengjiaye",
+      "Namo Guru Bei Namo Budaye Namo Damoye Namo Sengjiaye",
+      "Namo Gulu Bei Namo Buda Ye Namo Damo Ye Namo Seng Jia Ye"
+    ],
+    "chinese": [
+      "南摩古魯貝。南摩不打耶。南摩達摩耶。南摩僧伽耶。",
+      "四皈依咒"
+    ],
+    "pinyin": [
+      "ná mó gǔ lǔ bèi ná mó bù dǎ yé ná mó dá mó yé ná mó sēng jiā yé",
+      "na mo gu lu bei na mo bu da ye na mo da mo ye na mo seng jia ye"
+    ],
+    "asr_variants": [
+      "na mo gu lu bei na mo bu da ye na mo da mo ye na mo seng jia ye",
+      "namo guru bei namo budaya namo damoye namo sengjiaye",
+      "namo guru bei namo budaye namo damoye namo sengjiaye",
+      "namo gulu bei namo buda ye namo damo ye namo seng jia ye",
+      "namo gu lu bei namo bu da ye namo da mo ye namo seng jia ye"
+    ],
+    "associated_terms": [
+      "Four Refuge Mantra",
+      "Mantra Catur Sarana",
+      "四皈依咒",
+      "皈依",
+      "Guru",
+      "Buddha",
+      "Dharma",
+      "Sangha"
+    ],
+    "prompt_instruction": "Preserve this Four Refuge mantra exactly as “Na Mo Gu Lu Bei. Na Mo Bu Da Ye. Na Mo Da Mo Ye. Na Mo Seng Jia Ye.” Do not translate it literally.",
+    "notes": "May be recited three times in sadhana context."
+  },
+  {
+    "id": "amoghapasa-infallible-mani-offering-mantra",
+    "canonical": "Om A Mo Ga Bu Jia Mo Ni Bei De Ma Wa Ji La Da Ta Ga Da Wei Luo Ge De San Man Da Bo La Sa La Hum",
+    "display": "Om A Mo Ga Bu Jia Mo Ni Bei De Ma Wa Ji La Da Ta Ga Da Wei Luo Ge De San Man Da Bo La Sa La Hum",
+    "deity": "Amoghapasa Bodhisattva",
+    "category": "Offering mantra",
+    "tradition": "True Buddha School",
+    "language": "Chinese/Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om A Mo Ga Bu Jia Mo Ni Bei De Ma Wa Ji La Da Ta Ga Da Wei Luo Ge De San Man Da Bo La Sa La Hum",
+      "Om a-mo-ga bu-jia mo-ni bei-de-ma wa-ji-la da-ta-ga-da wei-luo-ge-de san-man-da bo-la-sa-la hum",
+      "Om。a-mo-ga。bu-jia。mo-ni。bei-de-ma。wa-ji-la。da-ta-ga-da。wei-luo-ge-de。san-man-da。bo-la-sa-la。hum。"
+    ],
+    "chinese": [],
+    "pinyin": [
+      "om a mo ga bu jia mo ni bei de ma wa ji la da ta ga da wei luo ge de san man da bo la sa la hum"
+    ],
+    "asr_variants": [
+      "om a mo ga bu jia mo ni bei de ma wa ji la da ta ga da wei luo ge de san man da bo la sa la hum",
+      "om amoga bujia moni beidema wajila datagada weiluogede sanmanda bolasala hum"
+    ],
+    "associated_terms": [
+      "Amoghapasa",
+      "Amoghapasa Bodhisattva",
+      "Infallible Mani Offering Mantra",
+      "Offering Mantra",
+      "vast offering"
+    ],
+    "prompt_instruction": "Preserve this mantra exactly. Do not translate it literally."
+  },
+  {
+    "id": "amoghapasa-mantra-of-light",
+    "canonical": "Om A Mo Ga Huai Lu Jia Na Ma Ha Mu De La Ma Ni Ba De Ma Ji Fa La Bo La Fa Er Da Ya Hum",
+    "display": "Om A Mo Ga Huai Lu Jia Na Ma Ha Mu De La Ma Ni Ba De Ma Ji Fa La Bo La Fa Er Da Ya Hum",
+    "deity": "Amoghapasa Bodhisattva / Vairocana Buddha",
+    "category": "Mantra of Light",
+    "tradition": "True Buddha School",
+    "language": "Chinese/Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om A Mo Ga Huai Lu Jia Na Ma Ha Mu De La Ma Ni Ba De Ma Ji Fa La Bo La Fa Er Da Ya Hum",
+      "Om a-mo-ga huai-lu-jia-na ma-ha mu-de-la ma-ni ba-de-ma ji-fa-la bo-la-fa-er-da-ya hum",
+      "Om。a-mo-ga。huai-lu-jia-na。ma-ha。mu-de-la。ma-ni。ba-de-ma。ji-fa-la。bo-la-fa-er-da-ya。hum。"
+    ],
+    "chinese": [],
+    "pinyin": [
+      "om a mo ga huai lu jia na ma ha mu de la ma ni ba de ma ji fa la bo la fa er da ya hum"
+    ],
+    "asr_variants": [
+      "om a mo ga huai lu jia na ma ha mu de la ma ni ba de ma ji fa la bo la fa er da ya hum",
+      "om amoga huailujiana maha mudela mani badema jifala bolafaerdaya hum"
+    ],
+    "associated_terms": [
+      "Amoghapasa",
+      "Mantra of Light",
+      "Vairocana Buddha",
+      "Mahamudra",
+      "light mantra"
+    ],
+    "prompt_instruction": "Preserve this mantra exactly. Do not translate it literally."
+  },
+  {
+    "id": "amoghapasa-bodhisattva-mantra",
+    "canonical": "Om A Mo Ga Pi She Ye Hum Pan Zha",
+    "display": "Om A Mo Ga Pi She Ye Hum Pan Zha",
+    "deity": "Amoghapasa Bodhisattva",
+    "category": "Bodhisattva mantra",
+    "tradition": "True Buddha School",
+    "language": "Chinese/Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om A Mo Ga Pi She Ye Hum Pan Zha",
+      "Om a-mo-ga pi-she-ye hum-pan-zha",
+      "om。a-mo-ga。pi-she-ye。hum-pan-zha。"
+    ],
+    "chinese": [],
+    "pinyin": [
+      "om a mo ga pi she ye hum pan zha"
+    ],
+    "asr_variants": [
+      "om a mo ga pi she ye hum pan zha",
+      "om amoga pisheye hum panzha",
+      "om amoga pisheye hum pancha"
+    ],
+    "associated_terms": [
+      "Amoghapasa",
+      "Amoghapasa Bodhisattva",
+      "不空羂索觀音"
+    ],
+    "prompt_instruction": "Preserve this Amoghapasa mantra exactly. Do not translate it literally."
+  },
+  {
+    "id": "golden-mother-jade-pond-mantra",
+    "canonical": "Om Jin Mu Siddhi Hum",
+    "display": "Om Jin Mu Siddhi Hum",
+    "deity": "Golden Mother of the Jade Pond",
+    "category": "Golden Mother mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Jin Mu Siddhi Hum",
+      "Om Jin Mu Sid Dhi Hum",
+      "Om jin-mu-sid-dhi hum",
+      "Om。jin-mu-sid-dhi。hum。"
+    ],
+    "chinese": [
+      "瑤池金母",
+      "金母"
+    ],
+    "pinyin": [
+      "om jin mu sid dhi hum",
+      "om jin mu siddhi hum"
+    ],
+    "asr_variants": [
+      "om jin mu siddhi hum",
+      "om jinmu siddhi hum",
+      "om jin mu city hum",
+      "om jinmu city hum"
+    ],
+    "associated_terms": [
+      "Golden Mother",
+      "Golden Mother of the Jade Pond",
+      "Jade Pond Golden Mother",
+      "瑤池金母",
+      "金母"
+    ],
+    "prompt_instruction": "Preserve this Golden Mother mantra exactly as “Om Jin Mu Siddhi Hum”. Do not translate it literally."
+  },
+  {
+    "id": "golden-faced-golden-mother-mantra",
+    "canonical": "Om Jin Mu Su Da Li She Na Siddhi Hum",
+    "display": "Om Jin Mu Su Da Li She Na Siddhi Hum",
+    "deity": "Golden-faced Golden Mother",
+    "category": "Golden Mother mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Jin Mu Su Da Li She Na Siddhi Hum",
+      "Om Jin Mu Su Da Li She Na Shi Dhi Hum",
+      "Om jin-mu su-da-li she-na shi-dhi hum",
+      "Om, jin-mu, su-da-li, she-na, shi-dhi, hum"
+    ],
+    "chinese": [
+      "金面金母",
+      "金母"
+    ],
+    "pinyin": [
+      "om jin mu su da li she na siddhi hum",
+      "om jin mu su da li she na shi dhi hum"
+    ],
+    "asr_variants": [
+      "om jin mu su da li she na siddhi hum",
+      "om jinmu sudali shena city hum",
+      "om jin mu su da li she na shi dhi hum"
+    ],
+    "associated_terms": [
+      "Golden-faced Golden Mother",
+      "Jade Pond Golden Mother",
+      "Golden Mother",
+      "金面金母",
+      "金母"
+    ],
+    "prompt_instruction": "Preserve this Golden-faced Golden Mother mantra exactly. Do not translate it literally."
+  },
+  {
+    "id": "vajrasattva-short-heart-mantra",
+    "canonical": "Om Bie Zha Sah Do Ah Hum Pei",
+    "display": "Om Bie Zha Sah Do Ah Hum Pei",
+    "deity": "Vajrasattva",
+    "category": "Heart mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Bie Zha Sah Do Ah Hum Pei",
+      "Om, bie-zha, sah-do, ah, hum, pei",
+      "Om Bie Zha Sah Do Ah Hum",
+      "Om, bie-zha, sah-do, ah, hum"
+    ],
+    "chinese": [
+      "金剛薩埵",
+      "百字明咒"
+    ],
+    "pinyin": [
+      "om bie zha sah do ah hum pei"
+    ],
+    "asr_variants": [
+      "om bie zha sah do ah hum pei",
+      "om biezha sahdo ah hum pei",
+      "om vajra sato ah hum pei",
+      "om vajrasattva ah hum pei"
+    ],
+    "associated_terms": [
+      "Vajrasattva",
+      "金剛薩埵",
+      "Hundred Syllable Mantra",
+      "short Hundred Syllable Mantra",
+      "purification"
+    ],
+    "prompt_instruction": "Preserve this Vajrasattva mantra exactly as “Om Bie Zha Sah Do Ah Hum Pei”. Do not translate it literally."
+  },
+  {
+    "id": "tara-contagious-diseases-mantra",
+    "canonical": "Om Tara Tuttara Tura Namo Hara Hera Hom Hara Soha",
+    "display": "Om Tara Tuttara Tura Namo Hara Hera Hom Hara Soha",
+    "deity": "Tara Who Saves from Contagious Diseases",
+    "category": "Tara mantra",
+    "tradition": "True Buddha School",
+    "language": "Sanskrit transliteration",
+    "preserve": true,
+    "aliases": [
+      "Om Tara Tuttara Tura Namo Hara Hera Hom Hara Soha",
+      "Om Tara Tuttara Tura Namo Hara Hera Hom",
+      "Om Ta Ra Tut Ta Ra Tu Ra Namo Hara Hera Hom Hara Soha"
+    ],
+    "chinese": [
+      "度瘟疫救度母"
+    ],
+    "pinyin": [
+      "om tara tuttara tura namo hara hera hom hara soha"
+    ],
+    "asr_variants": [
+      "om tara tuttara tura namo hara hera hom hara soha",
+      "om tara tutara tura namo hara hera hom hara soha"
+    ],
+    "associated_terms": [
+      "Tara",
+      "Tara Who Saves from Contagious Diseases",
+      "contagious diseases",
+      "度母",
+      "瘟疫"
+    ],
+    "prompt_instruction": "Preserve this Tara mantra exactly. Do not translate it literally."
+  },
+  {
     "id": "mahabala-vajra-mantra-placeholder",
     "canonical": "Mahabala Vajra mantra canonical wording pending TBS verification",
     "display": "Mahabala Vajra mantra canonical wording pending TBS verification",
