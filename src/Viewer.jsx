@@ -26,6 +26,11 @@ function getViewerSessionId(pathname = window.location.pathname) {
   }
 }
 
+function isProductSessionId(sessionId) {
+  const id = String(sessionId || '').trim().toLowerCase();
+  return Boolean(id && id !== FIXED_SESSION_ID && id !== 'main');
+}
+
 function formatTime(value) {
   if (!value) return '—';
   const d = new Date(value);
@@ -169,13 +174,20 @@ export default function Viewer() {
 
       const data = await res.json();
       setSession(data);
-      setRollingBrainState(data.brainState || null);
+      const isEphemeralSession = !isProductSessionId(sessionId);
+      setRollingBrainState(isEphemeralSession ? null : data.brainState || null);
       const brainStateEntry = buildBrainStateHistoryEntry(data.brainState);
       const persistedHistory = normalizeBrainStateHistory(
         data.brainStateHistory || data.brain_state_history || []
       );
       setBrainStateHistory(
-        persistedHistory.length ? persistedHistory : brainStateEntry ? [brainStateEntry] : []
+        isEphemeralSession
+          ? []
+          : persistedHistory.length
+            ? persistedHistory
+            : brainStateEntry
+              ? [brainStateEntry]
+              : []
       );
       setStatus((prev) => (prev === 'Live via WebSocket' ? prev : 'Live'));
       setError('');
@@ -422,6 +434,8 @@ export default function Viewer() {
   }, [visibleLines, toFeedItem]);
 
   const liveContextItems = useMemo(() => {
+    if (!isProductSessionId(sessionId) && totalLines === 0) return [];
+
     if (brainStateHistory.length > 0) return brainStateHistory;
 
     if (
@@ -442,7 +456,7 @@ export default function Viewer() {
     }
 
     return [];
-  }, [brainStateHistory, rollingBrainState]);
+  }, [brainStateHistory, rollingBrainState, sessionId, totalLines]);
 
   const renderFeedRow = useCallback((item) => (
     <div

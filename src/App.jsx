@@ -196,6 +196,10 @@ function isProductSessionId(sessionId) {
   return Boolean(id && id !== FIXED_SESSION_ID && id !== 'main');
 }
 
+function isEphemeralSessionId(sessionId) {
+  return !isProductSessionId(sessionId);
+}
+
 function PublicSessionsList() {
   const [sessions, setSessions] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -772,6 +776,7 @@ const shouldReconnectRef = useRef(false);
 const manualStopRef = useRef(false);
 const brainStateBySessionRef = useRef(new Map());
 const brainStateHistoryBySessionRef = useRef(new Map());
+const historyLineCountRef = useRef(0);
 const audioRunIdRef = useRef(0);
 const pendingReconnectModeRef = useRef(null);
 const liveConfigRef = useRef({
@@ -784,6 +789,10 @@ const lastTranslatedChineseRef = useRef('');
 const transcriptFeedRef = useRef(null);
 const premiumScrollTimersRef = useRef(new Map());
 const lastLiveSnapshotRef = useRef('');
+
+  useEffect(() => {
+    historyLineCountRef.current = historyLines.length;
+  }, [historyLines.length]);
 
   const handlePremiumScroll = useCallback((event) => {
     const el = event.currentTarget;
@@ -889,6 +898,17 @@ const lastLiveSnapshotRef = useRef('');
 
   const applySessionBrainState = useCallback((sessionId, brainState, { allowEmpty = false, history = null } = {}) => {
     const sanitized = sanitizeSessionId(sessionId) || FIXED_SESSION_ID;
+    if (isEphemeralSessionId(sanitized)) {
+      brainStateBySessionRef.current.delete(sanitized);
+      brainStateHistoryBySessionRef.current.delete(sanitized);
+      setRollingBrainState(null);
+      setBrainStateHistory([]);
+      console.log('[LiveContext] skipped ephemeral context restore', {
+        sessionId: sanitized,
+      });
+      return;
+    }
+
     const cachedBrainState = brainStateBySessionRef.current.get(sanitized) || null;
     const cachedHistory = brainStateHistoryBySessionRef.current.get(sanitized) || [];
     const persistedHistory = Array.isArray(history) ? history.filter(Boolean).slice(0, 24) : [];
@@ -939,8 +959,17 @@ const lastLiveSnapshotRef = useRef('');
         setHistoryLines([]);
         setLiveChinese('');
         setLiveEnglish('');
+        setRollingBrainState(null);
+        setBrainStateHistory([]);
         lastTranslatedChineseRef.current = '';
         lastLiveSnapshotRef.current = '';
+
+        if (isEphemeralSessionId(activeSessionId)) {
+          brainStateBySessionRef.current.delete(activeSessionId);
+          brainStateHistoryBySessionRef.current.delete(activeSessionId);
+          fetchSessionList();
+          return;
+        }
 
         const existing = await fetch(`${API}/api/session/${activeSessionId}`);
         if (existing.ok) {
@@ -1325,6 +1354,13 @@ const lastLiveSnapshotRef = useRef('');
           const nextBrainState = msg.brainState || null;
           const messageSessionId = sanitizeSessionId(msg.sessionId || activeSessionId) || FIXED_SESSION_ID;
           if (messageSessionId !== activeSessionId) return;
+          if (isEphemeralSessionId(messageSessionId) && historyLineCountRef.current === 0) {
+            brainStateBySessionRef.current.delete(messageSessionId);
+            brainStateHistoryBySessionRef.current.delete(messageSessionId);
+            setRollingBrainState(null);
+            setBrainStateHistory([]);
+            return;
+          }
           const persistedHistory = Array.isArray(msg.brainStateHistory || msg.brain_state_history)
             ? (msg.brainStateHistory || msg.brain_state_history).filter(Boolean).slice(0, 24)
             : [];
@@ -1858,6 +1894,8 @@ const lastLiveSnapshotRef = useRef('');
   }, [liveChinese, liveEnglish, historyLines]);
 
   const liveContextItems = useMemo(() => {
+    if (isEphemeralSessionId(activeSessionId) && historyLines.length === 0) return [];
+
     if (brainStateHistory.length > 0) return brainStateHistory;
 
     if (
@@ -1878,7 +1916,7 @@ const lastLiveSnapshotRef = useRef('');
     }
 
     return [];
-  }, [brainStateHistory, rollingBrainState]);
+  }, [activeSessionId, brainStateHistory, historyLines.length, rollingBrainState]);
 
   useEffect(() => {
     if (!isAdminAuthorized || !isLiveMode) return;
