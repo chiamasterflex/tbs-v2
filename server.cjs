@@ -198,11 +198,6 @@ console.log(
 
 let sessions = [];
 
-function isProductSessionId(sessionId) {
-  const id = String(sessionId || '').trim().toLowerCase();
-  return Boolean(id && id !== 'live-session' && id !== 'main');
-}
-
 const ROUTES = {
   zh_en: {
     key: 'zh_en',
@@ -319,7 +314,6 @@ function persistSessionLine(session, line, routeKey, retrieval) {
 
 function persistSessionBrainState(session) {
   if (!supabase || !session?.id) return;
-  if (!isProductSessionId(session.id)) return;
 
   const brainState = ensureSessionBrainState(session);
   const brainStateHistory = Array.isArray(session.brainStateHistory)
@@ -463,11 +457,6 @@ function exposeRollingBrainState(session) {
 
 async function hydrateSessionBrainState(session) {
   if (!supabase || !session?.id) return session?.brainState || null;
-  if (!isProductSessionId(session.id)) {
-    return getSessionLineCount(session) === 0
-      ? resetEphemeralSessionState(session)
-      : session.brainState || null;
-  }
 
   try {
     const { data, error } = await supabase
@@ -911,34 +900,6 @@ function ensureSessionBrainState(session) {
     session.brainStateHistory = [];
   }
 
-  return session.brainState;
-}
-
-function resetEphemeralSessionState(session) {
-  if (!session) return null;
-  const hasLines = getSessionLineCount(session) > 0;
-  if (!hasLines) {
-    session.totalFinalLinesSeen = 0;
-  }
-  session.brainStateHistory = [];
-  session.brainState = {
-    activeTopic: null,
-    activeTopicEn: null,
-    activeTopicType: null,
-    activeTopicConfidence: 0,
-    lockedUntilLineCount: 0,
-    lastTopics: [],
-    rollingSummary: '',
-    rollingIntent: '',
-    rollingTopic: '',
-    rollingDoctrinalTheme: '',
-    rollingRitualContext: '',
-    rollingGuidance: '',
-    rollingEntities: [],
-    rollingUpdatedAt: null,
-    lastSummaryLineCount: 0,
-    lastSummarySeq: 0,
-  };
   return session.brainState;
 }
 
