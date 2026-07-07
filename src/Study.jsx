@@ -36,14 +36,6 @@ function clearPersistedStudyState() {
   }
 }
 
-function splitStudyParagraphs(text = '') {
-  return String(text || '')
-    .trim()
-    .split(/\n\s*\n+/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
-
 export default function Study() {
   const persistedStateRef = useRef(null);
   if (persistedStateRef.current === null) {
@@ -98,34 +90,24 @@ export default function Study() {
     setOutput('');
 
     try {
-      const paragraphs = splitStudyParagraphs(text);
-
-      const results = await Promise.all(
-        paragraphs.map(async (paragraph) => {
-          const res = await fetch(`${API}/api/translate-interim`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-              rawCn: paragraph,
-              text: paragraph,
-              routeKey: 'zh_en',
-              translationRoute: 'zh_en',
-              eventMode: 'Dharma Talk',
-            }),
-          });
-
-          if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(errorText || 'Translation failed');
-          }
-
-          const data = await res.json();
-          return data.en || data.translation || 'No translation returned';
+      const res = await fetch(`${API}/api/study-translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          text,
+          eventMode: 'Dharma Talk',
         }),
-      );
+      });
 
-      setOutput(results.join('\n\n'));
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Translation failed');
+      }
+
+      const data = await res.json();
+      const translations = (data.translations || []).filter(Boolean);
+      setOutput(translations.join('\n\n') || 'No translation returned');
       setLastUpdatedAt(new Date().toISOString());
     } catch (err) {
       if (err.name === 'AbortError') return;

@@ -2312,6 +2312,66 @@ function buildCanonicalGlossary() {
 
 const canonicalGlossary = buildCanonicalGlossary();
 
+function buildCompiledTbsTerminology() {
+  const termLines = [];
+  const seen = new Set();
+
+  function addEntries(entries, label) {
+    const lines = [];
+    for (const entry of entries) {
+      const cn = entry?.cn || '';
+      const en = entry?.en || '';
+      if (!cn || !en || seen.has(cn)) continue;
+      seen.add(cn);
+      lines.push(`  ${cn} → ${en}`);
+    }
+    if (lines.length > 0) {
+      termLines.push(`${label} (${lines.length}):`);
+      termLines.push(...lines);
+    }
+  }
+
+  addEntries(canonicalGlossary, 'Glossary');
+  addEntries(generatedDeities, 'Deities');
+  addEntries(generatedSacredNames, 'Sacred Names');
+  addEntries(generatedTbsTerms, 'TBS Terms');
+  addEntries(sacredEntities, 'Sacred Entities');
+
+  const mantraLines = [];
+  const mantraSeen = new Set();
+  for (const m of mantras) {
+    const canonical = m?.canonical || m?.cn || '';
+    const en = m?.en || m?.english || '';
+    const label = m?.deity ? ` [${m.deity}]` : '';
+    if (!canonical || mantraSeen.has(canonical)) continue;
+    mantraSeen.add(canonical);
+    mantraLines.push(`  ${canonical}${en ? ` → ${en}` : ''}${label} (preserve exactly)`);
+  }
+  if (mantraLines.length > 0) {
+    termLines.push(`Mantras (${mantraLines.length}) — do not translate, preserve exactly:`);
+    termLines.push(...mantraLines);
+  }
+
+  const topPhrases = (phraseMemory.concat(generatedPhrases))
+    .filter((p) => p?.cn && p?.en)
+    .slice(0, 100);
+  const phraseLines = [];
+  const phraseSeen = new Set();
+  for (const p of topPhrases) {
+    if (phraseSeen.has(p.cn)) continue;
+    phraseSeen.add(p.cn);
+    phraseLines.push(`  ${p.cn} → ${p.en}`);
+  }
+  if (phraseLines.length > 0) {
+    termLines.push(`Key Phrases & Sutra Passages (${phraseLines.length}):`);
+    termLines.push(...phraseLines);
+  }
+
+  return termLines.join('\n');
+}
+
+const compiledTbsTerminology = buildCompiledTbsTerminology();
+
 function applyGlossary(text) {
   const hits = [];
   const sorted = [...canonicalGlossary].sort(
@@ -3814,6 +3874,97 @@ app.post('/api/translate-interim', async (req, res) => {
     sessionId,
     translationMeta,
   });
+});
+
+app.post('/api/study-translate', async (req, res) => {
+  const rawText = (req.body?.text || '').trim();
+  const eventMode = req.body?.eventMode || 'Dharma Talk';
+
+  if (!rawText) return res.json({ translations: [] });
+  if (!DEEPSEEK_API_KEY) return res.status(503).json({ error: 'Translation service unavailable' });
+
+  try {
+    const paragraphs = String(rawText)
+      .trim()
+      .split(/\n\s*\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+
+    if (paragraphs.length === 0) return res.json({ translations: [] });
+
+    const numberedInput = paragraphs
+      .map((p, i) => `[${i + 1}]\n${p}`)
+      .join('\n\n');
+
+    const glossaryHits = applyGlossary(rawText);
+    const glossaryBlock = glossaryHits.length > 0
+      ? glossaryHits.map((t) => `${t.cn} → ${t.en}`).join('\n')
+      : '';
+
+    let ragBlock = '';
+    if (supabase) {
+      try {
+        const tbsKnowledgeContext = await retrieveTbsKnowledgeContext({
+          sourceText: rawText,
+          rollingContext: null,
+          routeKey: 'zh_en',
+        });
+        ragBlock = formatTbsKnowledgeContextBlock(tbsKnowledgeContext);
+      } catch (err) {
+        console.warn('[StudyTranslate] RAG failed:', err.message);
+      }
+    }
+
+    const systemPrompt = `You are the official translator for True Buddha School (TBS).
+Translate Chinese into natural, accurate English using established TBS terminology.
+
+Rules:
+1. Output English only — translate only the Chinese portions.
+2. If the source contains English, preserve it as-is.
+3. Always use the canonical TBS translations below.
+4. Preserve the paragraph numbering format [1], [2], etc. in your output.
+5. Keep translations clear, natural, and doctrinally accurate.
+6. No explanations, notes, or brackets unless essential.
+
+${compiledTbsTerminology}`;
+
+    const userPrompt = `Translate each paragraph below. Keep the [N] numbering in your output.
+
+${numberedInput}
+${glossaryBlock ? `\nGlossary hits in this text:\n${glossaryBlock}` : ''}
+${ragBlock ? `\n${ragBlock}` : ''}`.trim();
+
+    const data = await deepSeekChatCompletions(
+      {
+        model: 'deepseek-chat',
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      },
+      { timeoutMs: 30000, maxAttempts: 2 }
+    );
+
+    const output = data?.choices?.[0]?.message?.content?.trim() || '';
+
+    const translations = paragraphs.map((_, i) => {
+      const pattern = new RegExp(`\\[${i + 1}\\]([\\s\\S]*?)(?=\\[${i + 2}\\]|$)`);
+      const match = output.match(pattern);
+      return match ? match[1].trim() : '';
+    });
+
+    console.log('[StudyTranslate] batch done', {
+      paragraphs: paragraphs.length,
+      ragChars: ragBlock.length,
+      outputChars: output.length,
+    });
+
+    res.json({ translations });
+  } catch (err) {
+    console.error('[StudyTranslate] failed:', err.message);
+    res.status(500).json({ error: 'Translation failed' });
+  }
 });
 
 app.get('/api/asr-mishear-log', (req, res) => {
