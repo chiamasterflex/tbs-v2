@@ -2339,7 +2339,7 @@ function buildCompiledTbsTerminology() {
 
   const mantraLines = [];
   const mantraSeen = new Set();
-  for (const m of mantras) {
+  for (const m of mantraResources) {
     const canonical = m?.canonical || m?.cn || '';
     const en = m?.en || m?.english || '';
     const label = m?.deity ? ` [${m.deity}]` : '';
