@@ -3702,7 +3702,10 @@ app.post('/api/translate-interim', async (req, res) => {
 
   if (!rawCn) return res.json({ en: '', normalizedCn: '', hits: [] });
 
-  const prepared = runRouteNormalization(rawCn, eventMode, routeKey);
+  const skipBrain = requestMode === 'study';
+  const prepared = skipBrain
+    ? { normalizedText: rawCn, correctionHits: [], inputMode: classifyInputModeForRoute(rawCn, routeKey), protectedEnglish: [] }
+    : runRouteNormalization(rawCn, eventMode, routeKey);
   const mantraNormalized = normalizeMantraText(prepared.normalizedText, {
     routeKey,
     mode: translationMode,

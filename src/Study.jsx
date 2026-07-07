@@ -11,7 +11,6 @@ function readPersistedStudyState() {
     const parsed = JSON.parse(raw);
     return {
       input: String(parsed.input || ''),
-      normalized: String(parsed.normalized || ''),
       translation: String(parsed.translation || ''),
       lastUpdatedAt: String(parsed.lastUpdatedAt || ''),
     };
@@ -50,7 +49,6 @@ export default function Study() {
   if (persistedStateRef.current === null) {
     persistedStateRef.current = readPersistedStudyState() || {
       input: '',
-      normalized: '',
       translation: '',
       lastUpdatedAt: '',
     };
@@ -58,25 +56,23 @@ export default function Study() {
 
   const [input, setInput] = useState(persistedStateRef.current.input);
   const [output, setOutput] = useState(persistedStateRef.current.translation);
-  const [normalizedCn, setNormalizedCn] = useState(persistedStateRef.current.normalized);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(persistedStateRef.current.lastUpdatedAt);
   const [loading, setLoading] = useState(false);
 
   const requestRef = useRef(null);
 
   useEffect(() => {
-    if (!input && !normalizedCn && !output && !lastUpdatedAt) {
+    if (!input && !output && !lastUpdatedAt) {
       clearPersistedStudyState();
       return;
     }
 
     persistStudyState({
       input,
-      normalized: normalizedCn,
       translation: output,
       lastUpdatedAt,
     });
-  }, [input, normalizedCn, output, lastUpdatedAt]);
+  }, [input, output, lastUpdatedAt]);
 
   useEffect(() => {
     return () => {
@@ -100,39 +96,36 @@ export default function Study() {
 
     setLoading(true);
     setOutput('');
-    setNormalizedCn('');
 
     try {
       const paragraphs = splitStudyParagraphs(text);
-      const normalizedParts = [];
-      const outputParts = [];
 
-      for (const paragraph of paragraphs) {
-        const res = await fetch(`${API}/api/translate-interim`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            rawCn: paragraph,
-            text: paragraph,
-            routeKey: 'zh_en',
-            translationRoute: 'zh_en',
-            eventMode: 'Dharma Talk',
-          }),
-        });
+      const results = await Promise.all(
+        paragraphs.map(async (paragraph) => {
+          const res = await fetch(`${API}/api/translate-interim`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              rawCn: paragraph,
+              text: paragraph,
+              routeKey: 'zh_en',
+              translationRoute: 'zh_en',
+              eventMode: 'Dharma Talk',
+            }),
+          });
 
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(errorText || 'Translation failed');
-        }
+          if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText || 'Translation failed');
+          }
 
-        const data = await res.json();
-        normalizedParts.push(data.normalizedCn || data.cn || paragraph);
-        outputParts.push(data.en || data.translation || 'No translation returned');
-      }
+          const data = await res.json();
+          return data.en || data.translation || 'No translation returned';
+        }),
+      );
 
-      setOutput(outputParts.join('\n\n'));
-      setNormalizedCn(normalizedParts.join('\n\n'));
+      setOutput(results.join('\n\n'));
       setLastUpdatedAt(new Date().toISOString());
     } catch (err) {
       if (err.name === 'AbortError') return;
@@ -159,7 +152,7 @@ export default function Study() {
           <div style={styles.eyebrow}>TBS V2</div>
           <h1 style={styles.title}>Study Translation</h1>
           <p style={styles.subtitle}>
-            Paste Chinese text and get a TBS-aware translation with normalised source handling.
+            Paste Chinese text and get a TBS-aware English translation.
           </p>
 
           <div style={styles.statRow}>
@@ -204,7 +197,6 @@ export default function Study() {
                 }
                 setInput('');
                 setOutput('');
-                setNormalizedCn('');
                 setLastUpdatedAt('');
                 setLoading(false);
                 clearPersistedStudyState();
@@ -214,7 +206,7 @@ export default function Study() {
             </button>
           </div>
 
-          {(output || normalizedCn) && (
+          {output ? (
             <div style={styles.resultsWrap}>
               {lastUpdatedAt ? (
                 <div style={styles.updatedAt}>
@@ -222,21 +214,12 @@ export default function Study() {
                 </div>
               ) : null}
 
-              {normalizedCn ? (
-                <div style={styles.resultCard}>
-                  <div style={styles.resultLabel}>Normalised Chinese</div>
-                  <div style={styles.resultTextChinese}>{normalizedCn}</div>
-                </div>
-              ) : null}
-
-              {output ? (
-                <div style={styles.resultCard}>
-                  <div style={styles.resultLabel}>English</div>
-                  <div style={styles.resultText}>{output}</div>
-                </div>
-              ) : null}
+              <div style={styles.resultCard}>
+                <div style={styles.resultLabel}>English</div>
+                <div style={styles.resultText}>{output}</div>
+              </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
@@ -455,16 +438,6 @@ const styles = {
     color: '#666',
     marginBottom: '10px',
     textAlign: 'left',
-  },
-  resultTextChinese: {
-    fontSize: '22px',
-    lineHeight: 1.75,
-    color: '#111',
-    fontWeight: 650,
-    textAlign: 'left',
-    whiteSpace: 'pre-wrap',
-    overflowWrap: 'anywhere',
-    wordBreak: 'break-word',
   },
   resultText: {
     fontSize: '19px',
