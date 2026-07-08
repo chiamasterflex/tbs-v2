@@ -1279,7 +1279,13 @@ const lastLiveSnapshotRef = useRef('');
       ws.onmessage = (event) => {
         if (audioRunIdRef.current !== runId) return;
 
-        const msg = JSON.parse(event.data);
+        let msg;
+        try {
+          msg = JSON.parse(event.data);
+        } catch (err) {
+          console.error('[WS] failed to parse message', err);
+          return;
+        }
 
         if (msg.type === 'status') {
           if (msg.status === 'deepgram_ready') {

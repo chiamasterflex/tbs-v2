@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8787' : '');
 const WS_URL =
   import.meta.env.VITE_WS_URL ||
-  API.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+  (import.meta.env.DEV
+    ? 'ws://localhost:8787/ws'
+    : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`);
 const FIXED_SESSION_ID = 'live-session';
 const POLL_MS = 3000;
 const INITIAL_VISIBLE_COUNT = 24;
@@ -191,12 +193,16 @@ export default function Viewer() {
     let timer = null;
 
     fetchSession();
-    timer = setInterval(fetchSession, POLL_MS);
+
+    const socketLive = socketState === 'Live' || socketState === 'Connected';
+    if (!socketLive) {
+      timer = setInterval(fetchSession, POLL_MS);
+    }
 
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [fetchSession]);
+  }, [fetchSession, socketState]);
 
   useEffect(() => {
     let cancelled = false;
