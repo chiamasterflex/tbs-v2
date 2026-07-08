@@ -3977,38 +3977,61 @@ ${ragBlock ? `\n${ragBlock}` : ''}`.trim();
         return res.end();
       }
 
-      const reader = upstream.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let totalChars = 0;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      await new Promise((resolve, reject) => {
+        upstream.body.on('data', (chunk) => {
+          buffer += decoder.decode(chunk, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            const jsonStr = trimmed.slice(6);
+            if (jsonStr === '[DONE]') continue;
 
-          const jsonStr = trimmed.slice(6);
-          if (jsonStr === '[DONE]') continue;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const delta = parsed?.choices?.[0]?.delta?.content || '';
-            if (delta) {
-              totalChars += delta.length;
-              res.write(delta);
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const delta = parsed?.choices?.[0]?.delta?.content || '';
+              if (delta) {
+                totalChars += delta.length;
+                res.write(delta);
+              }
+            } catch {
+              // partial JSON in stream, skip
             }
-          } catch {
-            // partial JSON in stream, skip
           }
-        }
-      }
+        });
+
+        upstream.body.on('end', () => {
+          const finalBuffer = decoder.decode();
+          if (finalBuffer.trim()) {
+            const trimmed = finalBuffer.trim();
+            if (trimmed.startsWith('data: ')) {
+              const jsonStr = trimmed.slice(6);
+              if (jsonStr !== '[DONE]') {
+                try {
+                  const parsed = JSON.parse(jsonStr);
+                  const delta = parsed?.choices?.[0]?.delta?.content || '';
+                  if (delta) {
+                    totalChars += delta.length;
+                    res.write(delta);
+                  }
+                } catch {
+                  // partial JSON, skip
+                }
+              }
+            }
+          }
+          resolve();
+        });
+
+        upstream.body.on('error', reject);
+      });
 
       console.log('[StudyTranslate] stream done', {
         paragraphs: paragraphs.length,
