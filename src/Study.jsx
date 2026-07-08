@@ -50,6 +50,7 @@ export default function Study() {
   const [output, setOutput] = useState(persistedStateRef.current.translation);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(persistedStateRef.current.lastUpdatedAt);
   const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
 
   const requestRef = useRef(null);
 
@@ -87,10 +88,11 @@ export default function Study() {
     requestRef.current = controller;
 
     setLoading(true);
+    setStreaming(false);
     setOutput('');
 
     try {
-      const res = await fetch(`${API}/api/study-translate`, {
+      const res = await fetch(`${API}/api/study-translate-stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
@@ -105,9 +107,29 @@ export default function Study() {
         throw new Error(errorText || 'Translation failed');
       }
 
-      const data = await res.json();
-      const translations = (data.translations || []).filter(Boolean);
-      setOutput(translations.join('\n\n') || 'No translation returned');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+      let firstChunkReceived = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        accumulated += chunk;
+
+        if (!firstChunkReceived) {
+          firstChunkReceived = true;
+          setStreaming(true);
+        }
+
+        const cleaned = accumulated.replace(/\[\d+\]/g, '').trim();
+        setOutput(cleaned);
+      }
+
+      const finalText = accumulated.replace(/\[\d+\]/g, '').trim();
+      setOutput(finalText || 'No translation returned');
       setLastUpdatedAt(new Date().toISOString());
     } catch (err) {
       if (err.name === 'AbortError') return;
@@ -119,11 +141,22 @@ export default function Study() {
         requestRef.current = null;
       }
       setLoading(false);
+      setStreaming(false);
     }
   };
 
   return (
     <div style={styles.page}>
+      <style>{`
+        @keyframes tbsShimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes tbsBlink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+      `}</style>
       <div style={styles.bgOrbA} />
       <div style={styles.bgOrbB} />
 
@@ -167,7 +200,7 @@ export default function Study() {
 
           <div style={styles.buttonRow}>
             <button style={styles.primaryButton} onClick={translate} disabled={loading}>
-              {loading ? 'Translating…' : 'Translate'}
+              {loading ? (streaming ? 'Translating…' : 'Sending…') : 'Translate'}
             </button>
 
             <button
@@ -181,6 +214,7 @@ export default function Study() {
                 setOutput('');
                 setLastUpdatedAt('');
                 setLoading(false);
+                setStreaming(false);
                 clearPersistedStudyState();
               }}
             >
@@ -188,7 +222,18 @@ export default function Study() {
             </button>
           </div>
 
-          {output ? (
+          {loading && !streaming ? (
+            <div style={styles.resultsWrap}>
+              <div style={styles.resultCard}>
+                <div style={styles.resultLabel}>English</div>
+                <div style={styles.skeletonRow} />
+                <div style={{ ...styles.skeletonRow, width: '92%' }} />
+                <div style={{ ...styles.skeletonRow, width: '78%' }} />
+                <div style={{ ...styles.skeletonRow, width: '95%' }} />
+                <div style={{ ...styles.skeletonRow, width: '60%' }} />
+              </div>
+            </div>
+          ) : output ? (
             <div style={styles.resultsWrap}>
               {lastUpdatedAt ? (
                 <div style={styles.updatedAt}>
@@ -197,8 +242,13 @@ export default function Study() {
               ) : null}
 
               <div style={styles.resultCard}>
-                <div style={styles.resultLabel}>English</div>
-                <div style={styles.resultText}>{output}</div>
+                <div style={styles.resultLabel}>
+                  English{streaming ? ' · translating…' : ''}
+                </div>
+                <div style={styles.resultText}>
+                  {output}
+                  {streaming ? <span style={styles.cursor}>▋</span> : null}
+                </div>
               </div>
             </div>
           ) : null}
@@ -430,5 +480,20 @@ const styles = {
     whiteSpace: 'pre-wrap',
     overflowWrap: 'anywhere',
     wordBreak: 'break-word',
+  },
+  skeletonRow: {
+    height: '16px',
+    borderRadius: '8px',
+    background: 'linear-gradient(90deg, #f0e8e0 25%, #f8f2ec 50%, #f0e8e0 75%)',
+    backgroundSize: '200% 100%',
+    animation: 'tbsShimmer 1.4s ease-in-out infinite',
+    width: '85%',
+    marginBottom: '14px',
+  },
+  cursor: {
+    display: 'inline-block',
+    color: '#ff6b35',
+    animation: 'tbsBlink 0.8s steps(2) infinite',
+    marginLeft: '2px',
   },
 };

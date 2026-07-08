@@ -3876,6 +3876,160 @@ app.post('/api/translate-interim', async (req, res) => {
   });
 });
 
+app.post('/api/study-translate-stream', async (req, res) => {
+  const rawText = (req.body?.text || '').trim();
+  const eventMode = req.body?.eventMode || 'Dharma Talk';
+
+  if (!rawText) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    return res.send('');
+  }
+  if (!DEEPSEEK_API_KEY) {
+    return res.status(503).json({ error: 'Translation service unavailable' });
+  }
+
+  try {
+    const paragraphs = String(rawText)
+      .trim()
+      .split(/\n\s*\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+
+    if (paragraphs.length === 0) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.send('');
+    }
+
+    const numberedInput = paragraphs
+      .map((p, i) => `[${i + 1}]\n${p}`)
+      .join('\n\n');
+
+    const glossaryHits = applyGlossary(rawText);
+    const glossaryBlock = glossaryHits.length > 0
+      ? glossaryHits.map((t) => `${t.cn} → ${t.en}`).join('\n')
+      : '';
+
+    let ragBlock = '';
+    if (supabase) {
+      try {
+        const tbsKnowledgeContext = await retrieveTbsKnowledgeContext({
+          sourceText: rawText,
+          rollingContext: null,
+          routeKey: 'zh_en',
+        });
+        ragBlock = formatTbsKnowledgeContextBlock(tbsKnowledgeContext);
+      } catch (err) {
+        console.warn('[StudyTranslate] RAG failed:', err.message);
+      }
+    }
+
+    const systemPrompt = `You are the official translator for True Buddha School (TBS).
+Translate Chinese into natural, accurate English using established TBS terminology.
+
+Rules:
+1. Output English only — translate only the Chinese portions.
+2. If the source contains English, preserve it as-is.
+3. Always use the canonical TBS translations below.
+4. Preserve the paragraph numbering format [1], [2], etc. in your output.
+5. Keep translations clear, natural, and doctrinally accurate.
+6. No explanations, notes, or brackets unless essential.
+
+${compiledTbsTerminology}`;
+
+    const userPrompt = `Translate each paragraph below. Keep the [N] numbering in your output.
+
+${numberedInput}
+${glossaryBlock ? `\nGlossary hits in this text:\n${glossaryBlock}` : ''}
+${ragBlock ? `\n${ragBlock}` : ''}`.trim();
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+    req.on('close', () => controller.abort());
+
+    try {
+      const upstream = await fetch(DEEPSEEK_CHAT_COMPLETIONS_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          temperature: 0.1,
+          stream: true,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
+        signal: controller.signal,
+      });
+
+      if (!upstream.ok) {
+        const errText = await upstream.text().catch(() => '');
+        res.write(`\n[Translation error: HTTP ${upstream.status}]`);
+        console.error('[StudyTranslate] DeepSeek HTTP error:', upstream.status, errText);
+        return res.end();
+      }
+
+      const reader = upstream.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let totalChars = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+          const jsonStr = trimmed.slice(6);
+          if (jsonStr === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed?.choices?.[0]?.delta?.content || '';
+            if (delta) {
+              totalChars += delta.length;
+              res.write(delta);
+            }
+          } catch {
+            // partial JSON in stream, skip
+          }
+        }
+      }
+
+      console.log('[StudyTranslate] stream done', {
+        paragraphs: paragraphs.length,
+        ragChars: ragBlock.length,
+        outputChars: totalChars,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    res.end();
+  } catch (err) {
+    console.error('[StudyTranslate] stream failed:', err.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Translation failed' });
+    } else {
+      res.end();
+    }
+  }
+});
+
 app.post('/api/study-translate', async (req, res) => {
   const rawText = (req.body?.text || '').trim();
   const eventMode = req.body?.eventMode || 'Dharma Talk';
