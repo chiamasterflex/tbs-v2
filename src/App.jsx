@@ -4,6 +4,7 @@ import Study from './Study';
 import Review from './Review';
 import Viewer from './Viewer';
 import ToolTabs from './ToolTabs';
+import { ConfirmDialog, Toast } from './ConfirmDialog';
 import micIcon from './assets/mic.svg';
 
 const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8787' : '');
@@ -727,6 +728,24 @@ export default function App() {
   }, []);
 
   const [session, setSession] = useState(null);
+  const [sessionInitError, setSessionInitError] = useState(false);
+  const [confirmState, setConfirmState] = useState({ open: false });
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((message, isError = false) => {
+    setToast({ message, isError, id: Date.now() });
+  }, []);
+
+  const confirm = useCallback((opts) => {
+    return new Promise((resolve) => {
+      setConfirmState({
+        open: true,
+        ...opts,
+        onConfirm: () => { setConfirmState({ open: false }); resolve(true); },
+        onCancel: () => { setConfirmState({ open: false }); resolve(false); },
+      });
+    });
+  }, []);
   const [status, setStatus] = useState('idle');
   const [audioDebug, setAudioDebug] = useState({
     frameCount: 0,
@@ -768,6 +787,7 @@ const processorRef = useRef(null);
 const pcmQueueRef = useRef([]);
 const interimTimerRef = useRef(null);
 const reconnectTimerRef = useRef(null);
+const reconnectAttemptsRef = useRef(0);
 const shouldReconnectRef = useRef(false);
 const manualStopRef = useRef(false);
 const brainStateBySessionRef = useRef(new Map());
@@ -935,6 +955,7 @@ const lastLiveSnapshotRef = useRef('');
 
     const init = async () => {
       try {
+        setSessionInitError(false);
         setSession(null);
         setHistoryLines([]);
         setLiveChinese('');
@@ -982,6 +1003,7 @@ const lastLiveSnapshotRef = useRef('');
         if (created.targetLanguage) setTargetLanguage(created.targetLanguage);
       } catch (err) {
         console.error('session init failed', err);
+        setSessionInitError(true);
       }
     };
 
@@ -1208,6 +1230,8 @@ const lastLiveSnapshotRef = useRef('');
           return;
         }
 
+        reconnectAttemptsRef.current = 0;
+
         try {
           setStatus('ws_open');
 
@@ -1393,9 +1417,13 @@ const lastLiveSnapshotRef = useRef('');
           clearTimeout(reconnectTimerRef.current);
         }
 
+        const attempt = reconnectAttemptsRef.current + 1;
+        reconnectAttemptsRef.current = attempt;
+        const delay = Math.min(1000 * 2 ** Math.min(attempt - 1, 5), 30000);
+
         reconnectTimerRef.current = setTimeout(() => {
           openSocket();
-        }, 900);
+        }, delay);
       };
 
       ws.onerror = () => {
@@ -1415,6 +1443,7 @@ const lastLiveSnapshotRef = useRef('');
   const stopAudio = async () => {
   manualStopRef.current = true;
   shouldReconnectRef.current = false;
+  reconnectAttemptsRef.current = 0;
   audioRunIdRef.current += 1;
   setStatus('stopping');
 
@@ -1506,7 +1535,7 @@ const lastLiveSnapshotRef = useRef('');
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('session export failed', err);
-      window.alert('Session export failed. Please try again.');
+      showToast('Session export failed. Please try again.', true);
     }
   };
 
@@ -1538,7 +1567,12 @@ const lastLiveSnapshotRef = useRef('');
     if (!sanitized) return;
 
     const isCurrentSession = sanitized === activeSessionId;
-    if (!window.confirm(isCurrentSession ? 'Clear current live session?' : 'Clear this session?')) {
+    const confirmed = await confirm({
+      title: 'Clear session?',
+      message: isCurrentSession ? 'Clear current live session?' : 'Clear this session?',
+      confirmLabel: 'Clear',
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -1556,7 +1590,7 @@ const lastLiveSnapshotRef = useRef('');
       await fetchSessionList();
     } catch (err) {
       console.error('clear history failed', err);
-      window.alert('Local session was cleared, but the shared session could not be reset.');
+      showToast('Local session was cleared, but the shared session could not be reset.', true);
     }
   };
 
@@ -1706,12 +1740,15 @@ const lastLiveSnapshotRef = useRef('');
     if (!sanitized) return;
 
     const isCurrentSession = sanitized === activeSessionId;
+    const confirmed = await confirm({
+      title: 'End session?',
+      message: isCurrentSession && isAudioActive
+        ? 'Stop audio and end this session?'
+        : 'End this session?',
+      confirmLabel: 'End',
+    });
     if (
-      !window.confirm(
-        isCurrentSession && isAudioActive
-          ? 'Stop audio and end this session?'
-          : 'End this session?'
-      )
+      !confirmed
     ) {
       return;
     }
@@ -1736,7 +1773,7 @@ const lastLiveSnapshotRef = useRef('');
       await fetchSessionList();
     } catch (err) {
       console.error('end session failed', err);
-      window.alert('Could not end this session. Please try again.');
+      showToast('Could not end this session. Please try again.', true);
     }
   };
 
@@ -1744,7 +1781,12 @@ const lastLiveSnapshotRef = useRef('');
     const sanitized = sanitizeSessionId(sessionId);
     if (!sanitized) return;
 
-    if (!window.confirm('Remove this ended session from active lists? Transcript lines remain archived.')) {
+    const confirmed = await confirm({
+      title: 'Remove session?',
+      message: 'Remove this ended session from active lists? Transcript lines remain archived.',
+      confirmLabel: 'Remove',
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -1775,7 +1817,7 @@ const lastLiveSnapshotRef = useRef('');
       await fetchSessionList();
     } catch (err) {
       console.error('delete session failed', err);
-      window.alert('Only ended sessions can be deleted.');
+      showToast('Only ended sessions can be deleted.', true);
     }
   };
 
@@ -2004,14 +2046,38 @@ const lastLiveSnapshotRef = useRef('');
         <div style={styles.bgOrbB} />
         <div style={styles.shell}>
           <ToolTabs current="live" />
-          <div style={styles.loadingWrap}>Loading…</div>
+          {sessionInitError ? (
+            <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+              <p style={{ color: '#b8b8c2', fontSize: '15px', marginBottom: '20px' }}>
+                Could not connect to the session server.
+              </p>
+              <button
+                style={{
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%)',
+                  color: '#111',
+                  borderRadius: '999px',
+                  padding: '12px 24px',
+                  fontSize: '15px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <div style={styles.loadingWrap}>Loading…</div>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div style={styles.page}>
+    <>
+      <div style={styles.page}>
       <div style={styles.bgOrbA} />
       <div style={styles.bgOrbB} />
 
@@ -2450,8 +2516,23 @@ const lastLiveSnapshotRef = useRef('');
             )}
           </div>
         </div>
+        </div>
       </div>
-    </div>
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={confirmState.cancelLabel}
+        onConfirm={confirmState.onConfirm}
+        onCancel={confirmState.onCancel}
+      />
+      <Toast
+        message={toast?.message}
+        isError={toast?.isError}
+        onDismiss={() => setToast(null)}
+      />
+    </>
   );
 }
 

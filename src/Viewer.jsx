@@ -114,6 +114,7 @@ export default function Viewer() {
   const scrollRef = useRef(null);
   const wsRef = useRef(null);
   const reconnectTimerRef = useRef(null);
+  const reconnectAttemptsRef = useRef(0);
   const premiumScrollTimersRef = useRef(new Map());
 
   const [session, setSession] = useState(null);
@@ -210,9 +211,12 @@ export default function Viewer() {
     const scheduleReconnect = () => {
       if (cancelled) return;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      const attempt = reconnectAttemptsRef.current + 1;
+      reconnectAttemptsRef.current = attempt;
+      const delay = Math.min(1000 * 2 ** Math.min(attempt - 1, 5), 30000);
       reconnectTimerRef.current = setTimeout(() => {
         connectViewerSocket();
-      }, 1200);
+      }, delay);
     };
 
     const handleSocketMessage = (event) => {
@@ -331,6 +335,7 @@ export default function Viewer() {
 
         ws.onopen = () => {
           if (cancelled) return;
+          reconnectAttemptsRef.current = 0;
           setSocketState('Connected');
           setError('');
         };

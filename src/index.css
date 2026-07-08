@@ -169,3 +169,8 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+@keyframes tbsFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
