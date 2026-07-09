@@ -18,7 +18,9 @@ export default function ToolTabs({ current }) {
               aria-selected={active}
               aria-current={active ? 'page' : undefined}
               onClick={() => {
-                window.location.href = tab.href;
+                if (window.location.pathname === tab.href) return;
+                window.history.pushState({}, '', tab.href);
+                window.dispatchEvent(new PopStateEvent('popstate'));
               }}
               style={{
                 ...styles.tab,

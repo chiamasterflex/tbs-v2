@@ -18,6 +18,12 @@ const {
 const fetch = require('cross-fetch');
 
 const app = express();
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'microphone=(self), display-capture=(self), camera=(), geolocation=()');
+  next();
+});
 app.use(cors());
 app.use(express.json());
 

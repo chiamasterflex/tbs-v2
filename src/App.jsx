@@ -5,6 +5,7 @@ import Review from './Review';
 import Viewer from './Viewer';
 import ToolTabs from './ToolTabs';
 import { ConfirmDialog, Toast } from './ConfirmDialog';
+import TranscriptFeed from './TranscriptFeed';
 import micIcon from './assets/mic.svg';
 
 const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8787' : '');
@@ -1259,34 +1260,62 @@ const lastLiveSnapshotRef = useRef('');
 
             pcmQueueRef.current = [];
 
-            const processor = audioContext.createScriptProcessor(4096, 1, 1);
-            processorRef.current = processor;
+            if (audioContext.audioWorklet && window.AudioWorkletNode) {
+              try {
+                await audioContext.audioWorklet.addModule('/audio-pcm-worklet.js');
+                const workletNode = new AudioWorkletNode(audioContext, 'pcm-downsample-processor', {
+                  numberOfInputs: 1,
+                  numberOfOutputs: 0,
+                });
+                processorRef.current = workletNode;
 
-            processor.onaudioprocess = (event) => {
-              const activeWs = wsRef.current;
-              if (!activeWs) return;
+                workletNode.port.onmessage = (event) => {
+                  const activeWs = wsRef.current;
+                  if (activeWs?.readyState === WebSocket.OPEN) {
+                    activeWs.send(event.data);
+                  }
+                };
 
-              const inputData = event.inputBuffer.getChannelData(0);
-              const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
-
-              for (let i = 0; i < downsampled.length; i++) {
-                pcmQueueRef.current.push(downsampled[i]);
+                source.connect(workletNode);
+              } catch (err) {
+                console.warn('AudioWorklet unavailable, falling back to ScriptProcessor', err);
+                try {
+                  processorRef.current?.disconnect?.();
+                } catch {}
+                processorRef.current = null;
               }
+            }
 
-              const FRAME_SIZE = 800;
+            if (!processorRef.current) {
+              const processor = audioContext.createScriptProcessor(4096, 1, 1);
+              processorRef.current = processor;
 
-              while (pcmQueueRef.current.length >= FRAME_SIZE) {
-                const frame = pcmQueueRef.current.splice(0, FRAME_SIZE);
-                const pcmBuffer = floatTo16BitPCM(new Float32Array(frame));
+              processor.onaudioprocess = (event) => {
+                const activeWs = wsRef.current;
+                if (!activeWs) return;
 
-                if (activeWs.readyState === WebSocket.OPEN) {
-                  activeWs.send(pcmBuffer);
+                const inputData = event.inputBuffer.getChannelData(0);
+                const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
+
+                for (let i = 0; i < downsampled.length; i++) {
+                  pcmQueueRef.current.push(downsampled[i]);
                 }
-              }
-            };
 
-            source.connect(processor);
-            processor.connect(audioContext.destination);
+                const FRAME_SIZE = 800;
+
+                while (pcmQueueRef.current.length >= FRAME_SIZE) {
+                  const frame = pcmQueueRef.current.splice(0, FRAME_SIZE);
+                  const pcmBuffer = floatTo16BitPCM(new Float32Array(frame));
+
+                  if (activeWs.readyState === WebSocket.OPEN) {
+                    activeWs.send(pcmBuffer);
+                  }
+                }
+              };
+
+              source.connect(processor);
+              processor.connect(audioContext.destination);
+            }
           }
 
           setStatus('listening');
@@ -2460,62 +2489,14 @@ const lastLiveSnapshotRef = useRef('');
               </div>
             </div>
           ) : null}
-          <div style={styles.transcriptHeader}>
-            <div>
-              <div style={styles.cardLabel}>Transcript</div>
-              <div style={styles.cardHint}>Draft line appears first, then settles into history.</div>
-            </div>
-
-            <div style={styles.debugChip}>
-              {audioDebug.lastBytes ? `Audio ${audioDebug.lastBytes}b` : 'Audio idle'}
-            </div>
-          </div>
-
-          <div
+          <TranscriptFeed
             ref={transcriptFeedRef}
-            aria-live="polite"
-            aria-relevant="additions text"
-            role="log"
-            className="scroll-premium"
+            audioDebug={audioDebug}
+            feedItems={feedItems}
+            formatTime={formatTime}
             onScroll={handlePremiumScroll}
-            style={styles.transcriptFeed}
-          >
-            {feedItems.length === 0 ? (
-              <div style={styles.emptyState}>Waiting for speech…</div>
-            ) : (
-              feedItems.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    ...styles.feedRow,
-                    ...(item.isLive ? styles.feedRowLive : {}),
-                  }}
-                >
-                  <div style={styles.feedMetaRow}>
-                    <div style={styles.feedMetaLeft}>
-                      <div style={styles.feedMeta}>{item.time}</div>
-                      {!item.isLive && item.at ? (
-                        <div style={styles.feedTimePill}>{formatTime(item.at)}</div>
-                      ) : null}
-                    </div>
-
-                    {item.isLive && <div style={styles.liveBadge}>Draft</div>}
-                  </div>
-
-                  <div style={styles.feedChinese}>{item.chinese || '…'}</div>
-
-                  <div
-                    style={{
-                      ...styles.feedEnglish,
-                      ...(item.isLive ? styles.feedEnglishDraft : {}),
-                    }}
-                  >
-                    {item.english || (item.isLive ? 'Translating…' : '…')}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+            styles={styles}
+          />
         </div>
         </div>
       </div>
@@ -2538,7 +2519,13 @@ const lastLiveSnapshotRef = useRef('');
 }
 
 export default function App() {
-  const path = window.location.pathname;
+  const [path, setPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const syncPath = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', syncPath);
+    return () => window.removeEventListener('popstate', syncPath);
+  }, []);
 
   if (path === '/viewer' || path.startsWith('/viewer/')) {
     return <Viewer />;
