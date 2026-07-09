@@ -191,17 +191,18 @@ export default function Viewer() {
   }, [sessionId]);
 
   useEffect(() => {
-    let timer = null;
-
-    fetchSession();
+    let immediateTimer = null;
+    let pollTimer = null;
 
     const socketLive = socketState === 'Live' || socketState === 'Connected';
     if (!socketLive) {
-      timer = setInterval(fetchSession, POLL_MS);
+      immediateTimer = setTimeout(fetchSession, 0);
+      pollTimer = setInterval(fetchSession, POLL_MS);
     }
 
     return () => {
-      if (timer) clearInterval(timer);
+      if (immediateTimer) clearTimeout(immediateTimer);
+      if (pollTimer) clearInterval(pollTimer);
     };
   }, [fetchSession, socketState]);
 
@@ -601,6 +602,9 @@ export default function Viewer() {
 
           <div
             ref={scrollRef}
+            aria-live="polite"
+            aria-relevant="additions text"
+            role="log"
             className="scroll-premium"
             onScroll={handleScroll}
             style={styles.transcriptFeed}

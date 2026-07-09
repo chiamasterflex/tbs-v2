@@ -594,12 +594,8 @@ function AuthGate({ mode, email, roleLabel, onLogin, onLogout }) {
   );
 }
 
-export default function App() {
+function LiveApp() {
   const path = window.location.pathname;
-
-  if (path === '/viewer' || path.startsWith('/viewer/')) {
-    return <Viewer />;
-  }
 
   const [authReady, setAuthReady] = useState(false);
   const [authSession, setAuthSession] = useState(null);
@@ -2382,6 +2378,7 @@ const lastLiveSnapshotRef = useRef('');
 
             <div style={styles.audioModeButtons}>
               <button
+                aria-label={isMicActive ? 'Stop microphone audio' : 'Start microphone audio'}
                 onClick={() => (isMicActive ? stopAudio() : startAudio('mic'))}
                 style={{
                   ...styles.audioModeButton,
@@ -2394,6 +2391,7 @@ const lastLiveSnapshotRef = useRef('');
 
               {showSystemAudioOption && (
                 <button
+                  aria-label={isSystemActive ? 'Stop system audio' : 'Start system audio'}
                   onClick={() => (isSystemActive ? stopAudio() : startAudio('system'))}
                   style={{
                     ...styles.audioModeButton,
@@ -2475,6 +2473,9 @@ const lastLiveSnapshotRef = useRef('');
 
           <div
             ref={transcriptFeedRef}
+            aria-live="polite"
+            aria-relevant="additions text"
+            role="log"
             className="scroll-premium"
             onScroll={handlePremiumScroll}
             style={styles.transcriptFeed}
@@ -2534,6 +2535,16 @@ const lastLiveSnapshotRef = useRef('');
       />
     </>
   );
+}
+
+export default function App() {
+  const path = window.location.pathname;
+
+  if (path === '/viewer' || path.startsWith('/viewer/')) {
+    return <Viewer />;
+  }
+
+  return <LiveApp />;
 }
 
 const styles = {

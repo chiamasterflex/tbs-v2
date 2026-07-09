@@ -6,14 +6,17 @@ const tabs = [
 
 export default function ToolTabs({ current }) {
   return (
-    <div style={styles.wrap}>
-      <div style={styles.inner}>
+    <nav aria-label="Tool navigation" style={styles.wrap}>
+      <div role="tablist" style={styles.inner}>
         {tabs.map((tab) => {
           const active = current === tab.key;
 
           return (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={active}
+              aria-current={active ? 'page' : undefined}
               onClick={() => {
                 window.location.href = tab.href;
               }}
@@ -27,7 +30,7 @@ export default function ToolTabs({ current }) {
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 }
 

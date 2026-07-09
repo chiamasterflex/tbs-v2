@@ -79,8 +79,9 @@ export default function Review() {
         <div style={styles.mainCard}>
           <div style={styles.grid}>
             <div style={styles.field}>
-              <label style={styles.label}>Heard</label>
+              <label htmlFor="review-heard" style={styles.label}>Heard</label>
               <textarea
+                id="review-heard"
                 value={heard}
                 onChange={(e) => setHeard(e.target.value)}
                 placeholder="What the system heard..."
@@ -90,8 +91,9 @@ export default function Review() {
             </div>
 
             <div style={styles.field}>
-              <label style={styles.label}>Should be</label>
+              <label htmlFor="review-corrected" style={styles.label}>Should be</label>
               <textarea
+                id="review-corrected"
                 value={corrected}
                 onChange={(e) => setCorrected(e.target.value)}
                 placeholder="Correct wording..."
@@ -103,8 +105,9 @@ export default function Review() {
 
           <div style={styles.row}>
             <div style={styles.fieldHalf}>
-              <label style={styles.label}>Category</label>
+              <label htmlFor="review-category" style={styles.label}>Category</label>
               <select
+                id="review-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 style={styles.select}
@@ -121,8 +124,9 @@ export default function Review() {
             </div>
 
             <div style={styles.fieldHalf}>
-              <label style={styles.label}>Event mode</label>
+              <label htmlFor="review-event-mode" style={styles.label}>Event mode</label>
               <select
+                id="review-event-mode"
                 value={eventMode}
                 onChange={(e) => setEventMode(e.target.value)}
                 style={styles.select}
@@ -138,8 +142,9 @@ export default function Review() {
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Notes</label>
+            <label htmlFor="review-notes" style={styles.label}>Notes</label>
             <textarea
+              id="review-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Optional notes..."
@@ -166,7 +171,7 @@ export default function Review() {
             </button>
           </div>
 
-          {status ? <div style={styles.status}>{status}</div> : null}
+          {status ? <div aria-live="polite" role="status" style={styles.status}>{status}</div> : null}
         </div>
       </div>
     </div>
