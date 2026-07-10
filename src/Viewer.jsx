@@ -41,18 +41,6 @@ function formatTime(value) {
   });
 }
 
-function formatDate(value) {
-  if (!value) return '—';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
-
-  return d.toLocaleDateString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
 function buildBrainStateHistoryEntry(brainState) {
   if (
     !brainState ||
@@ -120,7 +108,7 @@ export default function Viewer() {
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('Loading…');
   const [error, setError] = useState('');
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [, setLastUpdated] = useState(null);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
   const [socketState, setSocketState] = useState('Connecting…');
   const [liveInterim, setLiveInterim] = useState(null);

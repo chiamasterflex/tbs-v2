@@ -530,7 +530,7 @@ function AuthBadge({
   );
 }
 
-function AuthGate({ mode, email, roleLabel, onLogin, onLogout }) {
+function AuthGate({ mode, roleLabel, onLogin, onLogout }) {
   const isDenied = mode === 'denied';
   const title =
     mode === 'loading'
@@ -791,6 +791,7 @@ const brainStateBySessionRef = useRef(new Map());
 const brainStateHistoryBySessionRef = useRef(new Map());
 const audioRunIdRef = useRef(0);
 const pendingReconnectModeRef = useRef(null);
+const startAudioRef = useRef(null);
 const liveConfigRef = useRef({
   sourceLanguage: 'Mandarin',
   targetLanguage: 'English',
@@ -1281,7 +1282,9 @@ const lastLiveSnapshotRef = useRef('');
                 console.warn('AudioWorklet unavailable, falling back to ScriptProcessor', err);
                 try {
                   processorRef.current?.disconnect?.();
-                } catch {}
+                } catch {
+                  // Ignore cleanup errors.
+                }
                 processorRef.current = null;
               }
             }
@@ -1465,6 +1468,8 @@ const lastLiveSnapshotRef = useRef('');
   openSocket();
 };
 
+startAudioRef.current = startAudio;
+
   const stopAudio = async () => {
   manualStopRef.current = true;
   shouldReconnectRef.current = false;
@@ -1474,37 +1479,51 @@ const lastLiveSnapshotRef = useRef('');
 
   try {
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-  } catch {}
+  } catch {
+                  // Ignore cleanup errors.
+                }
 
   try {
     if (interimTimerRef.current) clearTimeout(interimTimerRef.current);
-  } catch {}
+  } catch {
+                  // Ignore cleanup errors.
+                }
 
   try {
     if (processorRef.current) processorRef.current.disconnect();
-  } catch {}
+  } catch {
+                  // Ignore cleanup errors.
+                }
 
   try {
     if (sourceRef.current) sourceRef.current.disconnect();
-  } catch {}
+  } catch {
+                  // Ignore cleanup errors.
+                }
 
   try {
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((t) => t.stop());
     }
-  } catch {}
+  } catch {
+                  // Ignore cleanup errors.
+                }
 
   try {
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       await audioContextRef.current.close();
     }
-  } catch {}
+  } catch {
+                  // Ignore cleanup errors.
+                }
 
   try {
     if (wsRef.current && wsRef.current.readyState <= 1) {
       wsRef.current.close();
     }
-  } catch {}
+  } catch {
+                  // Ignore cleanup errors.
+                }
 
   processorRef.current = null;
   sourceRef.current = null;
@@ -1682,7 +1701,7 @@ const lastLiveSnapshotRef = useRef('');
       if (bId === activeSessionId) return 1;
       return String(b?.updatedAt || '').localeCompare(String(a?.updatedAt || ''));
     });
-  }, [activeSessionId, availableSessions, realSessionIds.length]);
+  }, [activeSessionId, availableSessions]);
 
   const activeSessionSummary = useMemo(() => {
     return visibleSessions.find((entry) => getSessionId(entry) === activeSessionId) || null;
@@ -1968,7 +1987,7 @@ const lastLiveSnapshotRef = useRef('');
     if (!reconnectMode) return;
 
     pendingReconnectModeRef.current = null;
-    startAudio(reconnectMode);
+    startAudioRef.current?.(reconnectMode);
   }, [activeSessionId, isAdminAuthorized, isLiveMode, session?.id]);
 
   useEffect(() => {
