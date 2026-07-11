@@ -218,6 +218,13 @@ const ROUTES = {
     asrLanguage: 'id',
     hotwords: hotwordsId,
   },
+  auto: {
+    key: 'auto',
+    sourceLanguage: 'Auto',
+    targetLanguage: 'English',
+    asrLanguage: null,
+    subRoutes: ['zh_en', 'id_en'],
+  },
 };
 
 const bahasaGlossary = Object.entries(glossaryIdEn).map(([cn, en]) => ({ cn, en }));
@@ -4418,6 +4425,7 @@ wss.on('connection', async (browserWs, req) => {
   let totalBytes = 0;
   let keepAliveTimer = null;
   let dg = null;
+  let dgId = null;
   let shuttingDown = false;
   let deepgramClosedLogged = false;
 
@@ -4668,7 +4676,15 @@ wss.on('connection', async (browserWs, req) => {
         dg.sendClose({ type: 'CloseStream' });
       }
     } catch (err) {
-      console.error('[Deepgram] sendClose failed', err.message);
+      console.error('[Deepgram:zh] sendClose failed', err.message);
+    }
+
+    try {
+      if (dgId && typeof dgId.sendClose === 'function') {
+        dgId.sendClose({ type: 'CloseStream' });
+      }
+    } catch (err) {
+      console.error('[Deepgram:id] sendClose failed', err.message);
     }
   }
 
@@ -4686,24 +4702,292 @@ wss.on('connection', async (browserWs, req) => {
     };
   }
 
-  try {
+  function buildDeepgramOptionsForRoute(rc, includeVocabulary = true) {
+    return {
+      model: DEEPGRAM_MODEL,
+      language: rc.asrLanguage,
+      interim_results: true,
+      punctuate: true,
+      smart_format: true,
+      encoding: 'linear16',
+      sample_rate: 16000,
+      channels: 1,
+      ...(includeVocabulary ? getDeepgramVocabularyOptions(rc) : {}),
+    };
+  }
+
+  async function processTranscript(data, effectiveRouteKey, effectiveRouteConfig) {
     try {
-      dg = await deepgram.listen.v1.connect(buildDeepgramOptions(true));
+      if (!data || data.type !== 'Results') return;
+
+      const rawText = data?.channel?.alternatives?.[0]?.transcript || '';
+      if (!rawText.trim()) return;
+
+      const confidence = data?.channel?.alternatives?.[0]?.confidence ?? 0;
+
+      const prepared = runRouteNormalization(rawText, activeSession.eventMode, effectiveRouteKey);
+      const mantraNormalized = normalizeMantraText(prepared.normalizedText, {
+        routeKey: effectiveRouteKey,
+        mode: 'final',
+      });
+      const normalizedCn = mantraNormalized.text;
+      const correctionOverride =
+        effectiveRouteKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, 'final');
+      const canOverride = correctionOverride?.canOverride === true;
+      const hits = canOverride ? [] : applyRouteGlossary(normalizedCn, effectiveRouteKey);
+
+      if (data.is_final) {
+        const retrieval = canOverride
+          ? {
+              sacredEntities: [],
+              phraseMatches: [],
+              ceremonyMatches: [],
+              correctionMatches: [correctionOverride],
+            }
+          : effectiveRouteKey === 'id_en'
+          ? {
+              sacredEntities: [],
+              phraseMatches: prepared.phraseHints || retrieveIndonesianPhraseMemory(normalizedCn),
+              ceremonyMatches: [],
+              correctionMatches: prepared.correctionHits || [],
+            }
+          : {
+              sacredEntities: retrieveSacredEntities(normalizedCn, activeSession.eventMode),
+              phraseMatches: retrievePhraseMemory(normalizedCn, activeSession.eventMode),
+              ceremonyMatches: retrieveCeremonyMemory(normalizedCn, activeSession.eventMode),
+              correctionMatches: mergeGeneratedCorrectionMatch(
+                correctionOverride,
+                prepared.correctionHits ||
+                  retrieveCorrectionMemory(normalizedCn, activeSession.eventMode)
+              ),
+            };
+        retrieval.mantraMatches = mantraNormalized.matches || [];
+
+        const activeTopic = canOverride || effectiveRouteKey === 'id_en'
+          ? null
+          : getActiveTopicContext(
+              updateSessionTopic(activeSession, normalizedCn, retrieval, activeSession.eventMode)
+            );
+
+        const rollingContext = ensureSessionBrainState(activeSession);
+
+        const en = mantraNormalized.pureMantra
+          ? normalizedCn
+          : canOverride
+          ? correctionOverride.correctedEnglish
+          : await translateWithDeepSeek(
+              normalizedCn,
+              hits,
+              'final',
+              retrieval,
+              activeSession.eventMode,
+              getContextWindow(activeSession),
+              prepared.inputMode,
+              activeTopic,
+              effectiveRouteKey,
+              rollingContext
+            );
+
+        const translationMeta = buildTranslationMeta({
+          normalizedCn,
+          en,
+          hits,
+          retrieval,
+          inputMode: prepared.inputMode,
+          activeTopic,
+          mode: 'final',
+        });
+
+        const line = buildLine(rawText, normalizedCn, en, hits, retrieval, {
+          inputMode: prepared.inputMode,
+          correctionHits: prepared.correctionHits,
+          translationMeta,
+        });
+
+        addFinalLineToSession(activeSession, line);
+        persistLiveSession(activeSession);
+        persistSessionLine(activeSession, line, effectiveRouteKey, retrieval);
+
+        lastInterimSourceSent = '';
+        lastInterimSentAt = 0;
+
+        sendToBrowser({ type: 'final', line, sessionId, routeKey: effectiveRouteKey, translationRoute: effectiveRouteKey });
+        broadcastToViewers(sessionId, { type: 'final', line, sessionId, routeKey: effectiveRouteKey, translationRoute: effectiveRouteKey });
+        broadcastToViewers(sessionId, { type: 'session', session: activeSession, sessionId });
+        queueRollingContextUpdate();
+      } else {
+        const now = Date.now();
+
+        const hasMeaningfulChange =
+          normalizedCn !== lastInterimSourceSent &&
+          normalizedCn.length >= Math.max(4, lastInterimSourceSent.length);
+
+        const respectsThrottle = now - lastInterimSentAt >= 350;
+
+        if (hasMeaningfulChange && respectsThrottle) {
+          lastInterimSourceSent = normalizedCn;
+          lastInterimSentAt = now;
+
+          const livePayload = {
+            type: 'live_cn',
+            sessionId,
+            text: rawText,
+            rawCn: rawText,
+            cn: normalizedCn,
+            normalizedCn,
+            inputMode: prepared.inputMode,
+            routeKey: effectiveRouteKey,
+            translationRoute: effectiveRouteKey,
+          };
+
+          sendToBrowser(livePayload);
+          broadcastToViewers(sessionId, livePayload);
+        }
+      }
     } catch (err) {
-      const message = String(err?.message || err || '');
-      if (!message.includes('400') && !message.toLowerCase().includes('unexpected server response')) {
-        throw err;
+      console.error('[Deepgram] transcript handler failed', err.message);
+    }
+  }
+
+  function attachDeepgramHandlers(dgConn, dgLabel, effectiveRouteKey, effectiveRouteConfig) {
+    dgConn.on('open', () => {
+      if (shuttingDown) return;
+      console.log(`[Deepgram:${dgLabel}] open`);
+      sendToBrowser({ type: 'status', status: 'deepgram_ready' });
+    });
+
+    dgConn.on('message', async (data) => {
+      if (routeKey === 'auto' && data?.is_final && data?.speech_final) {
+        const confidence = data?.channel?.alternatives?.[0]?.confidence ?? 0;
+        const transcript = data?.channel?.alternatives?.[0]?.transcript || '';
+
+        autoState.lastFinal[dgLabel] = {
+          data,
+          confidence,
+          transcript,
+          routeKey: effectiveRouteKey,
+          routeConfig: effectiveRouteConfig,
+          at: Date.now(),
+        };
+
+        const zhFinal = autoState.lastFinal.zh;
+        const idFinal = autoState.lastFinal.id;
+        const now = Date.now();
+
+        if (zhFinal && idFinal && now - zhFinal.at < 3000 && now - idFinal.at < 3000) {
+          const winner = zhFinal.confidence >= idFinal.confidence ? zhFinal : idFinal;
+          const winnerLabel = zhFinal.confidence >= idFinal.confidence ? 'zh' : 'id';
+
+          if (autoState.consecutiveWins[winnerLabel] !== undefined) {
+            autoState.consecutiveWins[winnerLabel] += 1;
+            const loserLabel = winnerLabel === 'zh' ? 'id' : 'zh';
+            autoState.consecutiveWins[loserLabel] = 0;
+          }
+
+          autoState.lastFinal = {};
+          await processTranscript(winner.data, winner.routeKey, winner.routeConfig);
+        } else if (now - (autoState.lastFinal[dgLabel]?.at || 0) > 3000) {
+          autoState.lastFinal = {};
+          await processTranscript(data, effectiveRouteKey, effectiveRouteConfig);
+        }
+      } else if (routeKey === 'auto' && !data?.is_final) {
+        const text = data?.channel?.alternatives?.[0]?.transcript || '';
+        const hasCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(text);
+        const hasLatin = /[a-zA-Z]/.test(text);
+
+        if (hasCJK && !hasLatin && dgLabel === 'zh') {
+          await processTranscript(data, effectiveRouteKey, effectiveRouteConfig);
+        } else if (hasLatin && !hasCJK && dgLabel === 'id') {
+          await processTranscript(data, effectiveRouteKey, effectiveRouteConfig);
+        } else if (dgLabel === autoState.lastWinner || !autoState.lastWinner) {
+          await processTranscript(data, effectiveRouteKey, effectiveRouteConfig);
+        }
+      } else if (routeKey !== 'auto') {
+        await processTranscript(data, effectiveRouteKey, effectiveRouteConfig);
+      }
+    });
+
+    dgConn.on('error', (err) => {
+      if (shuttingDown) return;
+      console.error(`[Deepgram:${dgLabel}] error`, err.message);
+      sendToBrowser({ type: 'error', message: 'Deepgram error' });
+    });
+
+    dgConn.on('close', () => {
+      if (!deepgramClosedLogged) {
+        deepgramClosedLogged = true;
+        console.log(`[Deepgram:${dgLabel}] closed`);
+      }
+      if (!shuttingDown) {
+        sendToBrowser({ type: 'status', status: 'deepgram_closed' });
+      }
+    });
+
+    dgConn.connect();
+  }
+
+  const isAutoMode = routeKey === 'auto';
+  const autoState = isAutoMode ? {
+    lastFinal: {},
+    consecutiveWins: { zh: 0, id: 0 },
+    lastWinner: null,
+  } : null;
+
+  try {
+    if (isAutoMode) {
+      const zhConfig = ROUTES.zh_en;
+      const idConfig = ROUTES.id_en;
+
+      try {
+        dg = await deepgram.listen.v1.connect(buildDeepgramOptionsForRoute(zhConfig, true));
+      } catch (err) {
+        const message = String(err?.message || err || '');
+        if (message.includes('400') || message.toLowerCase().includes('unexpected server response')) {
+          dg = await deepgram.listen.v1.connect(buildDeepgramOptionsForRoute(zhConfig, false));
+        } else { throw err; }
       }
 
-      console.warn('[Deepgram] keyterms rejected, retrying without keyterms');
-      dg = await deepgram.listen.v1.connect(buildDeepgramOptions(false));
-    }
+      try {
+        dgId = await deepgram.listen.v1.connect(buildDeepgramOptionsForRoute(idConfig, true));
+      } catch (err) {
+        const message = String(err?.message || err || '');
+        if (message.includes('400') || message.toLowerCase().includes('unexpected server response')) {
+          dgId = await deepgram.listen.v1.connect(buildDeepgramOptionsForRoute(idConfig, false));
+        } else { throw err; }
+      }
 
-    dg.on('open', () => {
-      if (shuttingDown) return;
+      attachDeepgramHandlers(dg, 'zh', 'zh_en', zhConfig);
+      attachDeepgramHandlers(dgId, 'id', 'id_en', idConfig);
 
-      console.log('[Deepgram] open');
       sendToBrowser({ type: 'status', status: 'deepgram_ready' });
+
+      stopKeepAlive();
+      keepAliveTimer = setInterval(() => {
+        try {
+          if (!shuttingDown) {
+            if (dg && typeof dg.sendKeepAlive === 'function') dg.sendKeepAlive({ type: 'KeepAlive' });
+            if (dgId && typeof dgId.sendKeepAlive === 'function') dgId.sendKeepAlive({ type: 'KeepAlive' });
+          }
+        } catch (err) {
+          console.error('[Deepgram:auto] sendKeepAlive failed', err.message);
+        }
+      }, 3000);
+
+      await dg.waitForOpen();
+      await dgId.waitForOpen();
+    } else {
+      try {
+        dg = await deepgram.listen.v1.connect(buildDeepgramOptions(true));
+      } catch (err) {
+        const message = String(err?.message || err || '');
+        if (!message.includes('400') && !message.toLowerCase().includes('unexpected server response')) {
+          throw err;
+        }
+        console.warn('[Deepgram] keyterms rejected, retrying without keyterms');
+        dg = await deepgram.listen.v1.connect(buildDeepgramOptions(false));
+      }
+
+      attachDeepgramHandlers(dg, 'single', routeKey, routeConfig);
 
       stopKeepAlive();
       keepAliveTimer = setInterval(() => {
@@ -4715,166 +4999,17 @@ wss.on('connection', async (browserWs, req) => {
           console.error('[Deepgram] sendKeepAlive failed', err.message);
         }
       }, 3000);
-    });
 
-    dg.on('message', async (data) => {
-      try {
-        if (!data || data.type !== 'Results') return;
-
-        const rawText = data?.channel?.alternatives?.[0]?.transcript || '';
-        if (!rawText.trim()) return;
-
-        const prepared = runRouteNormalization(rawText, activeSession.eventMode, routeKey);
-        const mantraNormalized = normalizeMantraText(prepared.normalizedText, {
-          routeKey,
-          mode: 'final',
-        });
-        const normalizedCn = mantraNormalized.text;
-        const correctionOverride =
-          routeKey === 'id_en' ? null : findGeneratedTranslationCorrection(normalizedCn, 'final');
-        const canOverride = correctionOverride?.canOverride === true;
-        const hits = canOverride ? [] : applyRouteGlossary(normalizedCn, routeKey);
-
-        if (data.is_final) {
-          const retrieval = canOverride
-            ? {
-                sacredEntities: [],
-                phraseMatches: [],
-                ceremonyMatches: [],
-                correctionMatches: [correctionOverride],
-              }
-            : routeKey === 'id_en'
-            ? {
-                sacredEntities: [],
-                phraseMatches: prepared.phraseHints || retrieveIndonesianPhraseMemory(normalizedCn),
-                ceremonyMatches: [],
-                correctionMatches: prepared.correctionHits || [],
-              }
-            : {
-                sacredEntities: retrieveSacredEntities(normalizedCn, activeSession.eventMode),
-                phraseMatches: retrievePhraseMemory(normalizedCn, activeSession.eventMode),
-                ceremonyMatches: retrieveCeremonyMemory(normalizedCn, activeSession.eventMode),
-                correctionMatches: mergeGeneratedCorrectionMatch(
-                  correctionOverride,
-                  prepared.correctionHits ||
-                    retrieveCorrectionMemory(normalizedCn, activeSession.eventMode)
-                ),
-              };
-          retrieval.mantraMatches = mantraNormalized.matches || [];
-
-          const activeTopic = canOverride || routeKey === 'id_en'
-            ? null
-            : getActiveTopicContext(
-                updateSessionTopic(activeSession, normalizedCn, retrieval, activeSession.eventMode)
-              );
-
-          const rollingContext = ensureSessionBrainState(activeSession);
-
-          const en = mantraNormalized.pureMantra
-            ? normalizedCn
-            : canOverride
-            ? correctionOverride.correctedEnglish
-            : await translateWithDeepSeek(
-                normalizedCn,
-                hits,
-                'final',
-                retrieval,
-                activeSession.eventMode,
-                getContextWindow(activeSession),
-                prepared.inputMode,
-                activeTopic,
-                routeKey,
-                rollingContext
-              );
-
-          const translationMeta = buildTranslationMeta({
-            normalizedCn,
-            en,
-            hits,
-            retrieval,
-            inputMode: prepared.inputMode,
-            activeTopic,
-            mode: 'final',
-          });
-
-          const line = buildLine(rawText, normalizedCn, en, hits, retrieval, {
-            inputMode: prepared.inputMode,
-            correctionHits: prepared.correctionHits,
-            translationMeta,
-          });
-
-          addFinalLineToSession(activeSession, line);
-          persistLiveSession(activeSession);
-          persistSessionLine(activeSession, line, routeKey, retrieval);
-
-          lastInterimSourceSent = '';
-          lastInterimSentAt = 0;
-
-          sendToBrowser({ type: 'final', line, sessionId, routeKey, translationRoute: routeKey });
-          broadcastToViewers(sessionId, { type: 'final', line, sessionId, routeKey, translationRoute: routeKey });
-          broadcastToViewers(sessionId, { type: 'session', session: activeSession, sessionId });
-          queueRollingContextUpdate();
-        } else {
-          const now = Date.now();
-
-          const hasMeaningfulChange =
-            normalizedCn !== lastInterimSourceSent &&
-            normalizedCn.length >= Math.max(4, lastInterimSourceSent.length);
-
-          const respectsThrottle = now - lastInterimSentAt >= 350;
-
-          if (hasMeaningfulChange && respectsThrottle) {
-            lastInterimSourceSent = normalizedCn;
-            lastInterimSentAt = now;
-
-            const livePayload = {
-              type: 'live_cn',
-              sessionId,
-              text: rawText,
-              rawCn: rawText,
-              cn: normalizedCn,
-              normalizedCn,
-              inputMode: prepared.inputMode,
-              routeKey,
-              translationRoute: routeKey,
-            };
-
-            sendToBrowser(livePayload);
-            broadcastToViewers(sessionId, livePayload);
-          }
-        }
-      } catch (err) {
-        console.error('[Deepgram] transcript handler failed', err.message);
-      }
-    });
-
-    dg.on('error', (err) => {
-      if (shuttingDown) return;
-      console.error('[Deepgram] error', err);
-      sendToBrowser({ type: 'error', message: 'Deepgram error' });
-    });
-
-    dg.on('close', () => {
-      stopKeepAlive();
-
-      if (!deepgramClosedLogged) {
-        deepgramClosedLogged = true;
-        console.log('[Deepgram] closed');
-      }
-
-      if (!shuttingDown) {
-        sendToBrowser({ type: 'status', status: 'deepgram_closed' });
-      }
-    });
-
-    dg.connect();
-    await dg.waitForOpen();
+      await dg.waitForOpen();
+    }
   } catch (err) {
     console.error('[Deepgram] failed to initialize', err.message);
     sendToBrowser({ type: 'error', message: `Deepgram init failed: ${err.message}` });
     try {
       browserWs.close();
-    } catch {}
+    } catch {
+      // Ignore close errors.
+    }
     return;
   }
 
@@ -4897,8 +5032,13 @@ wss.on('connection', async (browserWs, req) => {
       });
 
       try {
-        if (dg && typeof dg.sendMedia === 'function') {
-          dg.sendMedia(data);
+        if (isAutoMode) {
+          if (dg && typeof dg.sendMedia === 'function') dg.sendMedia(data);
+          if (dgId && typeof dgId.sendMedia === 'function') dgId.sendMedia(data);
+        } else {
+          if (dg && typeof dg.sendMedia === 'function') {
+            dg.sendMedia(data);
+          }
         }
       } catch (err) {
         console.error('[Deepgram] sendMedia failed', err.message);

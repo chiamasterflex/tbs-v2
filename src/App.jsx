@@ -21,6 +21,7 @@ const SUPER_ADMIN_EMAILS = parseEmailAllowlist(import.meta.env.VITE_SUPER_ADMIN_
 const sessionRouteOptions = [
   { value: 'zh_en', label: 'Mandarin -> English' },
   { value: 'id_en', label: 'Bahasa -> English' },
+  { value: 'auto', label: 'Auto (CN + ID) -> English' },
 ];
 const supabase =
   SUPABASE_URL && SUPABASE_ANON_KEY
