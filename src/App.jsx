@@ -108,6 +108,7 @@ function deriveTranslationRoute(sourceLanguage, targetLanguage) {
   const source = String(sourceLanguage || '').toLowerCase();
   const target = String(targetLanguage || '').toLowerCase();
 
+  if (source.includes('auto') && target.includes('english')) return 'auto';
   if ((source.includes('bahasa') || source.includes('indones')) && target.includes('english')) {
     return 'id_en';
   }
@@ -1881,17 +1882,23 @@ startAudioRef.current = startAudio;
     }
 
     const routeConfig =
-      newSessionRoute === 'id_en'
+      newSessionRoute === 'auto'
         ? {
-            sourceLanguage: 'Bahasa Indonesia',
+            sourceLanguage: 'Auto (CN + ID)',
             targetLanguage: 'English',
-            translationRoute: 'id_en',
+            translationRoute: 'auto',
           }
-        : {
-            sourceLanguage: 'Mandarin',
-            targetLanguage: 'English',
-            translationRoute: 'zh_en',
-          };
+        : newSessionRoute === 'id_en'
+          ? {
+              sourceLanguage: 'Bahasa Indonesia',
+              targetLanguage: 'English',
+              translationRoute: 'id_en',
+            }
+          : {
+              sourceLanguage: 'Mandarin',
+              targetLanguage: 'English',
+              translationRoute: 'zh_en',
+            };
     const reconnectMode = isAudioActive ? activeAudioMode || 'mic' : null;
     if (reconnectMode) {
       pendingReconnectModeRef.current = reconnectMode;
@@ -2463,6 +2470,7 @@ startAudioRef.current = startAudio;
               >
                 <option>Mandarin</option>
                 <option>Bahasa Indonesia</option>
+                <option>Auto (CN + ID)</option>
               </select>
             </div>
 

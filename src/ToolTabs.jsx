@@ -40,6 +40,8 @@ const styles = {
   wrap: {
     width: '100%',
     marginBottom: '16px',
+    display: 'flex',
+    justifyContent: 'center',
   },
 
   inner: {
