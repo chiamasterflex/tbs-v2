@@ -1,12 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Study from './Study';
-import Review from './Review';
-import Viewer from './Viewer';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ToolTabs from './ToolTabs';
 import { ConfirmDialog, Toast } from './ConfirmDialog';
 import TranscriptFeed from './TranscriptFeed';
 import micIcon from './assets/mic.svg';
+
+const Study = lazy(() => import('./Study'));
+const Review = lazy(() => import('./Review'));
+const Viewer = lazy(() => import('./Viewer'));
 
 const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8787' : '');
 const WS_URL =
@@ -595,6 +596,10 @@ function AuthGate({ mode, roleLabel, onLogin, onLogout }) {
       </div>
     </div>
   );
+}
+
+function RouteFallback() {
+  return <div style={{ padding: '32px', textAlign: 'center', color: '#b8b8c2', fontSize: '15px' }}>Loading…</div>;
 }
 
 function LiveApp() {
@@ -2058,7 +2063,9 @@ startAudioRef.current = startAudio;
           />
         </div>
         <div className="study-review-embed">
-          <Study />
+          <Suspense fallback={<RouteFallback />}>
+            <Study />
+          </Suspense>
         </div>
       </div>
     );
@@ -2085,7 +2092,9 @@ startAudioRef.current = startAudio;
           />
         </div>
         <div className="study-review-embed">
-          <Review />
+          <Suspense fallback={<RouteFallback />}>
+            <Review />
+          </Suspense>
         </div>
       </div>
     );
@@ -2556,7 +2565,11 @@ export default function App() {
   }, []);
 
   if (path === '/viewer' || path.startsWith('/viewer/')) {
-    return <Viewer />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <Viewer />
+      </Suspense>
+    );
   }
 
   return <LiveApp />;

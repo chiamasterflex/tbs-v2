@@ -2627,65 +2627,60 @@ async function retrieveTbsKnowledgeContext({ sourceText = '', rollingContext = n
   const candidateTerms = buildTbsKnowledgeCandidateTerms({ sourceText, rollingContext });
   if (!candidateTerms.length) return [];
 
-  const rows = [];
   const seenChunkKeys = new Set();
   const searchedTerms = candidateTerms.slice(0, 5);
 
   try {
-    for (const term of searchedTerms) {
-      const safeTerm = escapePostgrestLikeTerm(term);
-      if (!safeTerm || safeTerm.length < 2) continue;
+    const chunkSelect = 'chunk_key, chunk_text, source_title, source_url, category, priority, trust_level, metadata';
 
-      const pattern = `%${safeTerm}%`;
-      const { data: chunkRows = [], error: chunkError } = await supabase
-        .from('tbs_knowledge_chunks')
-        .select('chunk_key, chunk_text, source_title, source_url, category, priority, trust_level, metadata')
-        .or(`chunk_text.ilike.${pattern},source_title.ilike.${pattern}`)
-        .limit(6);
+    const perTermResults = await Promise.all(
+      searchedTerms.map(async (term) => {
+        const safeTerm = escapePostgrestLikeTerm(term);
+        if (!safeTerm || safeTerm.length < 2) return { chunks: [], sourceChunkRows: [] };
 
-      if (chunkError) {
-        warnSupabaseFailure('tbs_knowledge_chunks retrieval', chunkError);
-        continue;
-      }
+        const pattern = `%${safeTerm}%`;
 
-      for (const row of chunkRows || []) {
-        const key = row.chunk_key || `${row.source_url}|${row.chunk_text?.slice(0, 80)}`;
-        if (!key || seenChunkKeys.has(key)) continue;
-        seenChunkKeys.add(key);
-        rows.push(row);
-      }
+        const [chunkRes, sourceRes] = await Promise.all([
+          supabase
+            .from('tbs_knowledge_chunks')
+            .select(chunkSelect)
+            .or(`chunk_text.ilike.${pattern},source_title.ilike.${pattern}`)
+            .limit(6),
+          supabase
+            .from('tbs_sources')
+            .select('id, source_key, title, url, priority')
+            .or(`source_key.ilike.${pattern},title.ilike.${pattern}`)
+            .limit(4),
+        ]);
 
-      const { data: sourceRows = [], error: sourceError } = await supabase
-        .from('tbs_sources')
-        .select('id, source_key, title, url, priority')
-        .or(`source_key.ilike.${pattern},title.ilike.${pattern}`)
-        .limit(4);
+        if (chunkRes.error) warnSupabaseFailure('tbs_knowledge_chunks retrieval', chunkRes.error);
+        if (sourceRes.error) warnSupabaseFailure('tbs_sources retrieval', sourceRes.error);
 
-      if (sourceError) {
-        warnSupabaseFailure('tbs_sources retrieval', sourceError);
-        continue;
-      }
+        const chunks = chunkRes.data || [];
 
-      const sourceIds = (sourceRows || []).map((row) => row.id).filter(Boolean);
-      if (sourceIds.length > 0) {
-        const { data: sourceChunkRows = [], error: sourceChunkError } = await supabase
+        const sourceIds = (sourceRes.data || []).map((row) => row.id).filter(Boolean);
+        if (sourceIds.length === 0) return { chunks, sourceChunkRows: [] };
+
+        const srcChunkRes = await supabase
           .from('tbs_knowledge_chunks')
-          .select('chunk_key, chunk_text, source_title, source_url, category, priority, trust_level, metadata')
+          .select(chunkSelect)
           .in('source_id', sourceIds)
           .order('chunk_index', { ascending: true })
           .limit(6);
 
-        if (sourceChunkError) {
-          warnSupabaseFailure('tbs_knowledge_chunks source retrieval', sourceChunkError);
-          continue;
-        }
+        if (srcChunkRes.error) warnSupabaseFailure('tbs_knowledge_chunks source retrieval', srcChunkRes.error);
 
-        for (const row of sourceChunkRows || []) {
-          const key = row.chunk_key || `${row.source_url}|${row.chunk_text?.slice(0, 80)}`;
-          if (!key || seenChunkKeys.has(key)) continue;
-          seenChunkKeys.add(key);
-          rows.push(row);
-        }
+        return { chunks, sourceChunkRows: srcChunkRes.data || [] };
+      })
+    );
+
+    const rows = [];
+    for (const { chunks, sourceChunkRows } of perTermResults) {
+      for (const row of [...chunks, ...sourceChunkRows]) {
+        const key = row.chunk_key || `${row.source_url}|${row.chunk_text?.slice(0, 80)}`;
+        if (!key || seenChunkKeys.has(key)) continue;
+        seenChunkKeys.add(key);
+        rows.push(row);
       }
     }
 
@@ -5024,12 +5019,14 @@ wss.on('connection', async (browserWs, req) => {
         );
       }
 
-      sendToBrowser({
-        type: 'audio_debug',
-        frameCount,
-        totalBytes,
-        lastBytes: data.length,
-      });
+      if (frameCount % 60 === 0) {
+        sendToBrowser({
+          type: 'audio_debug',
+          frameCount,
+          totalBytes,
+          lastBytes: data.length,
+        });
+      }
 
       try {
         if (isAutoMode) {
